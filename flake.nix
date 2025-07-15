@@ -1,0 +1,38 @@
+{
+  inputs = {
+    naersk.url = "github:nix-community/naersk/master";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    utils.url = "github:numtide/flake-utils";
+  };
+
+  outputs =
+    {
+      nixpkgs,
+      utils,
+      naersk,
+      ...
+    }:
+    utils.lib.eachDefaultSystem (
+      system:
+      let
+        pkgs = import nixpkgs { inherit system; };
+        naersk-lib = pkgs.callPackage naersk { };
+      in
+      {
+        defaultPackage = naersk-lib.buildPackage ./.;
+        devShell =
+          with pkgs;
+          mkShell {
+            buildInputs = [
+              cargo
+              openssl
+              pkg-config
+              rustPackages.clippy
+              rustc
+              rustfmt
+            ];
+            RUST_SRC_PATH = rustPlatform.rustLibSrc;
+          };
+      }
+    );
+}
