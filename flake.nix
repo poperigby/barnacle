@@ -25,6 +25,7 @@
           mkShell {
             buildInputs = [
               cargo
+              libarchive
               openssl
               pkg-config
               rustPackages.clippy
