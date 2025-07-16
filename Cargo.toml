@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 blake3 = "1.8.2"
+clap = { version = "4.5.41", features = ["derive"] }
 compress-tools = "0.15.1"
 tempfile = "3.20.0"
 xdg = "3.0.0"
