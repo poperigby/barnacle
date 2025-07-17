@@ -7,6 +7,10 @@ edition = "2024"
 blake3 = "1.8.2"
 clap = { version = "4.5.41", features = ["derive"] }
 compress-tools = "0.15.1"
+damascus = { version = "0.0.9", default-features=false, features = ["fuse-overlayfs"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_yml = "0.0.12"
 tempfile = "3.20.0"
+thiserror = "2.0.12"
 xdg = "3.0.0"
 zip = "4.3.0"

@@ -4,12 +4,10 @@ use std::{
     path::Path,
 };
 
+use crate::data_dir;
+
 pub fn import_mod(mod_path: &Path) {
-    let xdg_dirs = xdg::BaseDirectories::with_prefix("barnacle");
-    let store_path = xdg_dirs
-        .get_data_home()
-        .expect("Cannot find HOME")
-        .join("store");
+    let store_path = data_dir().join("store");
 
     let mod_hash = blake3::hash(&fs::read(&mod_path).unwrap());
 
