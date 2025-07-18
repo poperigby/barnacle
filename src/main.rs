@@ -1,6 +1,8 @@
 use barnacle::{config::Config, games::Game, import};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
+use tracing::Level;
+use tracing_subscriber::FmtSubscriber;
 
 #[derive(Parser)]
 #[command(version, about)]
@@ -43,9 +45,16 @@ enum GameCommands {
 // }
 
 fn main() {
-    let cli = Cli::parse();
+    // Setup logging
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::TRACE)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).unwrap();
+
+    // Load configuration file
     let mut config = Config::load().unwrap();
 
+    let cli = Cli::parse();
     match &cli.command {
         Some(Commands::Import { path }) => import::import_mod(path),
         Some(Commands::Game {

@@ -3,6 +3,7 @@ use std::path::PathBuf;
 pub mod config;
 pub mod games;
 pub mod import;
+pub mod mods;
 pub mod overlay;
 pub mod profiles;
 

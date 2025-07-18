@@ -1,11 +1,13 @@
-use crate::{data_dir, profiles::Profile};
+use crate::{data_dir, mods::Mod, profiles::Profile};
 use serde::{Deserialize, Serialize};
 use std::{fs::create_dir_all, path::PathBuf};
+use tracing::warn;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Game {
     name: String,
     profiles: Vec<Profile>,
+    mods: Vec<Mod>,
     game_dir: PathBuf,
 }
 
@@ -13,9 +15,17 @@ impl Game {
     pub fn new(name: String, game_dir: PathBuf) -> Self {
         create_dir_all(data_dir().join("profiles").join(&name)).unwrap();
 
+        if !game_dir.exists() {
+            warn!(
+                "The game directory \"{}\" does not exist",
+                game_dir.to_str().unwrap()
+            );
+        };
+
         Self {
             name,
             profiles: Vec::new(),
+            mods: Vec::new(),
             game_dir,
         }
     }
