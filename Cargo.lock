@@ -131,6 +131,7 @@ dependencies = [
  "cc",
  "cfg-if",
  "constant_time_eq",
+ "serde",
 ]
 
 [[package]]

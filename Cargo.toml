@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-blake3 = "1.8.2"
+blake3 = { version = "1.8.2", features = ["serde"] }
 clap = { version = "4.5.41", features = ["derive"] }
 compress-tools = "0.15.1"
 damascus = { version = "0.0.9", default-features=false, features = ["fuse-overlayfs"] }
