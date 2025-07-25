@@ -1,4 +1,4 @@
-use barnacle::{config::Config, games::Game, import};
+use barnacle::{config::Config, games::Game};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use tracing::Level;
@@ -13,15 +13,15 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Import a mod archive or directory
-    Import {
-        /// Path to the mod to import
-        path: PathBuf,
-    },
     /// Manage games
     Game {
         #[command(subcommand)]
         command: Option<GameCommands>,
+    },
+    /// Manage profiles
+    Profile {
+        #[command(subcommand)]
+        command: Option<ProfileCommands>,
     },
 }
 
@@ -35,14 +35,15 @@ enum GameCommands {
     },
 }
 
-// #[derive(Subcommand)]
-// enum ProfileCommands {
-//     Add {
-//         /// Name of the profile to add
-//         name: String,
-//         game:
-//     },
-// }
+#[derive(Subcommand)]
+enum ProfileCommands {
+    Add {
+        /// Name of the profile to add
+        name: String,
+        // Name of the game the profile should be added to
+        game: String,
+    },
+}
 
 fn main() {
     // Setup logging
@@ -56,7 +57,6 @@ fn main() {
 
     let cli = Cli::parse();
     match &cli.command {
-        Some(Commands::Import { path }) => import::import_mod(path),
         Some(Commands::Game {
             command: Some(GameCommands::Add { name, game_dir }),
         }) => {
@@ -64,6 +64,13 @@ fn main() {
             config.games.push(game);
         }
         Some(Commands::Game { command: None }) => {}
+        Some(Commands::Profile {
+            command: Some(ProfileCommands::Add { name, game }),
+        }) => {
+            let game = config.games.iter_mut().find(|g| g.name() == game).unwrap();
+            game.create_profile(name.into());
+        }
+        Some(Commands::Profile { command: None }) => {}
         None => {}
     }
 

@@ -36,6 +36,14 @@ impl Game {
         self.profiles.push(Profile::new(name));
     }
 
+    pub fn add_mod(&mut self, r#mod: Mod) {
+        self.mods.push(r#mod);
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
     /// Return the path of the game specific profile directory
     pub fn dir(&self) -> PathBuf {
         data_dir().join("profiles").join(&self.name)

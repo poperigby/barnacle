@@ -29,10 +29,10 @@ pub struct Mod {
 impl Mod {
     /// Import a new mod from the given path
     pub fn new(name: String, path: &Path) -> Result<Self, ModError> {
-        let hash = blake3::hash(&fs::read(&path).map_err(ModError::ReadArchiveError)?);
+        let hash = blake3::hash(&fs::read(path).map_err(ModError::ReadArchiveError)?);
 
-        let archive = File::open(&path).map_err(ModError::OpenArchiveError)?;
-        let output_dir = data_dir().join("store").join(hash.to_string());
+        let archive = File::open(path).map_err(ModError::OpenArchiveError)?;
+        let output_dir = data_dir().join("store").join(format!("{}-{}", hash, name));
         uncompress_archive(archive, &output_dir, Ownership::Preserve)?;
 
         Ok(Self { name, hash })
