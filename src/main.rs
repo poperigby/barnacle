@@ -23,10 +23,16 @@ enum Commands {
         #[command(subcommand)]
         command: Option<ProfileCommands>,
     },
+    /// Manage mods
+    Mod {
+        #[command(subcommand)]
+        command: Option<ModCommands>,
+    },
 }
 
 #[derive(Subcommand)]
 enum GameCommands {
+    /// Add a new game
     Add {
         /// Name of the game to add
         name: String,
@@ -37,11 +43,25 @@ enum GameCommands {
 
 #[derive(Subcommand)]
 enum ProfileCommands {
+    /// Add a new profile
     Add {
         /// Name of the profile to add
         name: String,
-        // Name of the game the profile should be added to
+        // The game the profile should be added to
         game: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum ModCommands {
+    /// Add a new mod
+    Add {
+        /// The path to the mod archive to import
+        mod_path: PathBuf,
+        // The game the mod should be imported to
+        game: String,
+        /// Name of the mod to import. This can usually be inferred from the mod archive name.
+        name: Option<String>,
     },
 }
 
@@ -56,11 +76,11 @@ fn main() {
     let mut config = Config::load().unwrap();
 
     let cli = Cli::parse();
-    match &cli.command {
+    match cli.command {
         Some(Commands::Game {
             command: Some(GameCommands::Add { name, game_dir }),
         }) => {
-            let game = Game::new(name.into(), game_dir.into());
+            let game = Game::new(name, game_dir);
             config.games.push(game);
         }
         Some(Commands::Game { command: None }) => {}
@@ -68,9 +88,21 @@ fn main() {
             command: Some(ProfileCommands::Add { name, game }),
         }) => {
             let game = config.games.iter_mut().find(|g| g.name() == game).unwrap();
-            game.create_profile(name.into());
+            game.create_profile(name);
         }
         Some(Commands::Profile { command: None }) => {}
+        Some(Commands::Mod {
+            command:
+                Some(ModCommands::Add {
+                    mod_path,
+                    game,
+                    name,
+                }),
+        }) => {
+            let game = config.games.iter_mut().find(|g| g.name() == game).unwrap();
+            game.import_mod(mod_path, name);
+        }
+        Some(Commands::Mod { command: None }) => {}
         None => {}
     }
 

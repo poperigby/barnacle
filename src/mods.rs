@@ -1,12 +1,8 @@
-use blake3::Hash;
 use compress_tools::{Ownership, uncompress_archive};
 use serde::{Deserialize, Serialize};
-use std::{
-    fs::{self, File},
-    io,
-    path::Path,
-};
+use std::{fs::File, io, path::Path};
 use thiserror::Error;
+use uuid::Uuid;
 
 use crate::data_dir;
 
@@ -23,18 +19,22 @@ pub enum ModError {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Mod {
     name: String,
-    hash: Hash,
+    uuid: Uuid,
 }
 
 impl Mod {
     /// Import a new mod from the given path
     pub fn new(name: String, path: &Path) -> Result<Self, ModError> {
-        let hash = blake3::hash(&fs::read(path).map_err(ModError::ReadArchiveError)?);
-
         let archive = File::open(path).map_err(ModError::OpenArchiveError)?;
-        let output_dir = data_dir().join("store").join(format!("{}-{}", hash, name));
+        let uuid = Uuid::new_v4();
+        let output_dir = data_dir().join("mods").join(uuid.to_string());
         uncompress_archive(archive, &output_dir, Ownership::Preserve)?;
 
-        Ok(Self { name, hash })
+        Ok(Self { name, uuid })
+    }
+
+    /// Return the mod UUID
+    pub fn uuid(&self) -> Uuid {
+        self.uuid
     }
 }
