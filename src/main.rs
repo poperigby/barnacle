@@ -1,4 +1,4 @@
-use barnacle::{games::Game, state_file::Config};
+use barnacle::{games::Game, overlay::Overlay, state_file::Config};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use tracing::Level;
@@ -76,6 +76,11 @@ fn main() {
 
     // Load configuration file
     let mut config = Config::load().unwrap();
+
+    let game = config.games.first().unwrap();
+    let profile = game.profiles().first().unwrap();
+    let mut overlay = Overlay::new(game, profile);
+    overlay.mount();
 
     let cli = Cli::parse();
     match cli.command {

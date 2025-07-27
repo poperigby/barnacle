@@ -1,5 +1,4 @@
 use crate::{data_dir, mods::Mod, profiles::Profile};
-use damascus::FuseOverlayFs;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -9,7 +8,7 @@ use std::{
 use tracing::warn;
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Game {
     name: String,
     profiles: Vec<Profile>,
@@ -40,6 +39,14 @@ impl Game {
         &self.name
     }
 
+    pub fn profiles(&self) -> &[Profile] {
+        &self.profiles
+    }
+
+    pub fn mods(&self) -> &HashMap<Uuid, Mod> {
+        &self.mods
+    }
+
     pub fn game_dir(&self) -> &Path {
         &self.game_dir
     }
@@ -53,6 +60,7 @@ impl Game {
         let dir = self.dir().join(name);
         create_dir_all(&dir).unwrap();
 
+        // Create overlay specific directories
         let overlay_dir = dir.join("overlay");
         create_dir_all(overlay_dir.join("work")).unwrap();
         create_dir_all(overlay_dir.join("upper")).unwrap();
@@ -63,22 +71,5 @@ impl Game {
     pub fn import_mod(&mut self, mod_path: &Path, name: Option<&str>) {
         let new_mod = Mod::new(mod_path, name).unwrap();
         self.mods.insert(new_mod.uuid(), new_mod);
-    }
-
-    pub fn deploy_profile(&self, profile: &Profile) {
-        let overlay_dir = self.dir().join(profile.name()).join("overlay");
-
-        let work_dir = overlay_dir.join("work");
-        let upper_dir = overlay_dir.join("upper");
-        let lower_dirs = vec![self.game_dir()].into_iter();
-
-        FuseOverlayFs::new(
-            lower_dirs,
-            Some(upper_dir),
-            Some(work_dir),
-            &self.game_dir,
-            false,
-        )
-        .unwrap();
     }
 }

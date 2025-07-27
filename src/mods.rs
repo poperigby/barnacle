@@ -1,6 +1,10 @@
 use compress_tools::{Ownership, uncompress_archive};
 use serde::{Deserialize, Serialize};
-use std::{fs::File, io, path::Path};
+use std::{
+    fs::File,
+    io,
+    path::{Path, PathBuf},
+};
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -16,7 +20,7 @@ pub enum ModError {
     UncompressArchive(compress_tools::Error),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Mod {
     /// A unique identifier to refer to the mod by
     uuid: Uuid,
@@ -46,5 +50,9 @@ impl Mod {
     /// Return the mod UUID
     pub fn uuid(&self) -> Uuid {
         self.uuid
+    }
+
+    pub fn dir(&self) -> PathBuf {
+        data_dir().join("mods").join(&self.uuid.to_string())
     }
 }
