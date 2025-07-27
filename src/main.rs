@@ -2,7 +2,7 @@ use barnacle::{games::Game, state::Config};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use tracing::Level;
-use tracing_subscriber::FmtSubscriber;
+use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 #[derive(Parser)]
 #[command(version, about)]
@@ -67,8 +67,10 @@ enum ModCommands {
 
 fn main() {
     // Setup logging
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     let subscriber = FmtSubscriber::builder()
         .with_max_level(Level::TRACE)
+        .with_env_filter(filter)
         .finish();
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
