@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
-pub mod config;
 pub mod games;
 pub mod mods;
 pub mod overlay;
 pub mod profiles;
+pub mod state;
 
 pub fn config_dir() -> PathBuf {
     xdg::BaseDirectories::with_prefix("barnacle")

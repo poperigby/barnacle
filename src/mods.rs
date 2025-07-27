@@ -18,8 +18,10 @@ pub enum ModError {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Mod {
-    name: String,
+    /// A unique identifier to refer to the mod by
     uuid: Uuid,
+    /// A pretty name to display in the UI
+    name: String,
 }
 
 impl Mod {
