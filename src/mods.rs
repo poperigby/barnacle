@@ -4,7 +4,7 @@ use std::{fs::File, io, path::Path};
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::data_dir;
+use crate::{Result, data_dir};
 
 #[derive(Error, Debug)]
 pub enum ModError {
@@ -13,7 +13,7 @@ pub enum ModError {
     #[error("Failed to open mod archive: {0}")]
     OpenArchiveError(io::Error),
     #[error("Failed to uncompress mod archive: {0}")]
-    UncompressArchiveError(#[from] compress_tools::Error),
+    UncompressArchiveError(compress_tools::Error),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -26,11 +26,12 @@ pub struct Mod {
 
 impl Mod {
     /// Import a new mod from the given path
-    pub fn new(name: &str, path: &Path) -> Result<Self, ModError> {
+    pub fn new(name: &str, path: &Path) -> Result<Self> {
         let archive = File::open(path).map_err(ModError::OpenArchiveError)?;
         let uuid = Uuid::new_v4();
         let output_dir = data_dir().join("mods").join(uuid.to_string());
-        uncompress_archive(archive, &output_dir, Ownership::Preserve)?;
+        uncompress_archive(archive, &output_dir, Ownership::Preserve)
+            .map_err(ModError::UncompressArchiveError)?;
 
         Ok(Self {
             name: name.to_string(),

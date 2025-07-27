@@ -1,4 +1,4 @@
-use barnacle::{games::Game, state::Config};
+use barnacle::{games::Game, state_file::Config};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use tracing::Level;
