@@ -11,13 +11,13 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum StateFileError {
     #[error("Failed to read state file: {0}")]
-    ReadError(io::Error),
+    Read(io::Error),
     #[error("Failed to write to state file: {0}")]
-    WriteError(io::Error),
+    Write(io::Error),
     #[error("Failed to deserialize state file: {0}")]
-    DeserializeError(ron::de::SpannedError),
+    Deserialize(ron::de::SpannedError),
     #[error("Failed to serialize state file: {0}")]
-    SerializeError(ron::Error),
+    Serialize(ron::Error),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -29,8 +29,8 @@ impl Config {
     pub fn load() -> Result<Self> {
         let path = config_dir().join("state.ron");
         if path.exists() {
-            let file = File::open(path).map_err(StateFileError::ReadError)?;
-            Ok(ron::de::from_reader(file).map_err(StateFileError::DeserializeError)?)
+            let file = File::open(path).map_err(StateFileError::Read)?;
+            Ok(ron::de::from_reader(file).map_err(StateFileError::Deserialize)?)
         } else {
             create_dir_all(config_dir()).unwrap();
             Ok(Config { games: Vec::new() })
@@ -39,12 +39,12 @@ impl Config {
 
     pub fn save(&self) -> Result<()> {
         let mut file =
-            File::create(config_dir().join("state.ron")).map_err(StateFileError::WriteError)?;
+            File::create(config_dir().join("state.ron")).map_err(StateFileError::Write)?;
 
         let s = ron::ser::to_string_pretty(&self, PrettyConfig::default())
-            .map_err(StateFileError::SerializeError)?;
+            .map_err(StateFileError::Serialize)?;
 
-        write!(file, "{}", s).map_err(StateFileError::WriteError)?;
+        write!(file, "{}", s).map_err(StateFileError::Write)?;
 
         Ok(())
     }

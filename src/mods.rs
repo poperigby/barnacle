@@ -9,11 +9,11 @@ use crate::{Result, data_dir};
 #[derive(Error, Debug)]
 pub enum ModError {
     #[error("Failed to read mod archive: {0}")]
-    ReadArchiveError(io::Error),
+    ReadArchive(io::Error),
     #[error("Failed to open mod archive: {0}")]
-    OpenArchiveError(io::Error),
+    OpenArchive(io::Error),
     #[error("Failed to uncompress mod archive: {0}")]
-    UncompressArchiveError(compress_tools::Error),
+    UncompressArchive(compress_tools::Error),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -27,11 +27,11 @@ pub struct Mod {
 impl Mod {
     /// Import a new mod from the given path
     pub fn new(name: &str, path: &Path) -> Result<Self> {
-        let archive = File::open(path).map_err(ModError::OpenArchiveError)?;
+        let archive = File::open(path).map_err(ModError::OpenArchive)?;
         let uuid = Uuid::new_v4();
         let output_dir = data_dir().join("mods").join(uuid.to_string());
         uncompress_archive(archive, &output_dir, Ownership::Preserve)
-            .map_err(ModError::UncompressArchiveError)?;
+            .map_err(ModError::UncompressArchive)?;
 
         Ok(Self {
             name: name.to_string(),
