@@ -80,7 +80,7 @@ fn main() {
         Some(Commands::Game {
             command: Some(GameCommands::Add { name, game_dir }),
         }) => {
-            let game = Game::new(name, game_dir);
+            let game = Game::new(&name, &game_dir);
             config.games.push(game);
         }
         Some(Commands::Game { command: None }) => {}
@@ -88,7 +88,7 @@ fn main() {
             command: Some(ProfileCommands::Add { name, game }),
         }) => {
             let game = config.games.iter_mut().find(|g| g.name() == game).unwrap();
-            game.create_profile(name);
+            game.create_profile(&name);
         }
         Some(Commands::Profile { command: None }) => {}
         Some(Commands::Mod {
@@ -100,7 +100,7 @@ fn main() {
                 }),
         }) => {
             let game = config.games.iter_mut().find(|g| g.name() == game).unwrap();
-            game.import_mod(mod_path, name);
+            game.import_mod(&mod_path, name.as_deref());
         }
         Some(Commands::Mod { command: None }) => {}
         None => {}

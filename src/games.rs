@@ -1,6 +1,10 @@
 use crate::{data_dir, mods::Mod, profiles::Profile};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs::create_dir_all, path::PathBuf};
+use std::{
+    collections::HashMap,
+    fs::create_dir_all,
+    path::{Path, PathBuf},
+};
 use tracing::warn;
 use uuid::Uuid;
 
@@ -13,40 +17,39 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(name: String, game_dir: PathBuf) -> Self {
-        create_dir_all(data_dir().join("profiles").join(&name)).unwrap();
+    pub fn new(name: &str, game_dir: &Path) -> Self {
+        create_dir_all(data_dir().join("profiles").join(name)).unwrap();
 
         if !game_dir.exists() {
             warn!(
-                "The game directory \"{}\" does not exist",
+                "The game directory '{}' does not exist",
                 game_dir.to_str().unwrap()
             );
         };
 
         Self {
-            name,
+            name: name.to_string(),
             profiles: Vec::new(),
             mods: HashMap::new(),
-            game_dir,
+            game_dir: game_dir.to_path_buf(),
         }
     }
 
-    pub fn create_profile(&mut self, name: String) {
-        create_dir_all(self.dir().join(&name)).unwrap();
-
-        self.profiles.push(Profile::new(name));
+    pub fn create_profile(&mut self, name: &str) {
+        self.profiles
+            .push(Profile::new(name, &self.dir().join(name)));
     }
 
-    pub fn import_mod(&mut self, mod_path: PathBuf, name: Option<String>) {
+    pub fn import_mod(&mut self, mod_path: &Path, name: Option<&str>) {
         match name {
             Some(n) => {
-                let new_mod = Mod::new(n, &mod_path).unwrap();
+                let new_mod = Mod::new(n, mod_path).unwrap();
                 self.mods.insert(new_mod.uuid(), new_mod);
             }
             None => {
                 // Infer name from mod_path
                 let n = mod_path.file_stem().unwrap().to_str().unwrap().to_string();
-                let new_mod = Mod::new(n, &mod_path).unwrap();
+                let new_mod = Mod::new(&n, mod_path).unwrap();
                 self.mods.insert(new_mod.uuid(), new_mod);
             }
         }

@@ -26,13 +26,16 @@ pub struct Mod {
 
 impl Mod {
     /// Import a new mod from the given path
-    pub fn new(name: String, path: &Path) -> Result<Self, ModError> {
+    pub fn new(name: &str, path: &Path) -> Result<Self, ModError> {
         let archive = File::open(path).map_err(ModError::OpenArchiveError)?;
         let uuid = Uuid::new_v4();
         let output_dir = data_dir().join("mods").join(uuid.to_string());
         uncompress_archive(archive, &output_dir, Ownership::Preserve)?;
 
-        Ok(Self { name, uuid })
+        Ok(Self {
+            name: name.to_string(),
+            uuid,
+        })
     }
 
     /// Return the mod UUID
