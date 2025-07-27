@@ -1,5 +1,3 @@
-use std::{fs::create_dir_all, path::Path};
-
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -11,12 +9,14 @@ pub struct Profile {
 }
 
 impl Profile {
-    pub fn new(name: &str, dir: &Path) -> Self {
-        create_dir_all(dir).unwrap();
-
+    pub fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
             mods: Vec::new(),
         }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 }
