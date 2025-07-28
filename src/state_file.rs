@@ -23,11 +23,11 @@ pub enum StateFileError {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Config {
+pub struct State {
     pub games: Vec<Game>,
 }
 
-impl Config {
+impl State {
     pub fn load() -> Result<Self> {
         let path = data_dir().join("state.ron");
         if path.exists() {
@@ -35,7 +35,7 @@ impl Config {
             Ok(ron::de::from_reader(file).map_err(StateFileError::Deserialize)?)
         } else {
             create_dir_all(data_dir()).map_err(StateFileError::CreateDataDir)?;
-            Ok(Config { games: Vec::new() })
+            Ok(State { games: Vec::new() })
         }
     }
 

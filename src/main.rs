@@ -1,4 +1,4 @@
-use barnacle::{games::Game, overlay::Overlay, state_file::Config};
+use barnacle::{games::Game, overlay::Overlay, state_file::State};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use tracing::Level;
@@ -75,10 +75,10 @@ fn main() {
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
     // Load configuration file
-    let mut config = Config::load().unwrap();
+    let mut state = State::load().unwrap();
 
     // Load overlay
-    let game = config.games.first().unwrap();
+    let game = state.games.first().unwrap();
     let profile = game.profiles().first().unwrap();
     let mut overlay = Overlay::new(game, profile);
     overlay.mount();
@@ -89,13 +89,13 @@ fn main() {
             command: Some(GameCommands::Add { name, game_dir }),
         }) => {
             let game = Game::new(&name, &game_dir);
-            config.games.push(game);
+            state.games.push(game);
         }
         Some(Commands::Game { command: None }) => {}
         Some(Commands::Profile {
             command: Some(ProfileCommands::Add { name, game }),
         }) => {
-            let game = config.games.iter_mut().find(|g| g.name() == game).unwrap();
+            let game = state.games.iter_mut().find(|g| g.name() == game).unwrap();
             game.create_profile(&name);
         }
         Some(Commands::Profile { command: None }) => {}
@@ -107,12 +107,12 @@ fn main() {
                     name,
                 }),
         }) => {
-            let game = config.games.iter_mut().find(|g| g.name() == game).unwrap();
+            let game = state.games.iter_mut().find(|g| g.name() == game).unwrap();
             game.import_mod(&mod_path, name.as_deref());
         }
         Some(Commands::Mod { command: None }) => {}
         None => {}
     }
 
-    config.save().unwrap();
+    state.save().unwrap();
 }
