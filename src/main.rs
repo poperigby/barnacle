@@ -77,6 +77,7 @@ fn main() {
     // Load configuration file
     let mut config = Config::load().unwrap();
 
+    // Load overlay
     let game = config.games.first().unwrap();
     let profile = game.profiles().first().unwrap();
     let mut overlay = Overlay::new(game, profile);
