@@ -34,6 +34,14 @@
               rustfmt
             ];
             RUST_SRC_PATH = rustPlatform.rustLibSrc;
+            LD_LIBRARY_PATH =
+              with pkgs;
+              lib.makeLibraryPath [
+                fontconfig
+                libGL
+                libxkbcommon
+                wayland
+              ];
           };
       }
     );

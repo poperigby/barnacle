@@ -8,6 +8,8 @@ use std::path::PathBuf;
 use tracing::Level;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
+slint::include_modules!();
+
 #[derive(Parser)]
 #[command(version, about)]
 struct Cli {
@@ -32,6 +34,7 @@ enum Commands {
         #[command(subcommand)]
         command: Option<ModCommands>,
     },
+    Gui,
 }
 
 #[derive(Subcommand)]
@@ -82,10 +85,10 @@ fn main() {
     let mut state = State::load().unwrap();
 
     // Load overlay
-    let game = state.games.first().unwrap();
-    let profile = game.profiles().first().unwrap();
-    let mut overlay = Overlay::new(game, profile);
-    overlay.mount();
+    // let game = state.games.first().unwrap();
+    // let profile = game.profiles().first().unwrap();
+    // let mut overlay = Overlay::new(game, profile);
+    // overlay.mount();
 
     let cli = Cli::parse();
     match cli.command {
@@ -115,6 +118,10 @@ fn main() {
             game.import_mod(&mod_path, name.as_deref());
         }
         Some(Commands::Mod { command: None }) => {}
+        Some(Commands::Gui) => {
+            let main_window = MainWindow::new().unwrap();
+            main_window.run().unwrap();
+        }
         None => {}
     }
 

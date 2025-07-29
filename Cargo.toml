@@ -19,3 +19,6 @@ tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 uuid = { version = "1.17.0", features = ["serde", "v4"] }
 xdg = "3.0.0"
 zip = "4.3.0"
+
+[build-dependencies]
+slint-build = "1.12.1"
