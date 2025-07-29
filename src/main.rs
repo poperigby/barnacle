@@ -1,4 +1,8 @@
-use barnacle::{games::Game, overlay::Overlay, state_file::State};
+use barnacle::{
+    games::{Game, GameType},
+    overlay::Overlay,
+    state_file::State,
+};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use tracing::Level;
@@ -88,7 +92,7 @@ fn main() {
         Some(Commands::Game {
             command: Some(GameCommands::Add { name, game_dir }),
         }) => {
-            let game = Game::new(&name, &game_dir);
+            let game = Game::new(&name, GameType::Generic, &game_dir);
             state.games.push(game);
         }
         Some(Commands::Game { command: None }) => {}

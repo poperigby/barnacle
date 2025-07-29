@@ -9,15 +9,29 @@ use tracing::warn;
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum GameType {
+    /// Deploys directly to the game directory with OverlayFS.
+    Generic,
+    /// Same as the generic type, but with support for Gamebryo/Creation Engine `plugins.txt`.
+    Bethesda,
+    /// Deploys mods to an intermediary staging directory with OverlayFS, preventing the mod store
+    /// from needing to be modified. The individual mod directories are then added to `openmw.cfg`.
+    /// Plugins are also handled.
+    OpenMW,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Game {
     name: String,
+    /// The deployment logic will change based on which game type is chosen.
+    game_type: GameType,
     profiles: Vec<Profile>,
     mods: HashMap<Uuid, Mod>,
     game_dir: PathBuf,
 }
 
 impl Game {
-    pub fn new(name: &str, game_dir: &Path) -> Self {
+    pub fn new(name: &str, game_type: GameType, game_dir: &Path) -> Self {
         create_dir_all(data_dir().join("profiles").join(name)).unwrap();
 
         if !game_dir.exists() {
@@ -29,6 +43,7 @@ impl Game {
 
         Self {
             name: name.to_string(),
+            game_type,
             profiles: Vec::new(),
             mods: HashMap::new(),
             game_dir: game_dir.to_path_buf(),
