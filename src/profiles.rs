@@ -29,4 +29,12 @@ impl Profile {
     pub fn add_mod(&mut self, new_mod: Mod) {
         self.mod_ids.push(new_mod.uuid());
     }
+
+    // pub fn get_enabled_mods(&self) {
+    //     let enabled_mods: Vec<_> = &self
+    //         .mod_ids()
+    //         .iter()
+    //         .filter_map(|id| game.mods().get(id))
+    //         .collect()
+    // }
 }

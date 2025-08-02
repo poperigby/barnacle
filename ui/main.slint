@@ -1,6 +1,26 @@
+import { StandardTableView } from "std-widgets.slint";
+
 export component MainWindow inherits Window {
-    Text {
-        text: "hello world";
-        color: green;
+    HorizontalLayout {
+        StandardTableView {
+            columns: [
+                { title: "Header 1" },
+                { title: "Header 2" },
+            ];
+            rows: [
+                [
+                    { text: "Item 1" },
+                    { text: "Item 2" },
+                ],
+                [
+                    { text: "Item 1" },
+                    { text: "Item 2" },
+                ],
+                [
+                    { text: "Item 1" },
+                    { text: "Item 2" },
+                ]
+            ];
+        }
     }
 }

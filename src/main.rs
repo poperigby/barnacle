@@ -8,6 +8,8 @@ use std::path::PathBuf;
 use tracing::Level;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
+mod gui;
+
 slint::include_modules!();
 
 #[derive(Parser)]

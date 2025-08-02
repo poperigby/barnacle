@@ -25,6 +25,7 @@
           mkShell {
             buildInputs = [
               cargo
+              cargo-info
               fuse-overlayfs
               libarchive
               openssl

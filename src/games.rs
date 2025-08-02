@@ -13,7 +13,8 @@ pub enum GameType {
     /// Deploys directly to the game directory with OverlayFS.
     Generic,
     /// Same as the generic type, but with support for Gamebryo/Creation Engine `plugins.txt`.
-    Bethesda,
+    Gamebryo,
+    CreationEngine,
     /// Deploys mods to an intermediary staging directory with OverlayFS, preventing the mod store
     /// from needing to be modified. The individual mod directories are then added to `openmw.cfg`.
     /// Plugins are also handled.
