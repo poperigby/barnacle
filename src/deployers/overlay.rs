@@ -1,4 +1,4 @@
-use std::fs::create_dir_all;
+use std::{fs::create_dir_all, iter::once, path::Path};
 
 use damascus::{Filesystem, FuseOverlayFs};
 
@@ -22,11 +22,12 @@ impl Deploy for OverlayDeployer {
         let upper_dir = overlay_dir.join("upper");
 
         let resolved_mod_entries = profile.resolve_mod_entries(game);
-        let mut lower_dirs = vec![game.game_dir().to_path_buf()];
-        lower_dirs.extend(resolved_mod_entries.iter().map(|m| m.mod_ref().dir()));
+        let lower_dirs: Vec<&Path> = once(game.game_dir())
+            .chain(resolved_mod_entries.iter().map(|m| m.mod_ref().dir()))
+            .collect();
 
         let overlay = FuseOverlayFs::new(
-            lower_dirs.iter().map(|p| p.as_path()),
+            lower_dirs.into_iter(),
             Some(upper_dir),
             Some(work_dir),
             game.game_dir(),

@@ -24,6 +24,8 @@ pub enum ModError {
 pub struct Mod {
     /// A unique identifier to refer to the mod by
     uuid: Uuid,
+    /// The path to the mod
+    path: PathBuf,
     /// A pretty name to display in the UI
     name: String,
 }
@@ -44,7 +46,8 @@ impl Mod {
         uncompress_archive(archive, &output_dir, Ownership::Preserve)
             .map_err(ModError::UncompressArchive)?;
 
-        Ok(Self { name, uuid })
+        let path = data_dir().join("mods").join(uuid.to_string());
+        Ok(Self { name, path, uuid })
     }
 
     /// Return the mod UUID
@@ -52,7 +55,7 @@ impl Mod {
         self.uuid
     }
 
-    pub fn dir(&self) -> PathBuf {
-        data_dir().join("mods").join(self.uuid.to_string())
+    pub fn dir(&self) -> &Path {
+        &self.path
     }
 }
