@@ -53,6 +53,6 @@ impl Mod {
     }
 
     pub fn dir(&self) -> PathBuf {
-        data_dir().join("mods").join(&self.uuid.to_string())
+        data_dir().join("mods").join(self.uuid.to_string())
     }
 }

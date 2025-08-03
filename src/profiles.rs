@@ -1,20 +1,41 @@
 use serde::{Deserialize, Serialize};
+use tracing::warn;
 use uuid::Uuid;
 
-use crate::mods::Mod;
+use crate::{games::Game, mods::Mod};
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ModEntry {
+    uuid: Uuid,
+    enabled: bool,
+}
+
+impl ModEntry {
+    pub fn new(uuid: Uuid) -> Self {
+        Self {
+            uuid,
+            enabled: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ResolvedModEntry<'a> {
+    entry: &'a ModEntry,
+    mod_data: &'a Mod,
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Profile {
     name: String,
-    /// An ordered list of mod UUIDs to quickly refer to them
-    mod_ids: Vec<Uuid>,
+    mod_entries: Vec<ModEntry>,
 }
 
 impl Profile {
     pub fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
-            mod_ids: Vec::new(),
+            mod_entries: Vec::new(),
         }
     }
 
@@ -22,19 +43,20 @@ impl Profile {
         &self.name
     }
 
-    pub fn mod_ids(&self) -> &[Uuid] {
-        &self.mod_ids
-    }
-
     pub fn add_mod(&mut self, new_mod: Mod) {
-        self.mod_ids.push(new_mod.uuid());
+        self.mod_entries.push(ModEntry::new(new_mod.uuid()));
     }
 
-    // pub fn get_enabled_mods(&self) {
-    //     let enabled_mods: Vec<_> = &self
-    //         .mod_ids()
-    //         .iter()
-    //         .filter_map(|id| game.mods().get(id))
-    //         .collect()
-    // }
+    pub fn resolve_mods<'a>(&'a self, game: &'a Game) -> Vec<ResolvedModEntry<'a>> {
+        self.mod_entries
+            .iter()
+            .filter_map(|entry| match game.mods().get(&entry.uuid) {
+                Some(mod_data) => Some(ResolvedModEntry { entry, mod_data }),
+                None => {
+                    warn!("Mod with UUID {} not found", entry.uuid);
+                    None
+                }
+            })
+            .collect()
+    }
 }
