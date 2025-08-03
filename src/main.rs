@@ -1,9 +1,10 @@
+use std::path::PathBuf;
+
 use barnacle::{
     games::{DeployType, Game},
     state_file::State,
 };
 use clap::{Parser, Subcommand};
-use std::path::PathBuf;
 use tracing::Level;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
@@ -81,6 +82,8 @@ fn main() {
         .with_env_filter(filter)
         .finish();
     tracing::subscriber::set_global_default(subscriber).unwrap();
+
+    human_panic::setup_panic!();
 
     // Load configuration file
     let mut state = State::load().unwrap();

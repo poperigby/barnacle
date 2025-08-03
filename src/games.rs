@@ -1,12 +1,14 @@
-use crate::{data_dir, mods::Mod, profiles::Profile};
-use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     fs::create_dir_all,
     path::{Path, PathBuf},
 };
+
+use serde::{Deserialize, Serialize};
 use tracing::warn;
 use uuid::Uuid;
+
+use crate::{data_dir, mods::Mod, profiles::Profile};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum DeployType {
