@@ -55,7 +55,7 @@ impl Profile {
         self.mod_entries.push(ModEntry::new(new_mod.uuid()));
     }
 
-    pub fn resolve_mods(&self, game: &Game) -> Vec<ResolvedModEntry> {
+    pub fn resolve_mod_entries(&self, game: &Game) -> Vec<ResolvedModEntry> {
         self.mod_entries
             .iter()
             .filter_map(|entry| match game.mods().get(&entry.uuid) {

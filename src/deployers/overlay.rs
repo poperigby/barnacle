@@ -1,15 +1,8 @@
-use std::{fs::create_dir_all, path::Path};
+use std::fs::create_dir_all;
 
 use damascus::{Filesystem, FuseOverlayFs};
 
 use crate::{deployers::Deploy, games::Game, profiles::Profile};
-
-/// Create overlay specific directories
-fn init_overlay_dirs(profile_dir: &Path) {
-    let overlay_dir = profile_dir.join("overlay");
-    create_dir_all(overlay_dir.join("work")).unwrap();
-    create_dir_all(overlay_dir.join("upper")).unwrap();
-}
 
 #[derive(Debug)]
 pub struct OverlayDeployer {
@@ -17,21 +10,20 @@ pub struct OverlayDeployer {
 }
 
 impl Deploy for OverlayDeployer {
-    type T = Self;
-
-    fn init(game: &Game, profile: &Profile) -> Self {
+    fn setup(game: &Game, profile: &Profile) -> Self {
         let profile_dir = game.dir().join(profile.name());
-        init_overlay_dirs(&profile_dir);
 
+        // Initialize overlay directories if missing
         let overlay_dir = profile_dir.join("overlay");
+        create_dir_all(overlay_dir.join("work")).unwrap();
+        create_dir_all(overlay_dir.join("upper")).unwrap();
 
         let work_dir = overlay_dir.join("work");
         let upper_dir = overlay_dir.join("upper");
 
-        let enabled_mods = profile.resolve_mods(game);
-
+        let resolved_mod_entries = profile.resolve_mod_entries(game);
         let mut lower_dirs = vec![game.game_dir().to_path_buf()];
-        lower_dirs.extend(enabled_mods.iter().map(|m| m.mod_ref().dir()));
+        lower_dirs.extend(resolved_mod_entries.iter().map(|m| m.mod_ref().dir()));
 
         let overlay = FuseOverlayFs::new(
             lower_dirs.iter().map(|p| p.as_path()),
