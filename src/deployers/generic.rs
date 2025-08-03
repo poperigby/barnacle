@@ -10,7 +10,7 @@ pub struct GenericDeployer {
 impl Deploy for GenericDeployer {
     type T = Self;
 
-    fn setup(game: &Game, profile: &Profile) -> Self {
+    fn init(game: &Game, profile: &Profile) -> Self {
         let overlay_dir = game.dir().join(profile.name()).join("overlay");
 
         let work_dir = overlay_dir.join("work");
