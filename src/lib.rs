@@ -4,9 +4,9 @@ use thiserror::Error;
 
 use crate::{mods::ModError, state_file::StateFileError};
 
+pub mod deployers;
 pub mod games;
 pub mod mods;
-pub mod overlay;
 pub mod profiles;
 pub mod state_file;
 

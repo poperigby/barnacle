@@ -1,6 +1,5 @@
 use barnacle::{
     games::{Game, GameType},
-    overlay::Overlay,
     state_file::State,
 };
 use clap::{Parser, Subcommand};

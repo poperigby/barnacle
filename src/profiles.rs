@@ -29,6 +29,12 @@ pub struct ResolvedModEntry {
     entry: ModEntry,
 }
 
+impl ResolvedModEntry {
+    pub fn mod_ref(&self) -> &Mod {
+        &self.mod_ref
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Profile {
     name: String,
