@@ -11,7 +11,7 @@ use uuid::Uuid;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum GameType {
     /// Deploys directly to the game directory with OverlayFS.
-    Generic,
+    Overlay,
     /// Same as the generic type, but with support for Gamebryo/Creation Engine `plugins.txt`.
     Gamebryo,
     CreationEngine,
@@ -76,10 +76,7 @@ impl Game {
         let dir = self.dir().join(name);
         create_dir_all(&dir).unwrap();
 
-        // Create overlay specific directories
-        let overlay_dir = dir.join("overlay");
-        create_dir_all(overlay_dir.join("work")).unwrap();
-        create_dir_all(overlay_dir.join("upper")).unwrap();
+        // TODO: Initialize deployer
 
         self.profiles.push(Profile::new(name));
     }

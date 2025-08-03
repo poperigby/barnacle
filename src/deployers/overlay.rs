@@ -1,17 +1,29 @@
+use std::{fs::create_dir_all, path::Path};
+
 use damascus::{Filesystem, FuseOverlayFs};
 
 use crate::{deployers::Deploy, games::Game, profiles::Profile};
 
+/// Create overlay specific directories
+fn init_overlay_dirs(profile_dir: &Path) {
+    let overlay_dir = profile_dir.join("overlay");
+    create_dir_all(overlay_dir.join("work")).unwrap();
+    create_dir_all(overlay_dir.join("upper")).unwrap();
+}
+
 #[derive(Debug)]
-pub struct GenericDeployer {
+pub struct OverlayDeployer {
     overlay: FuseOverlayFs,
 }
 
-impl Deploy for GenericDeployer {
+impl Deploy for OverlayDeployer {
     type T = Self;
 
     fn init(game: &Game, profile: &Profile) -> Self {
-        let overlay_dir = game.dir().join(profile.name()).join("overlay");
+        let profile_dir = game.dir().join(profile.name());
+        init_overlay_dirs(&profile_dir);
+
+        let overlay_dir = profile_dir.join("overlay");
 
         let work_dir = overlay_dir.join("work");
         let upper_dir = overlay_dir.join("upper");
