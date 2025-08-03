@@ -1,5 +1,5 @@
 use barnacle::{
-    games::{Game, GameType},
+    games::{DeployType, Game},
     state_file::State,
 };
 use clap::{Parser, Subcommand};
@@ -96,7 +96,7 @@ fn main() {
         Some(Commands::Game {
             command: Some(GameCommands::Add { name, game_dir }),
         }) => {
-            let game = Game::new(&name, GameType::Overlay, &game_dir);
+            let game = Game::setup(&name, DeployType::Overlay, &game_dir);
             state.games.push(game);
         }
         Some(Commands::Game { command: None }) => {}
