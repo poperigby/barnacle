@@ -50,12 +50,15 @@ impl Mod {
         Ok(Self { name, path, uuid })
     }
 
-    /// Return the mod UUID
     pub fn uuid(&self) -> Uuid {
         self.uuid
     }
 
-    pub fn dir(&self) -> &Path {
+    pub fn path(&self) -> &Path {
         &self.path
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 }

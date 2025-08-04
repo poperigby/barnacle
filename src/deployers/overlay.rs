@@ -23,7 +23,7 @@ impl Deploy for OverlayDeployer {
 
         let resolved_mod_entries = profile.resolve_mod_entries(game);
         let lower_dirs: Vec<&Path> = once(game.game_dir())
-            .chain(resolved_mod_entries.iter().map(|m| m.mod_ref().dir()))
+            .chain(resolved_mod_entries.iter().map(|m| m.mod_ref().path()))
             .collect();
 
         let overlay = FuseOverlayFs::new(

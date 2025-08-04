@@ -8,9 +8,9 @@ use clap::{Parser, Subcommand};
 use tracing::Level;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
-mod gui;
+use crate::gui::start_gui;
 
-slint::include_modules!();
+mod gui;
 
 #[derive(Parser)]
 #[command(version, about)]
@@ -123,8 +123,7 @@ fn main() {
         }
         Some(Commands::Mod { command: None }) => {}
         Some(Commands::Gui) => {
-            let main_window = MainWindow::new().unwrap();
-            main_window.run().unwrap();
+            start_gui();
         }
         None => {}
     }

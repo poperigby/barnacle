@@ -1,10 +1,12 @@
+use getset::Getters;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 use uuid::Uuid;
 
 use crate::{games::Game, mods::Mod};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Getters)]
+#[getset(get = "pub")]
 pub struct ModEntry {
     uuid: Uuid,
     enabled: bool,
@@ -21,19 +23,15 @@ impl ModEntry {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Getters)]
+#[getset(get = "pub")]
 pub struct ResolvedModEntry {
     mod_ref: Mod,
     entry: ModEntry,
 }
 
-impl ResolvedModEntry {
-    pub fn mod_ref(&self) -> &Mod {
-        &self.mod_ref
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Getters)]
+#[getset(get = "pub")]
 pub struct Profile {
     name: String,
     mod_entries: Vec<ModEntry>,
@@ -45,10 +43,6 @@ impl Profile {
             name: name.to_string(),
             mod_entries: Vec::new(),
         }
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
     }
 
     pub fn add_mod(&mut self, new_mod: Mod) {

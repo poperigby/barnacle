@@ -1,26 +1,13 @@
 import { StandardTableView } from "std-widgets.slint";
 
 export component ModTableView {
-    // in property <[ResolvedModEntry]> model;
+    in property <[[StandardListViewItem]]> model;
 
     StandardTableView {
         columns: [
-            { title: "Header 1" },
-            { title: "Header 2" },
+            { title: "Name" },
+            { title: "Status" },
         ];
-        rows: [
-            [
-                { text: "Item 1" },
-                { text: "Item 2" },
-            ],
-            [
-                { text: "Item 1" },
-                { text: "Item 2" },
-            ],
-            [
-                { text: "Item 1" },
-                { text: "Item 2" },
-            ]
-        ];
+        rows: root.model;
     }
 }
