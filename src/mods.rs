@@ -1,12 +1,14 @@
 use compress_tools::{Ownership, uncompress_archive};
 use serde::{Deserialize, Serialize};
 use std::{
-    fs::File,
+    fs::{File, Permissions, set_permissions},
     io,
+    os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
 };
 use thiserror::Error;
 use uuid::Uuid;
+use walkdir::WalkDir;
 
 use crate::{Result, data_dir};
 
@@ -45,6 +47,18 @@ impl Mod {
         let output_dir = data_dir().join("mods").join(uuid.to_string());
         uncompress_archive(archive, &output_dir, Ownership::Preserve)
             .map_err(ModError::UncompressArchive)?;
+
+        // Make mod read-only on disk
+        for entry in WalkDir::new(output_dir) {
+            let entry = entry.unwrap();
+            let mode = if entry.metadata().unwrap().is_dir() {
+                0o550
+            } else {
+                0o440
+            };
+
+            set_permissions(entry.path(), Permissions::from_mode(mode)).unwrap();
+        }
 
         let path = data_dir().join("mods").join(uuid.to_string());
         Ok(Self { name, path, uuid })
