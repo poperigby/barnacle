@@ -123,7 +123,7 @@ fn main() {
         }
         Some(Commands::Mod { command: None }) => {}
         Some(Commands::Gui) => {
-            start_gui();
+            start_gui(&state);
         }
         None => {}
     }
