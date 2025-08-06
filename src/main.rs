@@ -88,12 +88,6 @@ fn main() {
     // Load configuration file
     let mut state = State::load().unwrap();
 
-    // Load overlay
-    // let game = state.games.first().unwrap();
-    // let profile = game.profiles().first().unwrap();
-    // let mut overlay = Overlay::new(game, profile);
-    // overlay.mount();
-
     let cli = Cli::parse();
     match cli.command {
         Some(Commands::Game {

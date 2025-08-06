@@ -1,5 +1,5 @@
 use barnacle::{profiles::ResolvedModEntry, state_file::State};
-use slint::{ModelRc, StandardListViewItem, VecModel};
+use slint::{ModelRc, StandardListViewItem};
 
 slint::include_modules!();
 
@@ -8,14 +8,15 @@ type TableModel = ModelRc<TableRow>;
 
 pub fn start_gui(state: &State) {
     let app = App::new().unwrap();
-    app.run().unwrap();
 
-    // let game = &state.games[0];
-    // let profile = game.profiles()[0].clone();
-    // let resolved_mods = profile.resolve_mod_entries(&game);
-    // let mod_table_model = build_table_model(&resolved_mods);
-    //
-    // app.global::<ModTableData>().set_model(mod_table_model);
+    let game = &state.games[0];
+    let profile = game.profiles()[0].clone();
+    let resolved_mods = profile.resolve_mod_entries(game);
+    dbg!(&resolved_mods);
+    let mod_table_model = build_table_model(&resolved_mods);
+
+    app.global::<ModTableData>().set_model(mod_table_model);
+    app.run().unwrap();
 }
 
 fn build_table_model(resolved_entries: &[ResolvedModEntry]) -> TableModel {
@@ -24,7 +25,11 @@ fn build_table_model(resolved_entries: &[ResolvedModEntry]) -> TableModel {
     for entry in resolved_entries {
         let row = [
             StandardListViewItem::from(entry.mod_ref().name()),
-            StandardListViewItem::from(if *entry.entry().enabled() { "✔" } else { "" }),
+            StandardListViewItem::from(if *entry.entry().enabled() {
+                "✅"
+            } else {
+                "❌"
+            }),
         ];
 
         rows.push(TableRow::from(row));
