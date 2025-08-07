@@ -1,4 +1,4 @@
-use barnacle::{profiles::ResolvedModEntry, state_file::State};
+use barnacle::{data::profiles::ResolvedModEntry, state_file::State};
 use slint::{ModelRc, StandardListViewItem};
 
 slint::include_modules!();

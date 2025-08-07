@@ -29,6 +29,7 @@
         defaultPackage = naersk-lib.buildPackage ./.;
         devShell = mkShell {
           packages = with pkgs; [
+            bacon
             cargo
             cargo-info
             fuse-overlayfs

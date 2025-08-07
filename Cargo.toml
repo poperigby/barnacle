@@ -11,6 +11,8 @@ compress-tools = "0.15.1"
 damascus = { version = "0.0.9", default-features=false, features = ["fuse-overlayfs"] }
 getset = "0.1.6"
 human-panic = "2.0.3"
+native_db = "0.8.2"
+native_model = "0.6.2"
 ron = "0.10.1"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_with = "3.14.0"

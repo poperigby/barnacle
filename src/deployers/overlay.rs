@@ -2,7 +2,10 @@ use std::{fs::create_dir_all, iter::once, path::Path};
 
 use damascus::{Filesystem, FuseOverlayFs};
 
-use crate::{deployers::Deploy, games::Game, profiles::Profile};
+use crate::{
+    data::{games::Game, profiles::Profile},
+    deployers::Deploy,
+};
 
 #[derive(Debug)]
 pub struct OverlayDeployer {

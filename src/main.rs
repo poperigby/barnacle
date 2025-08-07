@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use barnacle::{
-    games::{DeployType, Game},
+    data::games::{DeployType, Game},
     state_file::State,
 };
 use clap::{Parser, Subcommand};

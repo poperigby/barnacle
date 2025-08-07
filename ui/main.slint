@@ -1,8 +1,9 @@
 import { ModTableView, ModTableData } from "mod_table_view.slint";
+import { VerticalBox } from "std-widgets.slint";
 export { ModTableData }
 
 export component App inherits Window {
-    HorizontalLayout {
+    VerticalBox {
         ModTableView { }
     }
 }

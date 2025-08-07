@@ -2,12 +2,10 @@ use std::path::PathBuf;
 
 use thiserror::Error;
 
-use crate::{mods::ModError, state_file::StateFileError};
+use crate::{data::mods::ModError, state_file::StateFileError};
 
+pub mod data;
 pub mod deployers;
-pub mod games;
-pub mod mods;
-pub mod profiles;
 pub mod state_file;
 
 pub type Result<T> = std::result::Result<T, BarnacleError>;

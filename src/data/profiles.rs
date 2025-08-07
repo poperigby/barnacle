@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use tracing::warn;
 use uuid::Uuid;
 
-use crate::{games::Game, mods::Mod};
+use crate::data::{games::Game, mods::Mod};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Getters)]
 #[getset(get = "pub")]

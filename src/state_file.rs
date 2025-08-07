@@ -3,7 +3,7 @@ use std::{
     io::{self, Write},
 };
 
-use crate::{Result, data_dir, games::Game};
+use crate::{Result, data::games::Game, data_dir};
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;

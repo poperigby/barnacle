@@ -8,7 +8,10 @@ use serde::{Deserialize, Serialize};
 use tracing::warn;
 use uuid::Uuid;
 
-use crate::{data_dir, mods::Mod, profiles::Profile};
+use crate::{
+    data::{mods::Mod, profiles::Profile},
+    data_dir,
+};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum DeployType {
