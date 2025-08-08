@@ -40,7 +40,7 @@ impl ToKey for ModId {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
-#[native_model(id = 1, version = 1)]
+#[native_model(id = 3, version = 1)]
 #[native_db]
 pub struct Mod {
     /// A unique identifier to refer to the mod by

@@ -74,7 +74,28 @@
 //     },
 // }
 //
+//
+
+use barnacle::{
+    data::{games::Game, mods::Mod, profiles::Profile},
+    data_dir,
+};
+use native_db::{Builder, Models};
+use once_cell::sync::Lazy;
+
+static MODELS: Lazy<Models> = Lazy::new(|| {
+    let mut models = Models::new();
+    // It's a good practice to define the models by specifying the version
+    models.define::<Game>().unwrap();
+    models.define::<Profile>().unwrap();
+    models.define::<Mod>().unwrap();
+    models
+});
+
 fn main() {
+    let db = Builder::new()
+        .create(&MODELS, data_dir().join("state.db"))
+        .unwrap();
     //     // Setup logging
     //     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     //     let subscriber = FmtSubscriber::builder()

@@ -1,6 +1,7 @@
 use derive_more::{AsRef, From};
 use getset::Getters;
-use native_db::{Key, ToKey};
+use native_db::{Key, ToKey, native_db};
+use native_model::{Model, native_model};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -37,8 +38,11 @@ impl ModEntry {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Getters)]
+#[native_model(id = 2, version = 1)]
+#[native_db]
 #[getset(get = "pub")]
 pub struct Profile {
+    #[primary_key]
     id: ProfileId,
     name: String,
     mod_entries: Vec<ModEntry>,

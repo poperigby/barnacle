@@ -563,6 +563,7 @@ dependencies = [
  "human-panic",
  "native_db",
  "native_model",
+ "once_cell",
  "ron",
  "serde",
  "serde_with",
