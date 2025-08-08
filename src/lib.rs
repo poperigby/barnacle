@@ -6,7 +6,6 @@ use crate::data::mods::ModError;
 
 pub mod data;
 // pub mod deployers;
-// pub mod state_file;
 
 pub type Result<T> = std::result::Result<T, BarnacleError>;
 
