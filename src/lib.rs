@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use thiserror::Error;
 
-use crate::data::mods::ModError;
+use crate::data::v1::mods::ModError;
 
 pub mod data;
 // pub mod deployers;

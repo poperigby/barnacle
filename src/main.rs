@@ -77,7 +77,7 @@
 //
 
 use barnacle::{
-    data::{games::Game, mods::Mod, profiles::Profile},
+    data::v1::{games::Game, mods::Mod, profiles::Profile},
     data_dir,
 };
 use native_db::{Builder, Models};

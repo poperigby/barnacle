@@ -11,7 +11,7 @@ use tracing::warn;
 use uuid::Uuid;
 
 use crate::{
-    data::{
+    data::v1::{
         mods::{Mod, ModId},
         profiles::Profile,
     },
