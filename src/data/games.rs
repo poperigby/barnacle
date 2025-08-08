@@ -1,17 +1,34 @@
 use std::{
-    collections::HashMap,
     fs::create_dir_all,
     path::{Path, PathBuf},
 };
 
+use derive_more::{AsRef, From};
+use native_db::{Key, ToKey, native_db};
+use native_model::{Model, native_model};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 use uuid::Uuid;
 
 use crate::{
-    data::{mods::Mod, profiles::Profile},
+    data::{
+        mods::{Mod, ModId},
+        profiles::Profile,
+    },
     data_dir,
 };
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, AsRef, From)]
+pub struct GameId(Uuid);
+
+impl ToKey for GameId {
+    fn to_key(&self) -> Key {
+        Key::new(self.0.as_bytes().to_vec())
+    }
+    fn key_names() -> Vec<String> {
+        vec!["Mod ID".to_string()]
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum DeployType {
@@ -27,12 +44,16 @@ pub enum DeployType {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[native_model(id = 1, version = 1)]
+#[native_db]
 pub struct Game {
+    #[primary_key]
+    id: GameId,
     name: String,
     deploy_type: DeployType,
-    profiles: Vec<Profile>,
-    mods: HashMap<Uuid, Mod>,
     game_dir: PathBuf,
+    profiles: Vec<Profile>,
+    mod_ids: Vec<ModId>,
 }
 
 impl Game {
@@ -47,11 +68,12 @@ impl Game {
         };
 
         Self {
+            id: Uuid::new_v4().into(),
             name: name.to_string(),
             deploy_type: game_type,
-            profiles: Vec::new(),
-            mods: HashMap::new(),
             game_dir: game_dir.to_path_buf(),
+            profiles: Vec::new(),
+            mod_ids: Vec::new(),
         }
     }
 
@@ -63,8 +85,8 @@ impl Game {
         &self.profiles
     }
 
-    pub fn mods(&self) -> &HashMap<Uuid, Mod> {
-        &self.mods
+    pub fn mods(&self) -> &[ModId] {
+        &self.mod_ids
     }
 
     pub fn game_dir(&self) -> &Path {
@@ -87,6 +109,6 @@ impl Game {
 
     pub fn import_mod(&mut self, mod_path: &Path, name: Option<&str>) {
         let new_mod = Mod::new(mod_path, name).unwrap();
-        self.mods.insert(new_mod.uuid(), new_mod);
+        self.mod_ids.push(new_mod.id());
     }
 }

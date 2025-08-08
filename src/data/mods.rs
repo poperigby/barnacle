@@ -1,4 +1,7 @@
 use compress_tools::{Ownership, uncompress_archive};
+use derive_more::{AsRef, From};
+use native_db::{Key, ToKey, native_db};
+use native_model::{Model, native_model};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{File, Permissions, set_permissions},
@@ -22,10 +25,27 @@ pub enum ModError {
     UncompressArchive(compress_tools::Error),
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(
+    Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, AsRef, From, Copy,
+)]
+pub struct ModId(Uuid);
+
+impl ToKey for ModId {
+    fn to_key(&self) -> Key {
+        Key::new(self.0.as_bytes().to_vec())
+    }
+    fn key_names() -> Vec<String> {
+        vec!["Mod ID".to_string()]
+    }
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[native_model(id = 1, version = 1)]
+#[native_db]
 pub struct Mod {
     /// A unique identifier to refer to the mod by
-    uuid: Uuid,
+    #[primary_key]
+    id: ModId,
     /// The path to the mod
     path: PathBuf,
     /// A pretty name to display in the UI
@@ -41,7 +61,7 @@ impl Mod {
             // archive
             .unwrap_or_else(|| path.file_stem().unwrap().to_str().unwrap())
             .to_string();
-        let uuid = Uuid::new_v4();
+        let uuid = uuid::Uuid::new_v4();
 
         let archive = File::open(path).map_err(ModError::OpenArchive)?;
         let output_dir = data_dir().join("mods").join(uuid.to_string());
@@ -61,11 +81,15 @@ impl Mod {
         }
 
         let path = data_dir().join("mods").join(uuid.to_string());
-        Ok(Self { name, path, uuid })
+        Ok(Self {
+            id: uuid.into(),
+            name,
+            path,
+        })
     }
 
-    pub fn uuid(&self) -> Uuid {
-        self.uuid
+    pub fn id(&self) -> ModId {
+        self.id
     }
 
     pub fn path(&self) -> &Path {

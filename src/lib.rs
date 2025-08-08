@@ -2,18 +2,16 @@ use std::path::PathBuf;
 
 use thiserror::Error;
 
-use crate::{data::mods::ModError, state_file::StateFileError};
+use crate::data::mods::ModError;
 
 pub mod data;
-pub mod deployers;
-pub mod state_file;
+// pub mod deployers;
+// pub mod state_file;
 
 pub type Result<T> = std::result::Result<T, BarnacleError>;
 
 #[derive(Debug, Error)]
 pub enum BarnacleError {
-    #[error("Problem detected with state file: {0}")]
-    StateFileError(#[from] StateFileError),
     #[error("Problem detected with mod: {0}")]
     ModError(#[from] ModError),
 }
