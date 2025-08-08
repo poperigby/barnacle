@@ -5,7 +5,6 @@ edition = "2024"
 homepage = "https://github.com/poperigby/barnacle"
 
 [dependencies]
-blake3 = { version = "1.8.2", features = ["serde"] }
 clap = { version = "4.5.41", features = ["derive"] }
 compress-tools = "0.15.1"
 damascus = { version = "0.0.9", default-features=false, features = ["fuse-overlayfs"] }
@@ -15,7 +14,6 @@ human-panic = "2.0.3"
 native_db = "0.8.1"
 native_model = "0.4.20"
 once_cell = "1.21.3"
-ron = "0.10.1"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_with = "3.14.0"
 slint = "1.12.1"

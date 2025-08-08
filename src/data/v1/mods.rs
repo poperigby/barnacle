@@ -1,14 +1,15 @@
-use compress_tools::{Ownership, uncompress_archive};
-use derive_more::{AsRef, From};
-use native_db::{Key, ToKey, native_db};
-use native_model::{Model, native_model};
-use serde::{Deserialize, Serialize};
 use std::{
     fs::{File, Permissions, set_permissions},
     io,
     os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
 };
+
+use compress_tools::{Ownership, uncompress_archive};
+use derive_more::{AsRef, From};
+use native_db::{Key, ToKey, native_db};
+use native_model::{Model, native_model};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 use walkdir::WalkDir;
@@ -25,9 +26,7 @@ pub enum ModError {
     UncompressArchive(compress_tools::Error),
 }
 
-#[derive(
-    Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, AsRef, From, Copy,
-)]
+#[derive(Serialize, Deserialize, Clone, Debug, AsRef, From, Copy)]
 pub struct ModId(Uuid);
 
 impl ToKey for ModId {
@@ -39,7 +38,7 @@ impl ToKey for ModId {
     }
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[native_model(id = 3, version = 1)]
 #[native_db]
 pub struct Mod {

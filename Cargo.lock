@@ -554,7 +554,6 @@ dependencies = [
 name = "barnacle"
 version = "0.1.0"
 dependencies = [
- "blake3",
  "clap",
  "compress-tools",
  "damascus",
@@ -564,7 +563,6 @@ dependencies = [
  "native_db",
  "native_model",
  "once_cell",
- "ron",
  "serde",
  "serde_with",
  "slint",
@@ -650,20 +648,6 @@ name = "bitstream-io"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6099cdc01846bc367c4e7dd630dc5966dccf36b652fae7a74e17b640411a91b2"
-
-[[package]]
-name = "blake3"
-version = "1.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3888aaa89e4b2a40fca9848e400f6a658a5a3978de7be858e209cafa8be9a4a0"
-dependencies = [
- "arrayref",
- "arrayvec",
- "cc",
- "cfg-if",
- "constant_time_eq",
- "serde",
-]
 
 [[package]]
 name = "block-buffer"
@@ -4359,19 +4343,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c6a884d2998352bb4daf0183589aec883f16a6da1f4dde84d8e2e9a5409a1ce"
 dependencies = [
  "bytemuck",
-]
-
-[[package]]
-name = "ron"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "beceb6f7bf81c73e73aeef6dd1356d9a1b2b4909e1f0fc3e59b034f9572d7b7f"
-dependencies = [
- "base64",
- "bitflags 2.9.1",
- "serde",
- "serde_derive",
- "unicode-ident",
 ]
 
 [[package]]

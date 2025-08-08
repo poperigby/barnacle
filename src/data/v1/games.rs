@@ -26,7 +26,7 @@ impl ToKey for GameId {
         Key::new(self.0.as_bytes().to_vec())
     }
     fn key_names() -> Vec<String> {
-        vec!["Mod ID".to_string()]
+        vec!["Game ID".to_string()]
     }
 }
 
