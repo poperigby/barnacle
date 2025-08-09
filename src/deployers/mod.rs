@@ -1,4 +1,4 @@
-use crate::data::{games::Game, profiles::Profile};
+use crate::data::v1::{games::Game, profiles::Profile};
 
 pub mod overlay;
 

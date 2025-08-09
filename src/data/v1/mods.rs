@@ -6,7 +6,7 @@ use std::{
 };
 
 use compress_tools::{Ownership, uncompress_archive};
-use derive_more::{AsRef, From};
+use derive_more::AsRef;
 use native_db::{Key, ToKey, native_db};
 use native_model::{Model, native_model};
 use serde::{Deserialize, Serialize};
@@ -26,7 +26,7 @@ pub enum ModError {
     UncompressArchive(compress_tools::Error),
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, AsRef, From, Copy)]
+#[derive(Serialize, Deserialize, Clone, Debug, AsRef, Copy)]
 pub struct ModId(Uuid);
 
 impl ToKey for ModId {
@@ -81,7 +81,7 @@ impl Mod {
 
         let path = data_dir().join("mods").join(uuid.to_string());
         Ok(Self {
-            id: uuid.into(),
+            id: ModId(uuid),
             name,
             path,
         })

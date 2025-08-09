@@ -80,9 +80,10 @@ use barnacle::{
     data::v1::{games::Game, mods::Mod, profiles::Profile},
     data_dir,
 };
-use native_db::{Builder, Models};
-use once_cell::sync::Lazy;
+use native_db::{Builder, Database, Models};
+use once_cell::sync::{Lazy, OnceCell};
 
+static DATABASE: OnceCell<Database> = OnceCell::new();
 static MODELS: Lazy<Models> = Lazy::new(|| {
     let mut models = Models::new();
     // It's a good practice to define the models by specifying the version
@@ -93,7 +94,7 @@ static MODELS: Lazy<Models> = Lazy::new(|| {
 });
 
 fn main() {
-    let db = Builder::new()
+    DATABASE = Builder::new()
         .create(&MODELS, data_dir().join("state.db"))
         .unwrap();
     //     // Setup logging

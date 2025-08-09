@@ -1,4 +1,4 @@
-use derive_more::{AsRef, From};
+use derive_more::AsRef;
 use getset::Getters;
 use native_db::{Key, ToKey, native_db};
 use native_model::{Model, native_model};
@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::data::v1::mods::{Mod, ModId};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, AsRef, From)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, AsRef)]
 pub struct ProfileId(Uuid);
 
 impl ToKey for ProfileId {
@@ -51,7 +51,7 @@ pub struct Profile {
 impl Profile {
     pub fn new(name: &str) -> Self {
         Self {
-            id: Uuid::new_v4().into(),
+            id: ProfileId(Uuid::new_v4()),
             name: name.to_string(),
             mod_entries: Vec::new(),
         }

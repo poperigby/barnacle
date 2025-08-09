@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use derive_more::{AsRef, From};
+use derive_more::AsRef;
 use native_db::{Key, ToKey, native_db};
 use native_model::{Model, native_model};
 use serde::{Deserialize, Serialize};
@@ -18,7 +18,7 @@ use crate::{
     data_dir,
 };
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, AsRef, From)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, AsRef)]
 pub struct GameId(Uuid);
 
 impl ToKey for GameId {
@@ -68,7 +68,7 @@ impl Game {
         };
 
         Self {
-            id: Uuid::new_v4().into(),
+            id: GameId(Uuid::new_v4()),
             name: name.to_string(),
             deploy_type: game_type,
             game_dir: game_dir.to_path_buf(),
