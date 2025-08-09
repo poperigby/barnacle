@@ -1,54 +1,61 @@
-// use std::path::PathBuf;
-//
-// use barnacle::{
-//     data::games::{DeployType, Game},
-//     state_file::State,
-// };
-// use clap::{Parser, Subcommand};
-// use tracing::Level;
-// use tracing_subscriber::{EnvFilter, FmtSubscriber};
-//
+use std::{fs::create_dir_all, path::PathBuf};
+
+use barnacle::{
+    data::v1::{
+        games::{DeployType, Game},
+        mods::Mod,
+        profiles::Profile,
+    },
+    data_dir,
+};
+use clap::{Parser, Subcommand};
+use native_db::{Builder, Models};
+use once_cell::sync::Lazy;
+use tracing::Level;
+use tracing_subscriber::{EnvFilter, FmtSubscriber};
+
 // use crate::gui::start_gui;
-//
+
 // mod gui;
-//
-// #[derive(Parser)]
-// #[command(version, about)]
-// struct Cli {
-//     #[command(subcommand)]
-//     command: Option<Commands>,
-// }
-//
-// #[derive(Subcommand)]
-// enum Commands {
-//     /// Manage games
-//     Game {
-//         #[command(subcommand)]
-//         command: Option<GameCommands>,
-//     },
-//     /// Manage profiles
-//     Profile {
-//         #[command(subcommand)]
-//         command: Option<ProfileCommands>,
-//     },
-//     /// Manage mods
-//     Mod {
-//         #[command(subcommand)]
-//         command: Option<ModCommands>,
-//     },
-//     Gui,
-// }
-//
-// #[derive(Subcommand)]
-// enum GameCommands {
-//     /// Add a new game
-//     Add {
-//         /// Name of the game to add
-//         name: String,
-//         /// Path to the game directory
-//         game_dir: PathBuf,
-//     },
-// }
+
+#[derive(Parser)]
+#[command(version, about)]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Manage games
+    Game {
+        #[command(subcommand)]
+        command: Option<GameCommands>,
+    },
+    // /// Manage profiles
+    // Profile {
+    //     #[command(subcommand)]
+    //     command: Option<ProfileCommands>,
+    // },
+    // /// Manage mods
+    // Mod {
+    //     #[command(subcommand)]
+    //     command: Option<ModCommands>,
+    // },
+    // Gui,
+}
+
+#[derive(Subcommand)]
+enum GameCommands {
+    /// Add a new game
+    Add {
+        /// Name of the game to add
+        name: String,
+        /// Path to the game directory
+        game_dir: PathBuf,
+    },
+    List,
+}
 //
 // #[derive(Subcommand)]
 // enum ProfileCommands {
@@ -75,15 +82,7 @@
 // }
 //
 //
-
-use barnacle::{
-    data::v1::{games::Game, mods::Mod, profiles::Profile},
-    data_dir,
-};
-use native_db::{Builder, Database, Models};
-use once_cell::sync::{Lazy, OnceCell};
-
-static DATABASE: OnceCell<Database> = OnceCell::new();
+//
 static MODELS: Lazy<Models> = Lazy::new(|| {
     let mut models = Models::new();
     // It's a good practice to define the models by specifying the version
@@ -94,50 +93,72 @@ static MODELS: Lazy<Models> = Lazy::new(|| {
 });
 
 fn main() {
-    DATABASE = Builder::new()
+    // Setup logging
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::TRACE)
+        .with_env_filter(filter)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).unwrap();
+
+    human_panic::setup_panic!();
+
+    // Make sure data_dir exists
+    create_dir_all(data_dir()).unwrap();
+
+    // Load database
+    let db = Builder::new()
         .create(&MODELS, data_dir().join("state.db"))
         .unwrap();
-    //     // Setup logging
-    //     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-    //     let subscriber = FmtSubscriber::builder()
-    //         .with_max_level(Level::TRACE)
-    //         .with_env_filter(filter)
-    //         .finish();
-    //     tracing::subscriber::set_global_default(subscriber).unwrap();
-    //
-    //     human_panic::setup_panic!();
-    //
-    //     let cli = Cli::parse();
-    //     match cli.command {
-    //         Some(Commands::Game {
-    //             command: Some(GameCommands::Add { name, game_dir }),
-    //         }) => {
-    //             let game = Game::setup(&name, DeployType::Overlay, &game_dir);
-    //             state.games.push(game);
-    //         }
-    //         Some(Commands::Game { command: None }) => {}
-    //         Some(Commands::Profile {
-    //             command: Some(ProfileCommands::Add { name, game }),
-    //         }) => {
-    //             let game = state.games.iter_mut().find(|g| g.name() == game).unwrap();
-    //             game.create_profile(&name);
-    //         }
-    //         Some(Commands::Profile { command: None }) => {}
-    //         Some(Commands::Mod {
-    //             command:
-    //                 Some(ModCommands::Add {
-    //                     mod_path,
-    //                     game,
-    //                     name,
-    //                 }),
-    //         }) => {
-    //             let game = state.games.iter_mut().find(|g| g.name() == game).unwrap();
-    //             game.import_mod(&mod_path, name.as_deref());
-    //         }
-    //         Some(Commands::Mod { command: None }) => {}
-    //         Some(Commands::Gui) => {
-    //             start_gui(&state);
-    //         }
-    //         None => {}
-    //     }
+
+    let cli = Cli::parse();
+    match cli.command {
+        Some(Commands::Game {
+            command: Some(GameCommands::Add { name, game_dir }),
+        }) => {
+            let game = Game::setup(&name, DeployType::Overlay, &game_dir);
+            let rw = db.rw_transaction().unwrap();
+            rw.insert(game).unwrap();
+            rw.commit().unwrap();
+        }
+        Some(Commands::Game {
+            command: Some(GameCommands::List),
+        }) => {
+            let r = db.r_transaction().unwrap();
+            let games: Vec<Game> = r
+                .scan()
+                .primary()
+                .unwrap()
+                .all()
+                .unwrap()
+                .collect::<Result<_, _>>()
+                .unwrap();
+
+            dbg!(games);
+        }
+        Some(Commands::Game { command: None }) => {}
+        // Some(Commands::Profile {
+        //     command: Some(ProfileCommands::Add { name, game }),
+        // }) => {
+        //     let game = state.games.iter_mut().find(|g| g.name() == game).unwrap();
+        //     game.create_profile(&name);
+        // }
+        // Some(Commands::Profile { command: None }) => {}
+        // Some(Commands::Mod {
+        //     command:
+        //         Some(ModCommands::Add {
+        //             mod_path,
+        //             game,
+        //             name,
+        //         }),
+        // }) => {
+        //     let game = state.games.iter_mut().find(|g| g.name() == game).unwrap();
+        //     game.import_mod(&mod_path, name.as_deref());
+        // }
+        // Some(Commands::Mod { command: None }) => {}
+        // Some(Commands::Gui) => {
+        //     start_gui(&state);
+        // }
+        None => {}
+    }
 }
