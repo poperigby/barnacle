@@ -1,14 +1,7 @@
 use std::{fs::create_dir_all, path::PathBuf};
 
-use barnacle::{
-    AppService, data_dir,
-    domain::v1::{
-        games::{DeployType, Game},
-        mods::Mod,
-        profiles::Profile,
-    },
-    managers::{games::GamesManager, profiles::ProfilesManager},
-};
+use barnacle::{AppService, data_dir};
+use barnacle_data::v1::{games::Game, mods::Mod, profiles::Profile};
 use clap::{Parser, Subcommand};
 use native_db::{Builder, Models};
 use once_cell::sync::Lazy;

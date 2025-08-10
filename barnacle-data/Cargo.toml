@@ -1,6 +1,12 @@
 [package]
-name = "data"
+name = "barnacle-data"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+derive_more = { version = "2.0.1", features = ["from", "as_ref", "display"] }
+getset = "0.1.6"
+native_db = "0.8.1"
+native_model = "0.4.20"
+serde = { version = "1.0.219", features = ["derive"] }
+uuid = { version = "1.17.0", features = ["v4", "serde"] }

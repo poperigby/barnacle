@@ -5,6 +5,7 @@ edition = "2024"
 homepage = "https://github.com/poperigby/barnacle"
 
 [dependencies]
+barnacle-data = { path = "../barnacle-data" }
 clap = { version = "4.5.41", features = ["derive"] }
 compress-tools = "0.15.1"
 damascus = { version = "0.0.9", default-features=false, features = ["fuse-overlayfs"] }

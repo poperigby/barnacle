@@ -554,6 +554,7 @@ dependencies = [
 name = "barnacle"
 version = "0.1.0"
 dependencies = [
+ "barnacle-data",
  "clap",
  "compress-tools",
  "damascus",
@@ -575,6 +576,18 @@ dependencies = [
  "walkdir",
  "xdg",
  "zip",
+]
+
+[[package]]
+name = "barnacle-data"
+version = "0.1.0"
+dependencies = [
+ "derive_more 2.0.1",
+ "getset",
+ "native_db",
+ "native_model",
+ "serde",
+ "uuid",
 ]
 
 [[package]]
@@ -1370,10 +1383,6 @@ dependencies = [
  "quote",
  "syn",
 ]
-
-[[package]]
-name = "data"
-version = "0.1.0"
 
 [[package]]
 name = "data-url"

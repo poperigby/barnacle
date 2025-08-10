@@ -6,10 +6,7 @@ use native_model::{Model, native_model};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{
-    data_dir,
-    domain::v1::{mods::ModId, profiles::ProfileId},
-};
+use crate::v1::{mods::ModId, profiles::ProfileId};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, AsRef, Display)]
 pub struct GameId(Uuid);
@@ -84,10 +81,5 @@ impl Game {
 
     pub fn add_mod(&mut self, id: ModId) {
         self.mod_ids.push(id);
-    }
-
-    /// Return the path of the game specific profile directory
-    pub fn dir(&self) -> PathBuf {
-        data_dir().join("profiles").join(&self.name)
     }
 }

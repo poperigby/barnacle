@@ -1,8 +1,9 @@
 use std::fs::create_dir_all;
 
+use barnacle_data::v1::profiles::Profile;
 use native_db::Database;
 
-use crate::{data_dir, domain::v1::profiles::Profile};
+use crate::data_dir;
 
 pub struct ProfilesManager<'a> {
     db: &'a Database<'a>,

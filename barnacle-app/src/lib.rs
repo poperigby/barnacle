@@ -4,7 +4,6 @@ use native_db::Database;
 
 use crate::managers::{games::GamesManager, mods::ModsManager, profiles::ProfilesManager};
 
-pub mod domain;
 pub mod managers;
 
 pub fn config_dir() -> PathBuf {

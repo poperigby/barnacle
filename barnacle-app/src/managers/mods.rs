@@ -4,12 +4,13 @@ use std::{
     path::Path,
 };
 
+use barnacle_data::v1::mods::{Mod, ModId};
 use compress_tools::{Ownership, uncompress_archive};
 use native_db::Database;
 use thiserror::Error;
 use walkdir::WalkDir;
 
-use crate::domain::v1::mods::{Mod, ModId};
+use crate::data_dir;
 
 #[derive(PartialEq)]
 enum Permissions {
@@ -53,12 +54,13 @@ impl<'a> ModsManager<'a> {
             .unwrap_or_else(|| input_path.file_stem().unwrap().to_str().unwrap())
             .to_string();
         let new_mod = Mod::new(name);
+        let dir = data_dir().join("mods").join(new_mod.id().to_string());
 
         // TODO: Only do attempt to open the archive if the input_path is an archive
         let archive = File::open(input_path).map_err(AddModError::OpenArchive)?;
-        uncompress_archive(archive, &new_mod.dir(), Ownership::Preserve)?;
+        uncompress_archive(archive, &dir, Ownership::Preserve)?;
 
-        change_dir_permissions(&new_mod.dir(), Permissions::ReadOnly);
+        change_dir_permissions(&dir, Permissions::ReadOnly);
 
         let rw = self.db.rw_transaction().unwrap();
         rw.insert(new_mod).unwrap();
@@ -70,9 +72,10 @@ impl<'a> ModsManager<'a> {
     pub fn delete(&self, mod_id: ModId) {
         let rw = self.db.rw_transaction().unwrap();
         let found_mod: Mod = rw.get().primary(mod_id).unwrap().unwrap();
+        let dir = data_dir().join("mods").join(found_mod.id().to_string());
 
-        change_dir_permissions(&found_mod.dir(), Permissions::ReadWrite);
-        remove_dir_all(found_mod.dir()).unwrap();
+        change_dir_permissions(&dir, Permissions::ReadWrite);
+        remove_dir_all(&dir).unwrap();
 
         rw.remove(found_mod).unwrap();
         rw.commit().unwrap();

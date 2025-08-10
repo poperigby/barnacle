@@ -1,9 +1,8 @@
 use std::path::Path;
 
+use barnacle_data::v1::games::{DeployType, Game};
 use native_db::Database;
 use tracing::warn;
-
-use crate::domain::v1::games::{DeployType, Game};
 
 pub struct GamesManager<'a> {
     db: &'a Database<'a>,

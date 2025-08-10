@@ -1,12 +1,8 @@
-use std::path::PathBuf;
-
 use derive_more::{AsRef, Display};
 use native_db::{Key, ToKey, native_db};
 use native_model::{Model, native_model};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-
-use crate::data_dir;
 
 #[derive(Serialize, Deserialize, Clone, Debug, AsRef, Copy, Display)]
 pub struct ModId(Uuid);
@@ -45,9 +41,5 @@ impl Mod {
 
     pub fn name(&self) -> &str {
         &self.name
-    }
-
-    pub fn dir(&self) -> PathBuf {
-        data_dir().join("mods").join(self.id.to_string())
     }
 }
