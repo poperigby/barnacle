@@ -1,8 +1,7 @@
 [package]
 name = "barnacle"
-version = "0.1.0"
-edition = "2024"
-homepage = "https://github.com/poperigby/barnacle"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
 barnacle-data = { path = "../barnacle-data" }
