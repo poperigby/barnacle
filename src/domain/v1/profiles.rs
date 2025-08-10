@@ -5,7 +5,7 @@ use native_model::{Model, native_model};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::data::v1::mods::{Mod, ModId};
+use crate::domain::v1::mods::{Mod, ModId};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, AsRef)]
 pub struct ProfileId(Uuid);

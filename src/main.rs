@@ -1,12 +1,12 @@
 use std::{fs::create_dir_all, path::PathBuf};
 
 use barnacle::{
-    data::v1::{
+    data_dir,
+    domain::v1::{
         games::{DeployType, Game},
         mods::Mod,
         profiles::Profile,
     },
-    data_dir,
     managers::games::GameManager,
 };
 use clap::{Parser, Subcommand};

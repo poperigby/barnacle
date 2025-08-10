@@ -1,18 +1,14 @@
-use std::{
-    fs::create_dir_all,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use derive_more::AsRef;
 use native_db::{Key, ToKey, native_db};
 use native_model::{Model, native_model};
 use serde::{Deserialize, Serialize};
-use tracing::warn;
 use uuid::Uuid;
 
 use crate::{
-    data::v1::{mods::ModId, profiles::ProfileId},
     data_dir,
+    domain::v1::{mods::ModId, profiles::ProfileId},
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, AsRef)]

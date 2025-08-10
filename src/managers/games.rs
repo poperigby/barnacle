@@ -4,8 +4,8 @@ use native_db::Database;
 use tracing::warn;
 
 use crate::{
-    data::v1::games::{DeployType, Game},
     data_dir,
+    domain::v1::games::{DeployType, Game},
 };
 
 pub struct GameManager<'a> {
