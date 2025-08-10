@@ -1,7 +1,6 @@
 use std::{
-    fs::{File, Permissions, set_permissions},
+    fs::{File, remove_dir_all, set_permissions},
     io,
-    os::unix::fs::PermissionsExt,
     path::Path,
 };
 
@@ -10,7 +9,22 @@ use native_db::Database;
 use thiserror::Error;
 use walkdir::WalkDir;
 
-use crate::domain::v1::mods::Mod;
+use crate::domain::v1::mods::{Mod, ModId};
+
+#[derive(PartialEq)]
+enum Permissions {
+    ReadOnly,
+    ReadWrite,
+}
+fn change_dir_permissions(path: &Path, permissions: Permissions) {
+    use Permissions::*;
+
+    for entry in WalkDir::new(path) {
+        let mut perms = entry.as_ref().unwrap().metadata().unwrap().permissions();
+        perms.set_readonly(permissions == ReadOnly);
+        set_permissions(entry.unwrap().path(), perms).unwrap();
+    }
+}
 
 #[derive(Error, Debug)]
 pub enum AddModError {
@@ -19,7 +33,7 @@ pub enum AddModError {
     #[error("Failed to open mod archive: {0}")]
     OpenArchive(io::Error),
     #[error("Failed to uncompress mod archive: {0}")]
-    UncompressArchive(compress_tools::Error),
+    UncompressArchive(#[from] compress_tools::Error),
 }
 
 pub struct ModsRepo<'a> {
@@ -42,25 +56,25 @@ impl<'a> ModsRepo<'a> {
 
         // TODO: Only do attempt to open the archive if the input_path is an archive
         let archive = File::open(input_path).map_err(AddModError::OpenArchive)?;
-        uncompress_archive(archive, &new_mod.dir(), Ownership::Preserve)
-            .map_err(AddModError::UncompressArchive)?;
+        uncompress_archive(archive, &new_mod.dir(), Ownership::Preserve)?;
 
-        // Make mod read-only on disk
-        for entry in WalkDir::new(new_mod.dir()) {
-            let entry = entry.unwrap();
-            let mode = if entry.metadata().unwrap().is_dir() {
-                0o550
-            } else {
-                0o440
-            };
-
-            set_permissions(entry.path(), Permissions::from_mode(mode)).unwrap();
-        }
+        change_dir_permissions(&new_mod.dir(), Permissions::ReadOnly);
 
         let rw = self.db.rw_transaction().unwrap();
         rw.insert(new_mod).unwrap();
         rw.commit().unwrap();
 
         Ok(())
+    }
+
+    pub fn delete_mod(&self, mod_id: ModId) {
+        let rw = self.db.rw_transaction().unwrap();
+        let found_mod: Mod = rw.get().primary(mod_id).unwrap().unwrap();
+
+        change_dir_permissions(&found_mod.dir(), Permissions::ReadWrite);
+        remove_dir_all(found_mod.dir()).unwrap();
+
+        rw.remove(found_mod).unwrap();
+        rw.commit().unwrap();
     }
 }
