@@ -46,7 +46,7 @@ impl<'a> ModRepo<'a> {
             .map_err(AddModError::UncompressArchive)?;
 
         // Make mod read-only on disk
-        for entry in WalkDir::new(&new_mod.dir()) {
+        for entry in WalkDir::new(new_mod.dir()) {
             let entry = entry.unwrap();
             let mode = if entry.metadata().unwrap().is_dir() {
                 0o550

@@ -8,7 +8,7 @@ homepage = "https://github.com/poperigby/barnacle"
 clap = { version = "4.5.41", features = ["derive"] }
 compress-tools = "0.15.1"
 damascus = { version = "0.0.9", default-features=false, features = ["fuse-overlayfs"] }
-derive_more = { version = "2.0.1", features = ["from", "as_ref"] }
+derive_more = { version = "2.0.1", features = ["from", "as_ref", "display"] }
 getset = "0.1.6"
 human-panic = "2.0.3"
 native_db = "0.8.1"

@@ -1,12 +1,9 @@
-use std::{fs::create_dir_all, path::Path};
+use std::path::Path;
 
 use native_db::Database;
 use tracing::warn;
 
-use crate::{
-    data_dir,
-    domain::v1::games::{DeployType, Game},
-};
+use crate::domain::v1::games::{DeployType, Game};
 
 pub struct GameRepo<'a> {
     db: Database<'a>,
@@ -18,8 +15,6 @@ impl<'a> GameRepo<'a> {
     }
 
     pub fn add_game(&self, name: &str, game_type: DeployType, game_dir: &Path) {
-        create_dir_all(data_dir().join("profiles").join(name)).unwrap();
-
         if !game_dir.exists() {
             warn!(
                 "The game directory '{}' does not exist",
@@ -27,10 +22,10 @@ impl<'a> GameRepo<'a> {
             );
         };
 
-        let game = Game::new(name, game_type, game_dir);
+        let new_game = Game::new(name, game_type, game_dir);
 
         let rw = self.db.rw_transaction().unwrap();
-        rw.insert(game).unwrap();
+        rw.insert(new_game).unwrap();
         rw.commit().unwrap();
     }
 }

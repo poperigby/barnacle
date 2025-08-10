@@ -1,4 +1,4 @@
-use derive_more::AsRef;
+use derive_more::{AsRef, Display};
 use getset::Getters;
 use native_db::{Key, ToKey, native_db};
 use native_model::{Model, native_model};
@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::domain::v1::mods::{Mod, ModId};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, AsRef)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, AsRef, Display)]
 pub struct ProfileId(Uuid);
 
 impl ToKey for ProfileId {

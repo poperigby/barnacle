@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use derive_more::AsRef;
+use derive_more::{AsRef, Display};
 use native_db::{Key, ToKey, native_db};
 use native_model::{Model, native_model};
 use serde::{Deserialize, Serialize};
@@ -11,7 +11,7 @@ use crate::{
     domain::v1::{mods::ModId, profiles::ProfileId},
 };
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, AsRef)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, AsRef, Display)]
 pub struct GameId(Uuid);
 
 impl ToKey for GameId {
