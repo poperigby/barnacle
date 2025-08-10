@@ -1,13 +1,13 @@
 use std::{fs::create_dir_all, path::PathBuf};
 
 use barnacle::{
-    data_dir,
+    AppService, data_dir,
     domain::v1::{
         games::{DeployType, Game},
         mods::Mod,
         profiles::Profile,
     },
-    infra::repos::games::GamesRepo,
+    infra::repos::{games::GamesRepo, profiles::ProfilesRepo},
 };
 use clap::{Parser, Subcommand};
 use native_db::{Builder, Models};
@@ -15,9 +15,7 @@ use once_cell::sync::Lazy;
 use tracing::Level;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
-// use crate::gui::start_gui;
-
-// mod gui;
+mod gui;
 
 #[derive(Parser)]
 #[command(version, about)]
@@ -43,7 +41,7 @@ enum Commands {
     //     #[command(subcommand)]
     //     command: Option<ModCommands>,
     // },
-    // Gui,
+    Gui,
 }
 
 #[derive(Subcommand)]
@@ -106,18 +104,20 @@ fn main() {
     // Make sure data_dir exists
     create_dir_all(data_dir()).unwrap();
 
-    // Load database
+    // Setup database
     let db = Builder::new()
         .create(&MODELS, data_dir().join("state.db"))
         .unwrap();
-    let game_manager = GamesRepo::new(&db);
+
+    let app_service = AppService::new(&db);
 
     let cli = Cli::parse();
     match cli.command {
         Some(Commands::Game {
             command: Some(GameCommands::Add { name, game_dir }),
         }) => {
-            game_manager.add_game(&name, DeployType::Overlay, &game_dir);
+            // game_manager.add_game(&name, DeployType::Overlay, &game_dir);
+            todo!();
         }
         Some(Commands::Game {
             command: Some(GameCommands::List),
@@ -155,9 +155,9 @@ fn main() {
         //     game.import_mod(&mod_path, name.as_deref());
         // }
         // Some(Commands::Mod { command: None }) => {}
-        // Some(Commands::Gui) => {
-        //     start_gui(&state);
-        // }
+        Some(Commands::Gui) => {
+            gui::run();
+        }
         None => {}
     }
 }

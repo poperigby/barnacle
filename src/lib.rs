@@ -19,14 +19,14 @@ pub fn data_dir() -> PathBuf {
         .unwrap()
 }
 
-struct AppService<'a> {
+pub struct AppService<'a> {
     games_repo: GamesRepo<'a>,
     profiles_repo: ProfilesRepo<'a>,
     mods_repo: ModsRepo<'a>,
 }
 
 impl<'a> AppService<'a> {
-    fn new(db: &'a Database) -> Self {
+    pub fn new(db: &'a Database) -> Self {
         Self {
             games_repo: GamesRepo::new(db),
             profiles_repo: ProfilesRepo::new(db),

@@ -2,7 +2,10 @@ use std::fs::create_dir_all;
 
 use native_db::Database;
 
-use crate::{data_dir, domain::v1::profiles::Profile};
+use crate::{
+    data_dir,
+    domain::v1::profiles::{Profile, ProfileId},
+};
 
 pub struct ProfilesRepo<'a> {
     db: &'a Database<'a>,
