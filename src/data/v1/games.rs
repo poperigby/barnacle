@@ -11,10 +11,7 @@ use tracing::warn;
 use uuid::Uuid;
 
 use crate::{
-    data::v1::{
-        mods::{Mod, ModId},
-        profiles::Profile,
-    },
+    data::v1::{mods::ModId, profiles::ProfileId},
     data_dir,
 };
 
@@ -49,24 +46,16 @@ pub enum DeployType {
 pub struct Game {
     #[primary_key]
     id: GameId,
+    #[secondary_key(unique)]
     name: String,
     deploy_type: DeployType,
     game_dir: PathBuf,
-    profiles: Vec<Profile>,
+    profiles: Vec<ProfileId>,
     mod_ids: Vec<ModId>,
 }
 
 impl Game {
-    pub fn setup(name: &str, game_type: DeployType, game_dir: &Path) -> Self {
-        create_dir_all(data_dir().join("profiles").join(name)).unwrap();
-
-        if !game_dir.exists() {
-            warn!(
-                "The game directory '{}' does not exist",
-                game_dir.to_str().unwrap()
-            );
-        };
-
+    pub fn new(name: &str, game_type: DeployType, game_dir: &Path) -> Self {
         Self {
             id: GameId(Uuid::new_v4()),
             name: name.to_string(),
@@ -81,7 +70,7 @@ impl Game {
         &self.name
     }
 
-    pub fn profiles(&self) -> &[Profile] {
+    pub fn profiles(&self) -> &[ProfileId] {
         &self.profiles
     }
 
@@ -93,22 +82,16 @@ impl Game {
         &self.game_dir
     }
 
+    pub fn add_profile(&mut self, id: ProfileId) {
+        self.profiles.push(id);
+    }
+
+    pub fn add_mod(&mut self, id: ModId) {
+        self.mod_ids.push(id);
+    }
+
     /// Return the path of the game specific profile directory
     pub fn dir(&self) -> PathBuf {
         data_dir().join("profiles").join(&self.name)
-    }
-
-    pub fn create_profile(&mut self, name: &str) {
-        let dir = self.dir().join(name);
-        create_dir_all(&dir).unwrap();
-
-        // TODO: Initialize deployer
-
-        self.profiles.push(Profile::new(name));
-    }
-
-    pub fn import_mod(&mut self, mod_path: &Path, name: Option<&str>) {
-        let new_mod = Mod::new(mod_path, name).unwrap();
-        self.mod_ids.push(new_mod.id());
     }
 }

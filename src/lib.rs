@@ -5,6 +5,7 @@ use thiserror::Error;
 use crate::data::v1::mods::ModError;
 
 pub mod data;
+pub mod managers;
 // pub mod deployers;
 
 pub type Result<T> = std::result::Result<T, BarnacleError>;

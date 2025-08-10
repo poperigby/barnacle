@@ -7,6 +7,7 @@ use barnacle::{
         profiles::Profile,
     },
     data_dir,
+    managers::games::GameManager,
 };
 use clap::{Parser, Subcommand};
 use native_db::{Builder, Models};
@@ -56,18 +57,18 @@ enum GameCommands {
     },
     List,
 }
-//
-// #[derive(Subcommand)]
-// enum ProfileCommands {
-//     /// Add a new profile
-//     Add {
-//         /// Name of the profile to add
-//         name: String,
-//         // The game the profile should be added to
-//         game: String,
-//     },
-// }
-//
+
+#[derive(Subcommand)]
+enum ProfileCommands {
+    /// Add a new profile
+    Add {
+        /// Name of the profile to add
+        name: String,
+        // The game the profile should be added to
+        game: String,
+    },
+}
+
 // #[derive(Subcommand)]
 // enum ModCommands {
 //     /// Add a new mod
@@ -85,7 +86,6 @@ enum GameCommands {
 //
 static MODELS: Lazy<Models> = Lazy::new(|| {
     let mut models = Models::new();
-    // It's a good practice to define the models by specifying the version
     models.define::<Game>().unwrap();
     models.define::<Profile>().unwrap();
     models.define::<Mod>().unwrap();
@@ -110,37 +110,36 @@ fn main() {
     let db = Builder::new()
         .create(&MODELS, data_dir().join("state.db"))
         .unwrap();
+    let game_manager = GameManager::new(db);
 
     let cli = Cli::parse();
     match cli.command {
         Some(Commands::Game {
             command: Some(GameCommands::Add { name, game_dir }),
         }) => {
-            let game = Game::setup(&name, DeployType::Overlay, &game_dir);
-            let rw = db.rw_transaction().unwrap();
-            rw.insert(game).unwrap();
-            rw.commit().unwrap();
+            game_manager.add_game(&name, DeployType::Overlay, &game_dir);
         }
         Some(Commands::Game {
             command: Some(GameCommands::List),
         }) => {
-            let r = db.r_transaction().unwrap();
-            let games: Vec<Game> = r
-                .scan()
-                .primary()
-                .unwrap()
-                .all()
-                .unwrap()
-                .collect::<Result<_, _>>()
-                .unwrap();
-
-            dbg!(games);
+            // let r = db.r_transaction().unwrap();
+            // let games: Vec<Game> = r
+            //     .scan()
+            //     .primary()
+            //     .unwrap()
+            //     .all()
+            //     .unwrap()
+            //     .collect::<Result<_, _>>()
+            //     .unwrap();
+            //
+            // dbg!(games);
         }
         Some(Commands::Game { command: None }) => {}
         // Some(Commands::Profile {
         //     command: Some(ProfileCommands::Add { name, game }),
         // }) => {
-        //     let game = state.games.iter_mut().find(|g| g.name() == game).unwrap();
+        //     let rw = db.rw_transaction().unwrap();
+        //     let game = rw.get().secondary(GameKey, name).unwrap();
         //     game.create_profile(&name);
         // }
         // Some(Commands::Profile { command: None }) => {}
