@@ -5,12 +5,12 @@ use tracing::warn;
 
 use crate::domain::v1::games::{DeployType, Game};
 
-pub struct GameRepo<'a> {
-    db: Database<'a>,
+pub struct GamesRepo<'a> {
+    db: &'a Database<'a>,
 }
 
-impl<'a> GameRepo<'a> {
-    pub fn new(db: Database<'a>) -> Self {
+impl<'a> GamesRepo<'a> {
+    pub fn new(db: &'a Database<'a>) -> Self {
         Self { db }
     }
 

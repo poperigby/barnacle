@@ -22,12 +22,12 @@ pub enum AddModError {
     UncompressArchive(compress_tools::Error),
 }
 
-pub struct ModRepo<'a> {
-    db: Database<'a>,
+pub struct ModsRepo<'a> {
+    db: &'a Database<'a>,
 }
 
-impl<'a> ModRepo<'a> {
-    pub fn new(db: Database<'a>) -> Self {
+impl<'a> ModsRepo<'a> {
+    pub fn new(db: &'a Database) -> Self {
         Self { db }
     }
 

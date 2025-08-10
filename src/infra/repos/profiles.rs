@@ -4,12 +4,12 @@ use native_db::Database;
 
 use crate::{data_dir, domain::v1::profiles::Profile};
 
-pub struct ProfileRepo<'a> {
-    db: Database<'a>,
+pub struct ProfilesRepo<'a> {
+    db: &'a Database<'a>,
 }
 
-impl<'a> ProfileRepo<'a> {
-    pub fn new(db: Database<'a>) -> Self {
+impl<'a> ProfilesRepo<'a> {
+    pub fn new(db: &'a Database<'a>) -> Self {
         Self { db }
     }
 

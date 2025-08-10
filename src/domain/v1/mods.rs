@@ -48,6 +48,6 @@ impl Mod {
     }
 
     pub fn dir(&self) -> PathBuf {
-        data_dir().join("mods").join(self.id.0.to_string())
+        data_dir().join("mods").join(self.id.to_string())
     }
 }
