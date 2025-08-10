@@ -2,10 +2,10 @@ use std::path::PathBuf;
 
 use native_db::Database;
 
-use crate::infra::repos::{games::GamesRepo, mods::ModsRepo, profiles::ProfilesRepo};
+use crate::managers::{games::GamesManager, mods::ModsManager, profiles::ProfilesManager};
 
 pub mod domain;
-pub mod infra;
+pub mod managers;
 
 pub fn config_dir() -> PathBuf {
     xdg::BaseDirectories::with_prefix("barnacle")
@@ -20,17 +20,17 @@ pub fn data_dir() -> PathBuf {
 }
 
 pub struct AppService<'a> {
-    games_repo: GamesRepo<'a>,
-    profiles_repo: ProfilesRepo<'a>,
-    mods_repo: ModsRepo<'a>,
+    games_repo: GamesManager<'a>,
+    profiles_repo: ProfilesManager<'a>,
+    mods_repo: ModsManager<'a>,
 }
 
 impl<'a> AppService<'a> {
     pub fn new(db: &'a Database) -> Self {
         Self {
-            games_repo: GamesRepo::new(db),
-            profiles_repo: ProfilesRepo::new(db),
-            mods_repo: ModsRepo::new(db),
+            games_repo: GamesManager::new(db),
+            profiles_repo: ProfilesManager::new(db),
+            mods_repo: ModsManager::new(db),
         }
     }
 }

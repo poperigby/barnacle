@@ -36,16 +36,16 @@ pub enum AddModError {
     UncompressArchive(#[from] compress_tools::Error),
 }
 
-pub struct ModsRepo<'a> {
+pub struct ModsManager<'a> {
     db: &'a Database<'a>,
 }
 
-impl<'a> ModsRepo<'a> {
+impl<'a> ModsManager<'a> {
     pub fn new(db: &'a Database) -> Self {
         Self { db }
     }
 
-    pub fn add_mod(&self, input_path: &Path, name: Option<&str>) -> Result<(), AddModError> {
+    pub fn add(&self, input_path: &Path, name: Option<&str>) -> Result<(), AddModError> {
         // If mod name isn't provided, infer it from the file's name
         let name = name
             // TODO: Infer from directory name if the input path is a directory instead of an
@@ -67,7 +67,7 @@ impl<'a> ModsRepo<'a> {
         Ok(())
     }
 
-    pub fn delete_mod(&self, mod_id: ModId) {
+    pub fn delete(&self, mod_id: ModId) {
         let rw = self.db.rw_transaction().unwrap();
         let found_mod: Mod = rw.get().primary(mod_id).unwrap().unwrap();
 

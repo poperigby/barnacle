@@ -5,16 +5,16 @@ use tracing::warn;
 
 use crate::domain::v1::games::{DeployType, Game};
 
-pub struct GamesRepo<'a> {
+pub struct GamesManager<'a> {
     db: &'a Database<'a>,
 }
 
-impl<'a> GamesRepo<'a> {
+impl<'a> GamesManager<'a> {
     pub fn new(db: &'a Database<'a>) -> Self {
         Self { db }
     }
 
-    pub fn add_game(&self, name: &str, game_type: DeployType, game_dir: &Path) {
+    pub fn add(&self, name: &str, game_type: DeployType, game_dir: &Path) {
         if !game_dir.exists() {
             warn!(
                 "The game directory '{}' does not exist",

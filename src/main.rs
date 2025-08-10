@@ -7,7 +7,7 @@ use barnacle::{
         mods::Mod,
         profiles::Profile,
     },
-    infra::repos::{games::GamesRepo, profiles::ProfilesRepo},
+    managers::{games::GamesManager, profiles::ProfilesManager},
 };
 use clap::{Parser, Subcommand};
 use native_db::{Builder, Models};
