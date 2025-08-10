@@ -8,11 +8,11 @@ use crate::{
     domain::v1::games::{DeployType, Game},
 };
 
-pub struct GameManager<'a> {
+pub struct GameRepo<'a> {
     db: Database<'a>,
 }
 
-impl<'a> GameManager<'a> {
+impl<'a> GameRepo<'a> {
     pub fn new(db: Database<'a>) -> Self {
         Self { db }
     }

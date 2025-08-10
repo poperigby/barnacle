@@ -7,7 +7,7 @@ use barnacle::{
         mods::Mod,
         profiles::Profile,
     },
-    managers::games::GameManager,
+    infra::repos::games::GameRepo,
 };
 use clap::{Parser, Subcommand};
 use native_db::{Builder, Models};
@@ -110,7 +110,7 @@ fn main() {
     let db = Builder::new()
         .create(&MODELS, data_dir().join("state.db"))
         .unwrap();
-    let game_manager = GameManager::new(db);
+    let game_manager = GameRepo::new(db);
 
     let cli = Cli::parse();
     match cli.command {
