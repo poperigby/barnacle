@@ -38,6 +38,11 @@ impl<'a> Database<'a> {
         Ok(())
     }
 
+    pub fn get_game(&self, id: GameId) -> Result<Option<Game>> {
+        let r = self.db.r_transaction()?;
+        Ok(r.get().primary(id)?)
+    }
+
     pub fn remove_game(&self, id: GameId) -> Result<()> {
         let rw = self.db.rw_transaction()?;
         let found_game: Game = rw

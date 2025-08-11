@@ -8,7 +8,10 @@ use once_cell::sync::Lazy;
 use tracing::Level;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
+use crate::state::AppState;
+
 mod gui;
+mod state;
 
 #[derive(Parser)]
 #[command(version, about)]
@@ -104,6 +107,9 @@ fn main() {
             .unwrap(),
     );
 
+    // Load state file
+    let mut state = AppState::load().unwrap();
+
     let cli = Cli::parse();
     match cli.command {
         Some(Commands::Game {
@@ -149,8 +155,10 @@ fn main() {
         // }
         // Some(Commands::Mod { command: None }) => {}
         Some(Commands::Gui) => {
-            gui::run();
+            gui::run(&db, &mut state);
         }
         None => {}
-    }
+    };
+
+    state.save().unwrap();
 }
