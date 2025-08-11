@@ -4,9 +4,13 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use barnacle_data::v1::mods::Mod;
+use barnacle_data::v1::{
+    games::{DeployType, Game},
+    mods::Mod,
+};
 use compress_tools::{Ownership, uncompress_archive};
 use thiserror::Error;
+use tracing::warn;
 use walkdir::WalkDir;
 
 use crate::database::Database;
@@ -49,6 +53,18 @@ pub fn data_dir() -> PathBuf {
     xdg::BaseDirectories::with_prefix("barnacle")
         .get_data_home()
         .unwrap()
+}
+
+pub fn add_game(db: &Database, name: &str, game_type: DeployType, game_dir: &Path) {
+    if !game_dir.exists() {
+        warn!(
+            "The game directory '{}' does not exist",
+            game_dir.to_str().unwrap()
+        );
+    };
+
+    let new_game = Game::new(name, game_type, game_dir);
+    db.insert_game(new_game);
 }
 
 pub fn add_mod(db: &Database, input_path: &Path, name: Option<&str>) -> Result<(), AddModError> {

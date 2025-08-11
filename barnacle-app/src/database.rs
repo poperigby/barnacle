@@ -1,16 +1,12 @@
 // TODO: Move business logic out of here
 
-use std::{
-    fs::{create_dir_all, remove_dir_all},
-    path::Path,
-};
+use std::fs::{create_dir_all, remove_dir_all};
 
 use barnacle_data::v1::{
-    games::{DeployType, Game, GameId},
+    games::{Game, GameId},
     mods::{Mod, ModId},
     profiles::{Profile, ProfileId},
 };
-use tracing::warn;
 
 use crate::{Permissions, change_dir_permissions, data_dir};
 
@@ -24,16 +20,7 @@ impl<'a> Database<'a> {
         Self { db }
     }
 
-    pub fn insert_game(&self, name: &str, game_type: DeployType, game_dir: &Path) {
-        if !game_dir.exists() {
-            warn!(
-                "The game directory '{}' does not exist",
-                game_dir.to_str().unwrap()
-            );
-        };
-
-        let new_game = Game::new(name, game_type, game_dir);
-
+    pub fn insert_game(&self, new_game: Game) {
         let rw = self.db.rw_transaction().unwrap();
         rw.insert(new_game).unwrap();
         rw.commit().unwrap();
