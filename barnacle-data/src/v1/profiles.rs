@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::v1::mods::{Mod, ModId};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, AsRef, Display)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Copy, AsRef, Display)]
 pub struct ProfileId(Uuid);
 
 impl ToKey for ProfileId {

@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use crate::v1::{mods::ModId, profiles::ProfileId};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, AsRef, Display)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, AsRef, Display, Copy)]
 pub struct GameId(Uuid);
 
 impl ToKey for GameId {

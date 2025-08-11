@@ -65,7 +65,7 @@ pub fn add_game(db: &Database, name: &str, game_type: DeployType, game_dir: &Pat
     };
 
     let new_game = Game::new(name, game_type, game_dir);
-    db.insert_game(new_game);
+    db.insert_game(new_game).unwrap();
 }
 
 pub fn add_profile(db: &Database, name: &str) {
@@ -78,7 +78,7 @@ pub fn add_profile(db: &Database, name: &str) {
     )
     .unwrap();
 
-    db.insert_profile(new_profile);
+    db.insert_profile(new_profile).unwrap();
 }
 
 pub fn add_mod(db: &Database, input_path: &Path, name: Option<&str>) -> Result<(), AddModError> {
@@ -97,13 +97,13 @@ pub fn add_mod(db: &Database, input_path: &Path, name: Option<&str>) -> Result<(
     uncompress_archive(archive, &dir, Ownership::Preserve)?;
     change_dir_permissions(&dir, Permissions::ReadOnly);
 
-    db.insert_mod(new_mod);
+    db.insert_mod(new_mod).unwrap();
 
     Ok(())
 }
 
 pub fn delete_mod(db: &Database, id: ModId) {
-    db.remove_mod(id);
+    db.remove_mod(id).unwrap();
 
     let dir = data_dir().join("mods").join(id.to_string());
 
