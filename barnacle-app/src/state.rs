@@ -3,7 +3,7 @@ use std::{
     io::{self, Write},
 };
 
-use barnacle::config_dir;
+use barnacle::data_dir;
 use barnacle_data::v1::{games::GameId, profiles::ProfileId};
 use ron::{
     de::from_reader,
@@ -34,19 +34,18 @@ pub struct AppState {
 
 impl AppState {
     pub fn load() -> Result<Self> {
-        let path = config_dir().join("state.ron");
+        let path = data_dir().join("state.ron");
         if path.exists() {
             let file = File::open(path).map_err(AppStateError::Read)?;
             Ok(from_reader(file).map_err(AppStateError::Deserialize)?)
         } else {
-            create_dir_all(config_dir()).unwrap();
+            create_dir_all(data_dir()).unwrap();
             Ok(AppState::default())
         }
     }
 
     pub fn save(&self) -> Result<()> {
-        let mut file =
-            File::create(config_dir().join("state.ron")).map_err(AppStateError::Write)?;
+        let mut file = File::create(data_dir().join("state.ron")).map_err(AppStateError::Write)?;
 
         let s =
             to_string_pretty(&self, PrettyConfig::default()).map_err(AppStateError::Serialize)?;
