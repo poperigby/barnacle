@@ -1,37 +1,21 @@
 // TODO: Move business logic out of here
 
 use std::{
-    fs::{File, create_dir_all, remove_dir_all, set_permissions},
+    fs::{File, create_dir_all, remove_dir_all},
     io,
     path::Path,
 };
 
 use barnacle_data::v1::{
-    games::{DeployType, Game},
+    games::{DeployType, Game, GameId},
     mods::{Mod, ModId},
-    profiles::Profile,
+    profiles::{Profile, ProfileId},
 };
 use compress_tools::{Ownership, uncompress_archive};
 use thiserror::Error;
 use tracing::warn;
-use walkdir::WalkDir;
 
-use crate::data_dir;
-
-#[derive(PartialEq)]
-enum Permissions {
-    ReadOnly,
-    ReadWrite,
-}
-fn change_dir_permissions(path: &Path, permissions: Permissions) {
-    use Permissions::*;
-
-    for entry in WalkDir::new(path) {
-        let mut perms = entry.as_ref().unwrap().metadata().unwrap().permissions();
-        perms.set_readonly(permissions == ReadOnly);
-        set_permissions(entry.unwrap().path(), perms).unwrap();
-    }
-}
+use crate::{Permissions, change_dir_permissions, data_dir};
 
 #[derive(Error, Debug)]
 pub enum AddModError {
@@ -43,6 +27,7 @@ pub enum AddModError {
     UncompressArchive(#[from] compress_tools::Error),
 }
 
+/// Client for performing operations on the database
 pub struct Database<'a> {
     db: native_db::Database<'a>,
 }
@@ -52,7 +37,7 @@ impl<'a> Database<'a> {
         Self { db }
     }
 
-    pub fn add_game(&self, name: &str, game_type: DeployType, game_dir: &Path) {
+    pub fn insert_game(&self, name: &str, game_type: DeployType, game_dir: &Path) {
         if !game_dir.exists() {
             warn!(
                 "The game directory '{}' does not exist",
@@ -67,7 +52,15 @@ impl<'a> Database<'a> {
         rw.commit().unwrap();
     }
 
-    pub fn add_profile(&self, name: &str) {
+    pub fn remove_game(&self, id: GameId) {
+        let rw = self.db.rw_transaction().unwrap();
+        let found_game: Game = rw.get().primary(id).unwrap().unwrap();
+
+        rw.remove(found_game).unwrap();
+        rw.commit().unwrap();
+    }
+
+    pub fn insert_profile(&self, name: &str) {
         let new_profile = Profile::new(name);
 
         create_dir_all(
@@ -82,7 +75,15 @@ impl<'a> Database<'a> {
         rw.commit().unwrap();
     }
 
-    pub fn add_mod(&self, input_path: &Path, name: Option<&str>) -> Result<(), AddModError> {
+    pub fn remove_profile(&self, id: ProfileId) {
+        let rw = self.db.rw_transaction().unwrap();
+        let found_profile: Profile = rw.get().primary(id).unwrap().unwrap();
+
+        rw.remove(found_profile).unwrap();
+        rw.commit().unwrap();
+    }
+
+    pub fn insert_mod(&self, input_path: &Path, name: Option<&str>) -> Result<(), AddModError> {
         // If mod name isn't provided, infer it from the file's name
         let name = name
             // TODO: Infer from directory name if the input path is a directory instead of an
@@ -105,9 +106,9 @@ impl<'a> Database<'a> {
         Ok(())
     }
 
-    pub fn delete_mod(&self, mod_id: ModId) {
+    pub fn remove_mod(&self, id: ModId) {
         let rw = self.db.rw_transaction().unwrap();
-        let found_mod: Mod = rw.get().primary(mod_id).unwrap().unwrap();
+        let found_mod: Mod = rw.get().primary(id).unwrap().unwrap();
         let dir = data_dir().join("mods").join(found_mod.id().to_string());
 
         change_dir_permissions(&dir, Permissions::ReadWrite);
