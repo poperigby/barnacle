@@ -1,6 +1,6 @@
 use std::{fs::create_dir_all, path::PathBuf};
 
-use barnacle::{AppService, data_dir};
+use barnacle::{data_dir, database::Database};
 use barnacle_data::v1::{games::Game, mods::Mod, profiles::Profile};
 use clap::{Parser, Subcommand};
 use native_db::{Builder, Models};
@@ -98,11 +98,11 @@ fn main() {
     create_dir_all(data_dir()).unwrap();
 
     // Setup database
-    let db = Builder::new()
-        .create(&MODELS, data_dir().join("state.db"))
-        .unwrap();
-
-    let app_service = AppService::new(&db);
+    let db = Database::new(
+        Builder::new()
+            .create(&MODELS, data_dir().join("state.db"))
+            .unwrap(),
+    );
 
     let cli = Cli::parse();
     match cli.command {

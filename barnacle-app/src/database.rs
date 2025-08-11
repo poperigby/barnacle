@@ -1,13 +1,19 @@
+// TODO: Move business logic out of here
+
 use std::{
-    fs::{File, remove_dir_all, set_permissions},
+    fs::{File, create_dir_all, remove_dir_all, set_permissions},
     io,
     path::Path,
 };
 
-use barnacle_data::v1::mods::{Mod, ModId};
+use barnacle_data::v1::{
+    games::{DeployType, Game},
+    mods::{Mod, ModId},
+    profiles::Profile,
+};
 use compress_tools::{Ownership, uncompress_archive};
-use native_db::Database;
 use thiserror::Error;
+use tracing::warn;
 use walkdir::WalkDir;
 
 use crate::data_dir;
@@ -37,16 +43,46 @@ pub enum AddModError {
     UncompressArchive(#[from] compress_tools::Error),
 }
 
-pub struct ModsManager<'a> {
-    db: &'a Database<'a>,
+pub struct Database<'a> {
+    db: native_db::Database<'a>,
 }
 
-impl<'a> ModsManager<'a> {
-    pub fn new(db: &'a Database) -> Self {
+impl<'a> Database<'a> {
+    pub fn new(db: native_db::Database<'a>) -> Self {
         Self { db }
     }
 
-    pub fn add(&self, input_path: &Path, name: Option<&str>) -> Result<(), AddModError> {
+    pub fn add_game(&self, name: &str, game_type: DeployType, game_dir: &Path) {
+        if !game_dir.exists() {
+            warn!(
+                "The game directory '{}' does not exist",
+                game_dir.to_str().unwrap()
+            );
+        };
+
+        let new_game = Game::new(name, game_type, game_dir);
+
+        let rw = self.db.rw_transaction().unwrap();
+        rw.insert(new_game).unwrap();
+        rw.commit().unwrap();
+    }
+
+    pub fn add_profile(&self, name: &str) {
+        let new_profile = Profile::new(name);
+
+        create_dir_all(
+            data_dir()
+                .join("profiles")
+                .join(new_profile.id().to_string()),
+        )
+        .unwrap();
+
+        let rw = self.db.rw_transaction().unwrap();
+        rw.insert(new_profile).unwrap();
+        rw.commit().unwrap();
+    }
+
+    pub fn add_mod(&self, input_path: &Path, name: Option<&str>) -> Result<(), AddModError> {
         // If mod name isn't provided, infer it from the file's name
         let name = name
             // TODO: Infer from directory name if the input path is a directory instead of an
@@ -69,7 +105,7 @@ impl<'a> ModsManager<'a> {
         Ok(())
     }
 
-    pub fn delete(&self, mod_id: ModId) {
+    pub fn delete_mod(&self, mod_id: ModId) {
         let rw = self.db.rw_transaction().unwrap();
         let found_mod: Mod = rw.get().primary(mod_id).unwrap().unwrap();
         let dir = data_dir().join("mods").join(found_mod.id().to_string());
