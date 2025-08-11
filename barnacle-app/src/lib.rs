@@ -1,12 +1,12 @@
 use std::{
-    fs::{File, create_dir_all, set_permissions},
+    fs::{File, create_dir_all, remove_dir_all, set_permissions},
     io,
     path::{Path, PathBuf},
 };
 
 use barnacle_data::v1::{
     games::{DeployType, Game},
-    mods::Mod,
+    mods::{Mod, ModId},
     profiles::Profile,
 };
 use compress_tools::{Ownership, uncompress_archive};
@@ -95,10 +95,18 @@ pub fn add_mod(db: &Database, input_path: &Path, name: Option<&str>) -> Result<(
     // TODO: Only do attempt to open the archive if the input_path is an archive
     let archive = File::open(input_path).map_err(AddModError::OpenArchive)?;
     uncompress_archive(archive, &dir, Ownership::Preserve)?;
+    change_dir_permissions(&dir, Permissions::ReadOnly);
 
     db.insert_mod(new_mod);
 
-    change_dir_permissions(&dir, Permissions::ReadOnly);
-
     Ok(())
+}
+
+pub fn delete_mod(db: &Database, id: ModId) {
+    db.remove_mod(id);
+
+    let dir = data_dir().join("mods").join(id.to_string());
+
+    change_dir_permissions(&dir, Permissions::ReadWrite);
+    remove_dir_all(&dir).unwrap();
 }

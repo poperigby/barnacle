@@ -1,14 +1,8 @@
-// TODO: Move business logic out of here
-
-use std::fs::remove_dir_all;
-
 use barnacle_data::v1::{
     games::{Game, GameId},
     mods::{Mod, ModId},
     profiles::{Profile, ProfileId},
 };
-
-use crate::{Permissions, change_dir_permissions, data_dir};
 
 /// Client for performing operations on the database
 pub struct Database<'a> {
@@ -57,10 +51,6 @@ impl<'a> Database<'a> {
     pub fn remove_mod(&self, id: ModId) {
         let rw = self.db.rw_transaction().unwrap();
         let found_mod: Mod = rw.get().primary(id).unwrap().unwrap();
-        let dir = data_dir().join("mods").join(found_mod.id().to_string());
-
-        change_dir_permissions(&dir, Permissions::ReadWrite);
-        remove_dir_all(&dir).unwrap();
 
         rw.remove(found_mod).unwrap();
         rw.commit().unwrap();
