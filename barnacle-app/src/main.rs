@@ -103,7 +103,7 @@ fn main() {
     // Setup database
     let db = Database::new(
         Builder::new()
-            .create(&MODELS, data_dir().join("state.db"))
+            .create(&MODELS, data_dir().join("data.db"))
             .unwrap(),
     );
 

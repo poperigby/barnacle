@@ -20,7 +20,8 @@ pub enum DatabaseError {
     ModNotFound(ModId),
 }
 
-/// Client for performing operations on the database
+/// Client for performing operations on the database.
+/// The database is responsible for storing pure domain data.
 pub struct Database<'a> {
     db: native_db::Database<'a>,
 }
