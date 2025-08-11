@@ -28,10 +28,10 @@ pub struct Mod {
 }
 
 impl Mod {
-    pub fn new(name: String) -> Self {
+    pub fn new(name: &str) -> Self {
         Self {
             id: ModId(Uuid::new_v4()),
-            name,
+            name: name.to_string(),
         }
     }
 
