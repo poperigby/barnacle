@@ -1,6 +1,6 @@
 // TODO: Move business logic out of here
 
-use std::fs::{create_dir_all, remove_dir_all};
+use std::fs::remove_dir_all;
 
 use barnacle_data::v1::{
     games::{Game, GameId},
@@ -34,16 +34,7 @@ impl<'a> Database<'a> {
         rw.commit().unwrap();
     }
 
-    pub fn insert_profile(&self, name: &str) {
-        let new_profile = Profile::new(name);
-
-        create_dir_all(
-            data_dir()
-                .join("profiles")
-                .join(new_profile.id().to_string()),
-        )
-        .unwrap();
-
+    pub fn insert_profile(&self, new_profile: Profile) {
         let rw = self.db.rw_transaction().unwrap();
         rw.insert(new_profile).unwrap();
         rw.commit().unwrap();

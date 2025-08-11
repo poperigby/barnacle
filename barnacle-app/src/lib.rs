@@ -1,5 +1,5 @@
 use std::{
-    fs::{File, set_permissions},
+    fs::{File, create_dir_all, set_permissions},
     io,
     path::{Path, PathBuf},
 };
@@ -7,6 +7,7 @@ use std::{
 use barnacle_data::v1::{
     games::{DeployType, Game},
     mods::Mod,
+    profiles::Profile,
 };
 use compress_tools::{Ownership, uncompress_archive};
 use thiserror::Error;
@@ -65,6 +66,19 @@ pub fn add_game(db: &Database, name: &str, game_type: DeployType, game_dir: &Pat
 
     let new_game = Game::new(name, game_type, game_dir);
     db.insert_game(new_game);
+}
+
+pub fn add_profile(db: &Database, name: &str) {
+    let new_profile = Profile::new(name);
+
+    create_dir_all(
+        data_dir()
+            .join("profiles")
+            .join(new_profile.id().to_string()),
+    )
+    .unwrap();
+
+    db.insert_profile(new_profile);
 }
 
 pub fn add_mod(db: &Database, input_path: &Path, name: Option<&str>) -> Result<(), AddModError> {
