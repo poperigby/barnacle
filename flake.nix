@@ -29,18 +29,22 @@
         defaultPackage = naersk-lib.buildPackage ./.;
         devShell = mkShell {
           packages = with pkgs; [
+            # Tools
             bacon
             cargo
+            diesel-cli
             cargo-info
+            rustPackages.clippy
+            rustfmt
+
+            # Dependencies
             fuse-overlayfs
             libarchive
             openssl
-            rustPackages.clippy
+            pkg-config
             rustc
-            rustfmt
 
             # Slint
-            pkg-config
             fontconfig
             xorg.libxcb
             wayland
