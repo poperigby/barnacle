@@ -1,1 +1,3 @@
-pub mod v1;
+pub mod games;
+pub mod mods;
+pub mod profiles;

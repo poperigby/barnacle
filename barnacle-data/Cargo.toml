@@ -4,9 +4,9 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+agdb = { version = "0.11.2", features = ["serde"] }
 derive_more = { version = "2.0.1", features = ["from", "as_ref", "display"] }
 getset = "0.1.6"
-native_db = "0.8.1"
-native_model = "0.4.20"
 serde = { version = "1.0.219", features = ["derive"] }
+strum = { version = "0.27.2", features = ["derive"] }
 uuid = { version = "1.17.0", features = ["v4", "serde"] }

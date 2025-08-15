@@ -1,2 +1,2 @@
 # `barnacle-data`
-Pure, abstract data types used by Barnacle.
+Database types used by Barnacle.

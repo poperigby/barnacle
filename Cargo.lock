@@ -135,6 +135,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "agdb"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1cecf606d8f51e652e8cb825dd038ebc41b610917250b8530e69340197c8321d"
+dependencies = [
+ "agdb_derive",
+ "serde",
+]
+
+[[package]]
+name = "agdb_derive"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a994e5a76a824bb62324ca0747ae5ed11be0a429f4140ad8e5226e9dddc12ea"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "ahash"
 version = "0.8.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -583,11 +604,11 @@ dependencies = [
 name = "barnacle-data"
 version = "0.1.0"
 dependencies = [
+ "agdb",
  "derive_more 2.0.1",
  "getset",
- "native_db",
- "native_model",
  "serde",
+ "strum",
  "uuid",
 ]
 
