@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use agdb::{DbError, DbValue, UserValue, UserValueMarker};
 use derive_more::{AsRef, Display};
+use getset::Getters;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -28,7 +29,8 @@ impl TryFrom<DbValue> for ModId {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, UserValue)]
+#[derive(Serialize, Deserialize, Debug, Clone, UserValue, Getters)]
+#[getset(get = "pub")]
 pub struct Mod {
     /// A unique identifier to refer to the mod by
     id: ModId,
@@ -43,12 +45,22 @@ impl Mod {
             name: name.to_string(),
         }
     }
+}
 
-    pub fn id(&self) -> ModId {
-        self.id
-    }
+#[derive(Serialize, Deserialize, Debug, Clone, Getters, UserValue, UserValueMarker)]
+#[getset(get = "pub")]
+pub struct ModEntry {
+    mod_id: ModId,
+    enabled: bool,
+    notes: String,
+}
 
-    pub fn name(&self) -> &str {
-        &self.name
+impl ModEntry {
+    pub fn new(mod_id: ModId) -> Self {
+        Self {
+            mod_id,
+            enabled: true,
+            notes: "".to_string(),
+        }
     }
 }
