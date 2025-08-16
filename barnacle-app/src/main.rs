@@ -1,17 +1,11 @@
 use std::{fs::create_dir_all, path::PathBuf};
 
-use barnacle::{data_dir, database::Database};
-use barnacle_data::v1::{games::Game, mods::Mod, profiles::Profile};
+use barnacle::data_dir;
 use clap::{Parser, Subcommand};
-use native_db::{Builder, Models};
-use once_cell::sync::Lazy;
 use tracing::Level;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
-use crate::state::AppState;
-
 mod gui;
-mod state;
 
 #[derive(Parser)]
 #[command(version, about)]
@@ -78,14 +72,6 @@ enum ProfileCommands {
 //
 //
 //
-static MODELS: Lazy<Models> = Lazy::new(|| {
-    let mut models = Models::new();
-    models.define::<Game>().unwrap();
-    models.define::<Profile>().unwrap();
-    models.define::<Mod>().unwrap();
-    models
-});
-
 fn main() {
     // Setup logging
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
@@ -99,16 +85,6 @@ fn main() {
 
     // Make sure data_dir exists
     create_dir_all(data_dir()).unwrap();
-
-    // Setup database
-    let db = Database::new(
-        Builder::new()
-            .create(&MODELS, data_dir().join("data.db"))
-            .unwrap(),
-    );
-
-    // Load state file
-    let mut state = AppState::load().unwrap();
 
     let cli = Cli::parse();
     match cli.command {
@@ -155,10 +131,8 @@ fn main() {
         // }
         // Some(Commands::Mod { command: None }) => {}
         Some(Commands::Gui) => {
-            gui::run(&db, &mut state);
+            gui::run();
         }
         None => {}
     };
-
-    state.save().unwrap();
 }

@@ -1,7 +1,4 @@
-use barnacle::database::Database;
 use slint::{ModelRc, StandardListViewItem};
-
-use crate::state::AppState;
 
 slint::include_modules!();
 
@@ -9,7 +6,7 @@ type TableRow = ModelRc<StandardListViewItem>;
 type TableModel = ModelRc<TableRow>;
 
 /// Run the GUI
-pub fn run(db: &Database, state: &mut AppState) {
+pub fn run() {
     let app = App::new().unwrap();
 
     // let game = db.get_game(&state.selected_game).unwrap();
