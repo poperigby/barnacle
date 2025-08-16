@@ -606,7 +606,6 @@ version = "0.1.0"
 dependencies = [
  "agdb",
  "derive_more 2.0.1",
- "getset",
  "serde",
  "strum",
  "uuid",

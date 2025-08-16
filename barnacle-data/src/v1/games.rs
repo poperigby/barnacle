@@ -3,9 +3,8 @@ use std::{
     str::FromStr,
 };
 
-use agdb::{DbError, DbValue, UserValue, UserValueMarker};
+use agdb::{DbError, DbId, DbValue, UserValue, UserValueMarker};
 use derive_more::AsRef;
-use getset::Getters;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
@@ -65,9 +64,9 @@ impl TryFrom<DbValue> for GameDir {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, UserValue, Getters)]
-#[getset(get = "pub")]
+#[derive(Serialize, Deserialize, Debug, Clone, UserValue)]
 pub struct Game {
+    db_id: Option<DbId>,
     name: String,
     deploy_type: DeployType,
     game_dir: GameDir,
@@ -76,6 +75,7 @@ pub struct Game {
 impl Game {
     pub fn new(name: &str, game_type: DeployType, game_dir: &Path) -> Self {
         Self {
+            db_id: None,
             name: name.to_string(),
             deploy_type: game_type,
             game_dir: GameDir(game_dir.to_path_buf()),
