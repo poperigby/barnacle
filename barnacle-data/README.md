@@ -1,2 +1,2 @@
 # `barnacle-data`
-Database types used by Barnacle.
+Graph database backend for Barnacle.

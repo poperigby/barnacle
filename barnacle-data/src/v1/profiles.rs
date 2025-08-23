@@ -1,7 +1,6 @@
-use agdb::{DbId, UserValue};
-use serde::{Deserialize, Serialize};
+use agdb::{DbId, DbType};
 
-#[derive(Serialize, Deserialize, Debug, Clone, UserValue)]
+#[derive(Debug, Clone, DbType)]
 pub struct Profile {
     db_id: Option<DbId>,
     name: String,
