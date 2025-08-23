@@ -6,7 +6,7 @@ type TableRow = ModelRc<StandardListViewItem>;
 type TableModel = ModelRc<TableRow>;
 
 /// Run the GUI
-pub fn run() {
+pub fn main() {
     let app = App::new().unwrap();
 
     // let game = db.get_game(&state.selected_game).unwrap();

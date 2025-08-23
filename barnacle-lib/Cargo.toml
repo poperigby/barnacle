@@ -1,9 +1,10 @@
 [package]
-name = "barnacle"
+name = "barnacle-lib"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
+agdb = "0.11.2"
 barnacle-data = { path = "../barnacle-data" }
 clap = { version = "4.5.41", features = ["derive"] }
 compress-tools = "0.15.1"

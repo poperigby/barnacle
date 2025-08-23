@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use agdb::{Db, DbId, QueryBuilder, QueryError};
 use barnacle_data::v1::{
     games::{DeployType, Game},
     mods::{Mod, ModId},
@@ -52,7 +53,7 @@ pub fn data_dir() -> PathBuf {
         .unwrap()
 }
 
-// pub fn add_game(db: &Database, name: &str, game_type: DeployType, game_dir: &Path) {
+// pub fn add_game(db: &mut Db, name: &str, game_type: DeployType, game_dir: &Path) {
 //     if !game_dir.exists() {
 //         warn!(
 //             "The game directory '{}' does not exist",
@@ -61,7 +62,40 @@ pub fn data_dir() -> PathBuf {
 //     };
 //
 //     let new_game = Game::new(name, game_type, game_dir);
-//     db.insert_game(new_game).unwrap();
+//
+//     db.transaction_mut(|t| -> Result<DbId, QueryError> {
+//         if t.exec(
+//             QueryBuilder::search()
+//                 .from("users")
+//                 .where_()
+//                 .key("username")
+//                 .value(Equal(user.username.into()))
+//                 .query(),
+//         )?
+//         .result
+//             != 0
+//         {
+//             return Err(QueryError::from(format!(
+//                 "User {} already exists.",
+//                 user.username
+//             )));
+//         }
+//
+//         let user = t
+//             .exec_mut(QueryBuilder::insert().element(user).query())?
+//             .elements[0]
+//             .id;
+//
+//         t.exec_mut(
+//             QueryBuilder::insert()
+//                 .edges()
+//                 .from("users")
+//                 .to(user)
+//                 .query(),
+//         )?;
+//
+//         Ok(user)
+//     })
 // }
 //
 // pub fn add_profile(db: &Database, name: &str) {

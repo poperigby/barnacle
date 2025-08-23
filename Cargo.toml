@@ -2,7 +2,8 @@
 resolver = "3"
 members = [
     "barnacle-data",
-    "barnacle-app",
+    "barnacle-gui",
+    "barnacle-lib",
 ]
 
 [workspace.package]

@@ -1,0 +1,13 @@
+[package]
+name = "barnacle-gui"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+barnacle-data = { path = "../barnacle-data" }
+slint = "1.12.1"
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+
+[build-dependencies]
+slint-build = "1.12.1"
