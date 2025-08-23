@@ -15,6 +15,8 @@ use thiserror::Error;
 use tracing::warn;
 use walkdir::WalkDir;
 
+mod deployers;
+
 #[derive(Error, Debug)]
 pub enum AddModError {
     #[error("Failed to read mod archive: {0}")]
