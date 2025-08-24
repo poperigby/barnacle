@@ -65,6 +65,16 @@ impl Database {
             Ok(id)
         })
     }
+
+    // pub fn link_mod_to_profile(&mut self, mod_id: DbId, profile_id: DbId) -> Result<DbId, DbError> {
+    //     self.0.transaction_mut(|t| -> Result<DbId, DbError> {
+    //         // Find ID of the game the profile is connected to
+    //         // Search for
+    //
+    //
+    //         let found_mod = t.exec(QueryBuilder::select().elements::<Mod>())
+    //     })
+    // }
 }
 
 #[cfg(test)]
@@ -86,9 +96,8 @@ mod tests {
             .expect("Failed to insert root 'game' node");
 
         // Create a Game instance
-        let game = Game::new("Skyrim", DeployKind::Gamebryo);
+        let game = Game::new("Morrowind", DeployKind::OpenMW);
 
-        // Insert into the DB
         db.insert_game(&game).unwrap();
 
         // Query all games linked under "games"

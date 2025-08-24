@@ -4,10 +4,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use agdb::{Db, DbId, QueryBuilder, QueryError};
 use barnacle_data::v1::{
     games::{DeployKind, Game},
-    mods::{Mod, ModId},
+    mods::Mod,
     profiles::Profile,
 };
 use compress_tools::{Ownership, uncompress_archive};
