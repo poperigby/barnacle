@@ -1,7 +1,7 @@
 use agdb::{DbId, DbSerialize, DbType, DbValue};
 
 #[derive(Debug, Clone, Default, DbValue, DbSerialize)]
-pub enum DeployType {
+pub enum DeployKind {
     /// Deploys directly to the game directory with OverlayFS.
     #[default]
     Overlay,
@@ -18,15 +18,15 @@ pub enum DeployType {
 pub struct Game {
     db_id: Option<DbId>,
     name: String,
-    deploy_type: DeployType,
+    deploy_kind: DeployKind,
 }
 
 impl Game {
-    pub fn new(name: &str, deploy_type: DeployType) -> Self {
+    pub fn new(name: &str, deploy_kind: DeployKind) -> Self {
         Self {
             db_id: None,
             name: name.to_string(),
-            deploy_type,
+            deploy_kind,
         }
     }
 }

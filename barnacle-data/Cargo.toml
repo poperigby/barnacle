@@ -5,3 +5,7 @@ edition.workspace = true
 
 [dependencies]
 agdb = { version = "0.12.0", features = ["serde"] }
+
+[dev-dependencies]
+pretty_assertions = "1.4.1"
+tempfile = "3.21.0"

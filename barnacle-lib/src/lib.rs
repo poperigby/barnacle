@@ -6,7 +6,7 @@ use std::{
 
 use agdb::{Db, DbId, QueryBuilder, QueryError};
 use barnacle_data::v1::{
-    games::{DeployType, Game},
+    games::{DeployKind, Game},
     mods::{Mod, ModId},
     profiles::Profile,
 };
