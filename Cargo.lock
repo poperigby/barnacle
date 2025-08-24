@@ -136,32 +136,12 @@ dependencies = [
 
 [[package]]
 name = "agdb"
-version = "0.11.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1cecf606d8f51e652e8cb825dd038ebc41b610917250b8530e69340197c8321d"
-dependencies = [
- "agdb_derive 0.11.2",
-]
-
-[[package]]
-name = "agdb"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b20bdbe6e3ff887ffb32c72f35afb36b33800ef526b183e4157f8ae25e018b9"
 dependencies = [
- "agdb_derive 0.12.0",
+ "agdb_derive",
  "serde",
-]
-
-[[package]]
-name = "agdb_derive"
-version = "0.11.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a994e5a76a824bb62324ca0747ae5ed11be0a429f4140ad8e5226e9dddc12ea"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -595,7 +575,7 @@ dependencies = [
 name = "barnacle-data"
 version = "0.1.0"
 dependencies = [
- "agdb 0.12.0",
+ "agdb",
  "pretty_assertions",
  "tempfile",
 ]
@@ -615,7 +595,7 @@ dependencies = [
 name = "barnacle-lib"
 version = "0.1.0"
 dependencies = [
- "agdb 0.11.2",
+ "agdb",
  "barnacle-data",
  "clap",
  "compress-tools",
