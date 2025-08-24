@@ -103,8 +103,25 @@ impl Database {
         })
     }
 
+    pub fn set_current_profile(&mut self, profile_id: ProfileId) -> Result<()> {
+        self.0.transaction_mut(|t| {
+            // Check if there is already a current_profile
+            t.exec(
+                QueryBuilder::select()
+                    .edge_count()
+                    .search()
+                    .from("current_profile")
+                    .query(),
+            )?;
+            // If there is, delete the edge to it
+            // Insert a new edge from current_profile to new profile_id
+
+            Ok(())
+        })
+    }
+
     /// Insert a new Mod, linked to the given Game node
-    pub fn insert_mod(&mut self, new_mod: &Mod, game_id: DbId) -> Result<ModId> {
+    pub fn insert_mod(&mut self, new_mod: &Mod, game_id: GameId) -> Result<ModId> {
         self.0.transaction_mut(|t| {
             let mod_id = t
                 .exec_mut(QueryBuilder::insert().element(new_mod).query())?
@@ -115,7 +132,7 @@ impl Database {
             t.exec_mut(
                 QueryBuilder::insert()
                     .edges()
-                    .from(game_id)
+                    .from(game_id.0)
                     .to(mod_id)
                     .query(),
             )?;
@@ -123,20 +140,22 @@ impl Database {
         })
     }
 
-    pub fn link_mod_to_profile(&mut self, mod_id: DbId, profile_id: DbId) -> Result<()> {
+    pub fn link_mod_to_profile(&mut self, mod_id: ModId, profile_id: ProfileId) -> Result<()> {
         self.0.transaction_mut(|t| {
-            // Insert ModEntry in between Profile and Mod
+            // We don't have to worry about adding mods from the wrong game, because you can only query
+            // a Mod from a Game node.
             let mod_entry = ModEntry::default();
             let mod_entry_id = t
                 .exec_mut(QueryBuilder::insert().element(&mod_entry).query())?
                 .elements[0]
                 .id;
 
+            // Insert ModEntry in between Profile and Mod
             // Profile -> ModEntry -> Mod
             t.exec_mut(
                 QueryBuilder::insert()
                     .edges()
-                    .from(profile_id)
+                    .from(profile_id.0)
                     .to(mod_entry_id)
                     .query(),
             )?;
@@ -144,7 +163,7 @@ impl Database {
                 QueryBuilder::insert()
                     .edges()
                     .from(mod_entry_id)
-                    .to(mod_id)
+                    .to(mod_id.0)
                     .query(),
             )?;
 
@@ -168,9 +187,7 @@ mod tests {
         let mut db = Database::new(&tmp_dir.path().join("test.db"));
 
         // Insert root "games" node (required before linking edges)
-        db.0.exec_mut(QueryBuilder::insert().nodes().aliases(["games"]).query())
-            .expect("Failed to insert root 'game' node");
-
+        db.init().unwrap();
         // Create a Game instance
         let game = Game::new("Morrowind", DeployKind::OpenMW);
 
