@@ -39,7 +39,7 @@ impl Database {
         self.0.exec_mut(
             QueryBuilder::insert()
                 .nodes()
-                .aliases(["games", "mods", "profiles"])
+                .aliases(["games", "current_profile"])
                 .query(),
         )?;
 
@@ -48,21 +48,27 @@ impl Database {
 
     pub fn insert_game(&mut self, game: &Game) -> Result<GameId> {
         self.0.transaction_mut(|t| {
-            let id = t
+            let game_id = t
                 .exec_mut(QueryBuilder::insert().element(game).query())?
                 .elements[0]
                 .id;
 
-            t.exec_mut(QueryBuilder::insert().edges().from("games").to(id).query())?;
+            t.exec_mut(
+                QueryBuilder::insert()
+                    .edges()
+                    .from("games")
+                    .to(game_id)
+                    .query(),
+            )?;
 
-            Ok(GameId(id))
+            Ok(GameId(game_id))
         })
     }
 
     /// Insert a new Profile, linked to the given Game node
     pub fn insert_profile(&mut self, profile: &Profile, game_name: &str) -> Result<ProfileId> {
         self.0.transaction_mut(|t| {
-            let id = t
+            let profile_id = t
                 .exec_mut(QueryBuilder::insert().element(profile).query())?
                 .elements[0]
                 .id;
@@ -77,47 +83,45 @@ impl Database {
                         .key("name")
                         .value(game_name)
                         .query(),
-                )
-                .unwrap()
+                )?
                 .elements[0]
                 .id;
 
-            // Link Profile to "profiles" root node and to the specified Game node
+            // Link Profile to the specified Game node
             t.exec_mut(
                 QueryBuilder::insert()
                     .edges()
-                    .from([QueryId::from("profiles"), QueryId::from(game_id)])
-                    .to(id)
+                    .from(game_id)
+                    .to(profile_id)
                     .query(),
             )?;
-            Ok(ProfileId(id))
+            Ok(ProfileId(profile_id))
         })
     }
 
     /// Insert a new Mod, linked to the given Game node
     pub fn insert_mod(&mut self, new_mod: &Mod, game_id: DbId) -> Result<ModId> {
         self.0.transaction_mut(|t| {
-            let id = t
+            let mod_id = t
                 .exec_mut(QueryBuilder::insert().element(new_mod).query())?
                 .elements[0]
                 .id;
 
-            // Link Mod to "mods" root node and to the specified Game node
+            // Link Mod to the specified Game node
             t.exec_mut(
                 QueryBuilder::insert()
                     .edges()
-                    .from([QueryId::from("mods"), QueryId::from(game_id)])
-                    .to(id)
+                    .from(game_id)
+                    .to(mod_id)
                     .query(),
             )?;
-            Ok(ModId(id))
+            Ok(ModId(mod_id))
         })
     }
 
     // pub fn link_mod_to_profile(&mut self, mod_id: DbId, profile_id: DbId) -> Result<DbId, DbError> {
     //     self.0.transaction_mut(|t| -> Result<DbId, DbError> {
-    //         // Find ID of the game the profile is connected to
-    //         // Search for
+    //     // Insert ModEntry in between Profile and Mod
     //
     //
     //         let found_mod = t.exec(QueryBuilder::select().elements::<Mod>())

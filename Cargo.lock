@@ -578,6 +578,7 @@ dependencies = [
  "agdb",
  "pretty_assertions",
  "tempfile",
+ "thiserror 2.0.16",
 ]
 
 [[package]]
