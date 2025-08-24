@@ -1,9 +1,13 @@
 use std::path::Path;
 
-use agdb::{Db, DbError, DbId, QueryBuilder, QueryId};
+use agdb::{Db, DbError, DbId, QueryBuilder};
 use thiserror::Error;
 
-use crate::v1::{games::Game, mods::Mod, profiles::Profile};
+use crate::v1::{
+    games::Game,
+    mods::{Mod, ModEntry},
+    profiles::Profile,
+};
 
 type Result<T> = std::result::Result<T, DatabaseError>;
 
@@ -119,14 +123,34 @@ impl Database {
         })
     }
 
-    // pub fn link_mod_to_profile(&mut self, mod_id: DbId, profile_id: DbId) -> Result<DbId, DbError> {
-    //     self.0.transaction_mut(|t| -> Result<DbId, DbError> {
-    //     // Insert ModEntry in between Profile and Mod
-    //
-    //
-    //         let found_mod = t.exec(QueryBuilder::select().elements::<Mod>())
-    //     })
-    // }
+    pub fn link_mod_to_profile(&mut self, mod_id: DbId, profile_id: DbId) -> Result<()> {
+        self.0.transaction_mut(|t| {
+            // Insert ModEntry in between Profile and Mod
+            let mod_entry = ModEntry::default();
+            let mod_entry_id = t
+                .exec_mut(QueryBuilder::insert().element(&mod_entry).query())?
+                .elements[0]
+                .id;
+
+            // Profile -> ModEntry -> Mod
+            t.exec_mut(
+                QueryBuilder::insert()
+                    .edges()
+                    .from(profile_id)
+                    .to(mod_entry_id)
+                    .query(),
+            )?;
+            t.exec_mut(
+                QueryBuilder::insert()
+                    .edges()
+                    .from(mod_entry_id)
+                    .to(mod_id)
+                    .query(),
+            )?;
+
+            Ok(())
+        })
+    }
 }
 
 #[cfg(test)]
