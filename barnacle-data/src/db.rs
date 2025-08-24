@@ -4,33 +4,76 @@ use agdb::{Db, DbError, DbId, QueryBuilder, QueryId};
 
 use crate::v1::{games::Game, mods::Mod, profiles::Profile};
 
+/// Graph database for storing data related to Barnacle
 #[derive(Debug)]
 pub struct Database(Db);
 
+/// ID representing a Game in the database
+#[derive(Debug)]
+pub struct GameId(DbId);
+
+/// ID representing a Profile in the database
+#[derive(Debug)]
+pub struct ProfileId(DbId);
+
+/// ID representing a Mod in the database
+#[derive(Debug)]
+pub struct ModId(DbId);
+
 impl Database {
-    pub fn init(path: &Path) -> Self {
+    pub fn new(path: &Path) -> Self {
         Database(Db::new(path.to_str().unwrap()).unwrap())
     }
 
-    pub fn insert_game(&mut self, game: &Game) -> Result<DbId, DbError> {
-        self.0.transaction_mut(|t| -> Result<DbId, DbError> {
+    /// Initialize the root nodes
+    pub fn init(&mut self) -> Result<(), DbError> {
+        self.0.exec_mut(
+            QueryBuilder::insert()
+                .nodes()
+                .aliases(["games", "mods", "profiles"])
+                .query(),
+        )?;
+
+        Ok(())
+    }
+
+    pub fn insert_game(&mut self, game: &Game) -> Result<GameId, DbError> {
+        self.0.transaction_mut(|t| {
             let id = t
                 .exec_mut(QueryBuilder::insert().element(game).query())?
                 .elements[0]
                 .id;
 
-            // Link Game to "games" root node
             t.exec_mut(QueryBuilder::insert().edges().from("games").to(id).query())?;
 
-            Ok(id)
+            Ok(GameId(id))
         })
     }
 
     /// Insert a new Profile, linked to the given Game node
-    pub fn insert_profile(&mut self, profile: &Profile, game_id: DbId) -> Result<DbId, DbError> {
-        self.0.transaction_mut(|t| -> Result<DbId, DbError> {
+    pub fn insert_profile(
+        &mut self,
+        profile: &Profile,
+        game_name: &str,
+    ) -> Result<ProfileId, DbError> {
+        self.0.transaction_mut(|t| {
             let id = t
                 .exec_mut(QueryBuilder::insert().element(profile).query())?
+                .elements[0]
+                .id;
+
+            // Look up game by name
+            let game_id = t
+                .exec(
+                    QueryBuilder::select()
+                        .search()
+                        .from("games")
+                        .where_()
+                        .key("name")
+                        .value(game_name)
+                        .query(),
+                )
+                .unwrap()
                 .elements[0]
                 .id;
 
@@ -42,13 +85,13 @@ impl Database {
                     .to(id)
                     .query(),
             )?;
-            Ok(id)
+            Ok(ProfileId(id))
         })
     }
 
     /// Insert a new Mod, linked to the given Game node
-    pub fn insert_mod(&mut self, new_mod: &Mod, game_id: DbId) -> Result<DbId, DbError> {
-        self.0.transaction_mut(|t| -> Result<DbId, DbError> {
+    pub fn insert_mod(&mut self, new_mod: &Mod, game_id: DbId) -> Result<ModId, DbError> {
+        self.0.transaction_mut(|t| {
             let id = t
                 .exec_mut(QueryBuilder::insert().element(new_mod).query())?
                 .elements[0]
@@ -62,7 +105,7 @@ impl Database {
                     .to(id)
                     .query(),
             )?;
-            Ok(id)
+            Ok(ModId(id))
         })
     }
 
@@ -89,7 +132,7 @@ mod tests {
     #[test]
     fn test_insert_game() {
         let tmp_dir = tempdir().unwrap();
-        let mut db = Database::init(&tmp_dir.path().join("test.db"));
+        let mut db = Database::new(&tmp_dir.path().join("test.db"));
 
         // Insert root "games" node (required before linking edges)
         db.0.exec_mut(QueryBuilder::insert().nodes().aliases(["games"]).query())
