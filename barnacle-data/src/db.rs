@@ -1,8 +1,8 @@
 use std::path::Path;
 
-use agdb::{Db, DbError, QueryBuilder};
+use agdb::{Db, DbError, DbId, QueryBuilder, QueryId};
 
-use crate::v1::games::Game;
+use crate::v1::{games::Game, profiles::Profile};
 
 #[derive(Debug)]
 pub struct Database(Db);
@@ -12,18 +12,36 @@ impl Database {
         Database(Db::new(path.to_str().unwrap()).unwrap())
     }
 
-    fn insert_game(&mut self, game: &Game) {
-        self.0
-            .transaction_mut(|t| -> Result<(), DbError> {
-                let id = t
-                    .exec_mut(QueryBuilder::insert().element(game).query())?
-                    .elements[0]
-                    .id;
-                t.exec_mut(QueryBuilder::insert().edges().from("games").to(id).query())?;
+    pub fn insert_game(&mut self, game: &Game) -> Result<DbId, DbError> {
+        self.0.transaction_mut(|t| -> Result<DbId, DbError> {
+            let id = t
+                .exec_mut(QueryBuilder::insert().element(game).query())?
+                .elements[0]
+                .id;
+            t.exec_mut(QueryBuilder::insert().edges().from("games").to(id).query())?;
 
-                Ok(())
-            })
-            .unwrap()
+            Ok(id)
+        })
+    }
+
+    /// Insert a new Profile, linked to the given Game node
+    pub fn insert_profile(&mut self, profile: &Profile, game_id: DbId) -> Result<DbId, DbError> {
+        self.0.transaction_mut(|t| -> Result<DbId, DbError> {
+            let id = t
+                .exec_mut(QueryBuilder::insert().element(profile).query())?
+                .elements[0]
+                .id;
+
+            // Link Profile to profiles root node and to the specified Game node
+            t.exec_mut(
+                QueryBuilder::insert()
+                    .edges()
+                    .from([QueryId::from("profiles"), QueryId::from(game_id)])
+                    .to(id)
+                    .query(),
+            )?;
+            Ok(id)
+        })
     }
 }
 
@@ -49,7 +67,7 @@ mod tests {
         let game = Game::new("Skyrim", DeployKind::Gamebryo);
 
         // Insert into the DB
-        db.insert_game(&game);
+        db.insert_game(&game).unwrap();
 
         // Query all games linked under "games"
         let games: Vec<Game> =
