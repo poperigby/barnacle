@@ -1,12 +1,11 @@
 use std::path::Path;
 
 use agdb::{Db, DbError, DbId, QueryBuilder, QueryId};
+use thiserror::Error;
 
 use crate::v1::{games::Game, mods::Mod, profiles::Profile};
 
-/// Graph database for storing data related to Barnacle
-#[derive(Debug)]
-pub struct Database(Db);
+type Result<T> = std::result::Result<T, DatabaseError>;
 
 /// ID representing a Game in the database
 #[derive(Debug)]
@@ -20,13 +19,23 @@ pub struct ProfileId(DbId);
 #[derive(Debug)]
 pub struct ModId(DbId);
 
+/// Graph database for storing data related to Barnacle
+#[derive(Debug)]
+pub struct Database(Db);
+
+#[derive(Debug, Error)]
+pub enum DatabaseError {
+    #[error("Database error: {0}")]
+    Db(#[from] DbError),
+}
+
 impl Database {
     pub fn new(path: &Path) -> Self {
         Database(Db::new(path.to_str().unwrap()).unwrap())
     }
 
     /// Initialize the root nodes
-    pub fn init(&mut self) -> Result<(), DbError> {
+    pub fn init(&mut self) -> Result<()> {
         self.0.exec_mut(
             QueryBuilder::insert()
                 .nodes()
@@ -37,7 +46,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn insert_game(&mut self, game: &Game) -> Result<GameId, DbError> {
+    pub fn insert_game(&mut self, game: &Game) -> Result<GameId> {
         self.0.transaction_mut(|t| {
             let id = t
                 .exec_mut(QueryBuilder::insert().element(game).query())?
@@ -51,11 +60,7 @@ impl Database {
     }
 
     /// Insert a new Profile, linked to the given Game node
-    pub fn insert_profile(
-        &mut self,
-        profile: &Profile,
-        game_name: &str,
-    ) -> Result<ProfileId, DbError> {
+    pub fn insert_profile(&mut self, profile: &Profile, game_name: &str) -> Result<ProfileId> {
         self.0.transaction_mut(|t| {
             let id = t
                 .exec_mut(QueryBuilder::insert().element(profile).query())?
@@ -90,7 +95,7 @@ impl Database {
     }
 
     /// Insert a new Mod, linked to the given Game node
-    pub fn insert_mod(&mut self, new_mod: &Mod, game_id: DbId) -> Result<ModId, DbError> {
+    pub fn insert_mod(&mut self, new_mod: &Mod, game_id: DbId) -> Result<ModId> {
         self.0.transaction_mut(|t| {
             let id = t
                 .exec_mut(QueryBuilder::insert().element(new_mod).query())?
