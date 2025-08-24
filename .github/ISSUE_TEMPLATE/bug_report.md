@@ -8,9 +8,7 @@ assignees: ''
 
 <!--
 ⚠️⚠️⚠️ 
-If you need help, have a question, or want general support (but it's not a bug), please use our
-[Q&A Discussions](https://github.com/poperigby/barnacle/discussions/categories/q-a) instead of
-opening an issue.
+If you need help, have a question, or want general support (but it's not a bug), please use our [Q&A Discussions](https://github.com/poperigby/barnacle/discussions/categories/q-a) instead of opening an issue.
 ⚠️⚠️⚠️
 -->
 
