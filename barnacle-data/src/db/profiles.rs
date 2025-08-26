@@ -1,8 +1,8 @@
 use agdb::QueryBuilder;
 
 use crate::{
-    db::{Database, GameId, ProfileId, Result},
-    schema::v1::profiles::Profile,
+    db::{Database, GameId, ModId, ProfileId, Result},
+    schema::v1::{mods::ModEntry, profiles::Profile},
 };
 
 impl Database {
@@ -59,6 +59,38 @@ impl Database {
                     .edges()
                     .from("current_profile")
                     .to(profile_id.0)
+                    .query(),
+            )?;
+
+            Ok(())
+        })
+    }
+
+    /// Add a new ModEntry to a Profile that points to a Mod
+    pub fn link_mod_to_profile(&mut self, mod_id: ModId, profile_id: ProfileId) -> Result<()> {
+        self.0.transaction_mut(|t| {
+            // We don't have to worry about adding mods from the wrong game, because you can only query
+            // a Mod from a Game node.
+            let mod_entry = ModEntry::default();
+            let mod_entry_id = t
+                .exec_mut(QueryBuilder::insert().element(&mod_entry).query())?
+                .elements[0]
+                .id;
+
+            // Insert ModEntry in between Profile and Mod
+            // Profile -> ModEntry -> Mod
+            t.exec_mut(
+                QueryBuilder::insert()
+                    .edges()
+                    .from(profile_id.0)
+                    .to(mod_entry_id)
+                    .query(),
+            )?;
+            t.exec_mut(
+                QueryBuilder::insert()
+                    .edges()
+                    .from(mod_entry_id)
+                    .to(mod_id.0)
                     .query(),
             )?;
 

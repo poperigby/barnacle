@@ -3,8 +3,6 @@ use std::path::Path;
 use agdb::{Db, DbError, DbId, QueryBuilder};
 use thiserror::Error;
 
-use crate::schema::v1::mods::{Mod, ModEntry};
-
 pub mod games;
 pub mod mods;
 pub mod profiles;
@@ -52,57 +50,5 @@ impl Database {
         )?;
 
         Ok(())
-    }
-
-    /// Add a new ModEntry to a Profile that points to a Mod
-    pub fn link_mod_to_profile(&mut self, mod_id: ModId, profile_id: ProfileId) -> Result<()> {
-        self.0.transaction_mut(|t| {
-            // We don't have to worry about adding mods from the wrong game, because you can only query
-            // a Mod from a Game node.
-            let mod_entry = ModEntry::default();
-            let mod_entry_id = t
-                .exec_mut(QueryBuilder::insert().element(&mod_entry).query())?
-                .elements[0]
-                .id;
-
-            // Insert ModEntry in between Profile and Mod
-            // Profile -> ModEntry -> Mod
-            t.exec_mut(
-                QueryBuilder::insert()
-                    .edges()
-                    .from(profile_id.0)
-                    .to(mod_entry_id)
-                    .query(),
-            )?;
-            t.exec_mut(
-                QueryBuilder::insert()
-                    .edges()
-                    .from(mod_entry_id)
-                    .to(mod_id.0)
-                    .query(),
-            )?;
-
-            Ok(())
-        })
-    }
-
-    /// Insert a new Mod, linked to the given Game node
-    pub fn insert_mod(&mut self, new_mod: &Mod, game_id: GameId) -> Result<ModId> {
-        self.0.transaction_mut(|t| {
-            let mod_id = t
-                .exec_mut(QueryBuilder::insert().element(new_mod).query())?
-                .elements[0]
-                .id;
-
-            // Link Mod to the specified Game node
-            t.exec_mut(
-                QueryBuilder::insert()
-                    .edges()
-                    .from(game_id.0)
-                    .to(mod_id)
-                    .query(),
-            )?;
-            Ok(ModId(mod_id))
-        })
     }
 }
