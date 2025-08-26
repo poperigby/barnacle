@@ -1,9 +1,9 @@
 use std::path::Path;
 
-use agdb::{Db, DbError, DbId, QueryBuilder};
+use agdb::{CountComparison, Db, DbError, DbId, QueryBuilder};
 use thiserror::Error;
 
-use crate::v1::{
+use crate::schema::v1::{
     games::Game,
     mods::{Mod, ModEntry},
     profiles::Profile,
@@ -71,6 +71,23 @@ impl Database {
 
             Ok(GameId(game_id))
         })
+    }
+
+    pub fn games(&self) -> Result<Vec<Game>> {
+        Ok(self
+            .0
+            .exec(
+                QueryBuilder::select()
+                    .elements::<Game>()
+                    .search()
+                    .from("games")
+                    .where_()
+                    .node()
+                    .and()
+                    .distance(CountComparison::GreaterThan(1))
+                    .query(),
+            )?
+            .try_into()?)
     }
 
     /// Insert a new Profile, linked to the given Game node
@@ -188,10 +205,9 @@ impl Database {
 
 #[cfg(test)]
 mod tests {
-    use crate::v1::games::DeployKind;
+    use crate::schema::v1::games::DeployKind;
 
     use super::*;
-    use agdb::{CountComparison, QueryBuilder};
     use pretty_assertions::assert_eq;
     use tempfile::tempdir;
 
@@ -207,30 +223,13 @@ mod tests {
     fn test_insert_game() {
         let mut db = setup_db();
 
-        // Create a Game instance
         let game = Game::new("Morrowind", DeployKind::OpenMW);
 
         db.insert_game(&game).unwrap();
 
-        // Query all games linked under "games"
-        let games: Vec<Game> =
-            db.0.exec(
-                QueryBuilder::select()
-                    .elements::<Game>()
-                    .search()
-                    .from("games")
-                    .where_()
-                    .node()
-                    .and()
-                    .distance(CountComparison::GreaterThan(1))
-                    .query(),
-            )
-            .unwrap()
-            .try_into()
-            .unwrap();
+        let games = db.games().unwrap();
+        let inserted_game = games.first().unwrap();
 
-        // Ensure one game exists and has the correct name and deploy type
-        let inserted_game: &Game = games.first().unwrap();
         assert_eq!(inserted_game.name(), "Morrowind");
         assert!(matches!(inserted_game.deploy_kind(), DeployKind::OpenMW));
     }

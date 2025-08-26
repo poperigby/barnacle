@@ -1,2 +1,2 @@
 pub mod db;
-pub mod v1;
+pub mod schema;
