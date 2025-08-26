@@ -31,11 +31,15 @@ pub struct Database(Db);
 pub enum DatabaseError {
     #[error("Database error: {0}")]
     Db(#[from] DbError),
+    #[error("The given path is invalid unicode")]
+    PathInvalidUnicode,
 }
 
 impl Database {
-    pub fn new(path: &Path) -> Self {
-        Database(Db::new(path.to_str().unwrap()).unwrap())
+    pub fn new(path: &Path) -> Result<Self> {
+        let path_str = path.to_str().ok_or(DatabaseError::PathInvalidUnicode)?;
+        let db = Db::new(path_str)?;
+        Ok(Database(db))
     }
 
     /// Initialize the root nodes
@@ -70,24 +74,10 @@ impl Database {
     }
 
     /// Insert a new Profile, linked to the given Game node
-    pub fn insert_profile(&mut self, profile: &Profile, game_name: &str) -> Result<ProfileId> {
+    pub fn insert_profile(&mut self, profile: &Profile, game_id: GameId) -> Result<ProfileId> {
         self.0.transaction_mut(|t| {
             let profile_id = t
                 .exec_mut(QueryBuilder::insert().element(profile).query())?
-                .elements[0]
-                .id;
-
-            // Look up game by name
-            let game_id = t
-                .exec(
-                    QueryBuilder::select()
-                        .search()
-                        .from("games")
-                        .where_()
-                        .key("name")
-                        .value(game_name)
-                        .query(),
-                )?
                 .elements[0]
                 .id;
 
@@ -95,51 +85,55 @@ impl Database {
             t.exec_mut(
                 QueryBuilder::insert()
                     .edges()
-                    .from(game_id)
+                    .from(game_id.0)
                     .to(profile_id)
                     .query(),
             )?;
+
             Ok(ProfileId(profile_id))
         })
     }
 
-    pub fn set_current_profile(&mut self, profile_id: ProfileId) -> Result<()> {
-        self.0.transaction_mut(|t| {
-            // Check if there is already a current_profile
-            t.exec(
+    pub fn current_profile(&self) -> Result<Profile> {
+        let profile: Profile = self
+            .0
+            .exec(
                 QueryBuilder::select()
-                    .edge_count()
+                    .elements::<Profile>()
                     .search()
                     .from("current_profile")
                     .query(),
+            )?
+            .try_into()?;
+
+        Ok(profile)
+    }
+
+    pub fn set_current_profile(&mut self, profile_id: ProfileId) -> Result<()> {
+        self.0.transaction_mut(|t| {
+            // Delete existing current_profile, if it exists
+            t.exec_mut(
+                QueryBuilder::remove()
+                    .search()
+                    .from("current_profile")
+                    .where_()
+                    .edge()
+                    .query(),
             )?;
-            // If there is, delete the edge to it
             // Insert a new edge from current_profile to new profile_id
+            t.exec_mut(
+                QueryBuilder::insert()
+                    .edges()
+                    .from("current_profile")
+                    .to(profile_id.0)
+                    .query(),
+            )?;
 
             Ok(())
         })
     }
 
-    /// Insert a new Mod, linked to the given Game node
-    pub fn insert_mod(&mut self, new_mod: &Mod, game_id: GameId) -> Result<ModId> {
-        self.0.transaction_mut(|t| {
-            let mod_id = t
-                .exec_mut(QueryBuilder::insert().element(new_mod).query())?
-                .elements[0]
-                .id;
-
-            // Link Mod to the specified Game node
-            t.exec_mut(
-                QueryBuilder::insert()
-                    .edges()
-                    .from(game_id.0)
-                    .to(mod_id)
-                    .query(),
-            )?;
-            Ok(ModId(mod_id))
-        })
-    }
-
+    /// Add a new ModEntry to a Profile that points to a Mod
     pub fn link_mod_to_profile(&mut self, mod_id: ModId, profile_id: ProfileId) -> Result<()> {
         self.0.transaction_mut(|t| {
             // We don't have to worry about adding mods from the wrong game, because you can only query
@@ -170,6 +164,26 @@ impl Database {
             Ok(())
         })
     }
+
+    /// Insert a new Mod, linked to the given Game node
+    pub fn insert_mod(&mut self, new_mod: &Mod, game_id: GameId) -> Result<ModId> {
+        self.0.transaction_mut(|t| {
+            let mod_id = t
+                .exec_mut(QueryBuilder::insert().element(new_mod).query())?
+                .elements[0]
+                .id;
+
+            // Link Mod to the specified Game node
+            t.exec_mut(
+                QueryBuilder::insert()
+                    .edges()
+                    .from(game_id.0)
+                    .to(mod_id)
+                    .query(),
+            )?;
+            Ok(ModId(mod_id))
+        })
+    }
 }
 
 #[cfg(test)]
@@ -177,17 +191,22 @@ mod tests {
     use crate::v1::games::DeployKind;
 
     use super::*;
-    use agdb::QueryBuilder;
+    use agdb::{CountComparison, QueryBuilder};
     use pretty_assertions::assert_eq;
     use tempfile::tempdir;
 
+    fn setup_db() -> Database {
+        let tmp_dir = tempdir().unwrap();
+        let mut db = Database::new(&tmp_dir.path().join("test.db")).unwrap();
+        db.init().unwrap();
+
+        db
+    }
+
     #[test]
     fn test_insert_game() {
-        let tmp_dir = tempdir().unwrap();
-        let mut db = Database::new(&tmp_dir.path().join("test.db"));
+        let mut db = setup_db();
 
-        // Insert root "games" node (required before linking edges)
-        db.init().unwrap();
         // Create a Game instance
         let game = Game::new("Morrowind", DeployKind::OpenMW);
 
@@ -200,6 +219,10 @@ mod tests {
                     .elements::<Game>()
                     .search()
                     .from("games")
+                    .where_()
+                    .node()
+                    .and()
+                    .distance(CountComparison::GreaterThan(1))
                     .query(),
             )
             .unwrap()
@@ -207,8 +230,8 @@ mod tests {
             .unwrap();
 
         // Ensure one game exists and has the correct name and deploy type
-        // let inserted_game: &Game = &games[0];
-        // assert_eq!(inserted_game.name, "Skyrim");
-        // assert!(matches!(inserted_game.deploy_type, DeployType::Gamebryo));
+        let inserted_game: &Game = games.first().unwrap();
+        assert_eq!(inserted_game.name(), "Morrowind");
+        assert!(matches!(inserted_game.deploy_kind(), DeployKind::OpenMW));
     }
 }
