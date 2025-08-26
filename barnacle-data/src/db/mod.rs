@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use agdb::{Db, DbError, DbId, QueryBuilder};
+use derive_more::Display;
 use thiserror::Error;
 
 pub mod games;
@@ -31,6 +32,13 @@ pub enum DatabaseError {
     Db(#[from] DbError),
     #[error("The given path is invalid unicode")]
     PathInvalidUnicode,
+    #[error("Unique, constraint violated for: {0}")]
+    UniqueViolation(UniqueConstraint),
+}
+
+#[derive(Debug, Display)]
+pub enum UniqueConstraint {
+    GameName,
 }
 
 impl Database {

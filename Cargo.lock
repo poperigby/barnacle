@@ -576,6 +576,7 @@ name = "barnacle-data"
 version = "0.1.0"
 dependencies = [
  "agdb",
+ "derive_more 2.0.1",
  "pretty_assertions",
  "tempfile",
  "thiserror 2.0.16",
