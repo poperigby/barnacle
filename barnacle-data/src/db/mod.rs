@@ -1,13 +1,16 @@
 use std::path::Path;
 
-use agdb::{CountComparison, Db, DbError, DbId, QueryBuilder};
+use agdb::{Db, DbError, DbId, QueryBuilder};
 use thiserror::Error;
 
 use crate::schema::v1::{
-    games::Game,
     mods::{Mod, ModEntry},
     profiles::Profile,
 };
+
+pub mod games;
+pub mod mods;
+pub mod profiles;
 
 type Result<T> = std::result::Result<T, DatabaseError>;
 
@@ -52,42 +55,6 @@ impl Database {
         )?;
 
         Ok(())
-    }
-
-    pub fn insert_game(&mut self, game: &Game) -> Result<GameId> {
-        self.0.transaction_mut(|t| {
-            let game_id = t
-                .exec_mut(QueryBuilder::insert().element(game).query())?
-                .elements[0]
-                .id;
-
-            t.exec_mut(
-                QueryBuilder::insert()
-                    .edges()
-                    .from("games")
-                    .to(game_id)
-                    .query(),
-            )?;
-
-            Ok(GameId(game_id))
-        })
-    }
-
-    pub fn games(&self) -> Result<Vec<Game>> {
-        Ok(self
-            .0
-            .exec(
-                QueryBuilder::select()
-                    .elements::<Game>()
-                    .search()
-                    .from("games")
-                    .where_()
-                    .node()
-                    .and()
-                    .distance(CountComparison::GreaterThan(1))
-                    .query(),
-            )?
-            .try_into()?)
     }
 
     /// Insert a new Profile, linked to the given Game node
@@ -200,37 +167,5 @@ impl Database {
             )?;
             Ok(ModId(mod_id))
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::schema::v1::games::DeployKind;
-
-    use super::*;
-    use pretty_assertions::assert_eq;
-    use tempfile::tempdir;
-
-    fn setup_db() -> Database {
-        let tmp_dir = tempdir().unwrap();
-        let mut db = Database::new(&tmp_dir.path().join("test.db")).unwrap();
-        db.init().unwrap();
-
-        db
-    }
-
-    #[test]
-    fn test_insert_game() {
-        let mut db = setup_db();
-
-        let game = Game::new("Morrowind", DeployKind::OpenMW);
-
-        db.insert_game(&game).unwrap();
-
-        let games = db.games().unwrap();
-        let inserted_game = games.first().unwrap();
-
-        assert_eq!(inserted_game.name(), "Morrowind");
-        assert!(matches!(inserted_game.deploy_kind(), DeployKind::OpenMW));
     }
 }
