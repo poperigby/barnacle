@@ -1,6 +1,6 @@
 use agdb::{DbId, DbType};
 
-#[derive(Debug, Clone, DbType)]
+#[derive(Debug, Clone, DbType, PartialEq, PartialOrd)]
 pub struct Mod {
     db_id: Option<DbId>,
     /// A pretty name to display in the UI
@@ -16,7 +16,7 @@ impl Mod {
     }
 }
 
-#[derive(Debug, Clone, DbType, Default)]
+#[derive(Debug, Clone, DbType, Default, PartialEq, PartialOrd)]
 pub struct ModEntry {
     db_id: Option<DbId>,
     enabled: bool,

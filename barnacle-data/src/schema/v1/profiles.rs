@@ -1,6 +1,6 @@
 use agdb::{DbId, DbType};
 
-#[derive(Debug, Clone, DbType)]
+#[derive(Debug, Clone, DbType, PartialEq, PartialOrd)]
 pub struct Profile {
     db_id: Option<DbId>,
     name: String,

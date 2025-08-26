@@ -1,6 +1,6 @@
 use agdb::{DbId, DbSerialize, DbType, DbValue};
 
-#[derive(Debug, Clone, Default, DbValue, DbSerialize, Copy)]
+#[derive(Debug, Clone, Default, DbValue, DbSerialize, Copy, PartialEq, PartialOrd)]
 pub enum DeployKind {
     /// Deploys directly to the game directory with OverlayFS.
     #[default]
@@ -14,7 +14,7 @@ pub enum DeployKind {
     OpenMW,
 }
 
-#[derive(Debug, Clone, DbType)]
+#[derive(Debug, Clone, DbType, PartialEq, PartialOrd)]
 pub struct Game {
     db_id: Option<DbId>,
     name: String,
