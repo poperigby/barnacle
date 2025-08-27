@@ -4,7 +4,7 @@ use crate::{GameId, ModId, Result, db::Database, schema::v1::mods::Mod};
 
 impl Database {
     /// Insert a new Mod, linked to the given Game node
-    pub fn insert_mod(&mut self, new_mod: &Mod, game_id: GameId) -> Result<ModId> {
+    pub fn insert_mod(&mut self, new_mod: &Mod, game_id: &GameId) -> Result<ModId> {
         self.0.transaction_mut(|t| {
             let mod_id = t
                 .exec_mut(QueryBuilder::insert().element(new_mod).query())?

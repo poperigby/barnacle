@@ -71,7 +71,7 @@ impl Database {
         Ok(profile)
     }
 
-    pub fn set_current_profile(&mut self, profile_id: ProfileId) -> Result<()> {
+    pub fn set_current_profile(&mut self, profile_id: &ProfileId) -> Result<()> {
         self.0.transaction_mut(|t| {
             // Delete existing current_profile, if it exists
             t.exec_mut(
@@ -96,7 +96,7 @@ impl Database {
     }
 
     /// Add a new ModEntry to a Profile that points to a Mod
-    pub fn link_mod_to_profile(&mut self, mod_id: ModId, profile_id: ProfileId) -> Result<()> {
+    pub fn link_mod_to_profile(&mut self, mod_id: &ModId, profile_id: &ProfileId) -> Result<()> {
         self.0.transaction_mut(|t| {
             let mod_entry = ModEntry::default();
             let mod_entry_id = t
