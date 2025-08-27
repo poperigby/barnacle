@@ -1,4 +1,4 @@
-use agdb::QueryBuilder;
+use agdb::{CountComparison, QueryBuilder};
 
 use crate::{
     db::{Database, GameId, ModId, ProfileId, Result},
@@ -25,6 +25,24 @@ impl Database {
 
             Ok(ProfileId(profile_id))
         })
+    }
+
+    /// Retrieve Profiles owned by the given game.
+    pub fn profiles(&self, game_id: GameId) -> Result<Vec<Profile>> {
+        Ok(self
+            .0
+            .exec(
+                QueryBuilder::select()
+                    .elements::<Profile>()
+                    .search()
+                    .from(game_id.0)
+                    .where_()
+                    .node()
+                    .and()
+                    .distance(CountComparison::GreaterThan(1))
+                    .query(),
+            )?
+            .try_into()?)
     }
 
     pub fn current_profile(&self) -> Result<Profile> {
@@ -69,8 +87,6 @@ impl Database {
     /// Add a new ModEntry to a Profile that points to a Mod
     pub fn link_mod_to_profile(&mut self, mod_id: ModId, profile_id: ProfileId) -> Result<()> {
         self.0.transaction_mut(|t| {
-            // We don't have to worry about adding mods from the wrong game, because you can only query
-            // a Mod from a Game node.
             let mod_entry = ModEntry::default();
             let mod_entry_id = t
                 .exec_mut(QueryBuilder::insert().element(&mod_entry).query())?

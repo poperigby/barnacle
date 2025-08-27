@@ -39,8 +39,10 @@ impl Database {
                     .search()
                     .from("games")
                     .where_()
+                    // Make sure we're not grabbing edges
                     .node()
                     .and()
+                    // Don't count the first node, which is the alias
                     .distance(CountComparison::GreaterThan(1))
                     .query(),
             )?
