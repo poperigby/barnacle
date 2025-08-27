@@ -19,6 +19,7 @@ impl Database {
                     .to(mod_id)
                     .query(),
             )?;
+
             Ok(ModId(mod_id))
         })
     }

@@ -15,19 +15,18 @@ pub struct Database(Db);
 impl Database {
     pub fn new(path: &Path) -> Result<Self> {
         let path_str = path.to_str().ok_or(DatabaseError::PathInvalidUnicode)?;
-        let db = Db::new(path_str)?;
+        let mut db = Db::new(path_str)?;
+
+        // Insert aliases if they don't exist
+        if db.exec(QueryBuilder::select().aliases().query())?.result == 0 {
+            db.exec_mut(
+                QueryBuilder::insert()
+                    .nodes()
+                    .aliases(["games", "current_profile"])
+                    .query(),
+            )?;
+        }
+
         Ok(Database(db))
-    }
-
-    /// Initialize the root nodes
-    pub fn init(&mut self) -> Result<()> {
-        self.0.exec_mut(
-            QueryBuilder::insert()
-                .nodes()
-                .aliases(["games", "current_profile"])
-                .query(),
-        )?;
-
-        Ok(())
     }
 }

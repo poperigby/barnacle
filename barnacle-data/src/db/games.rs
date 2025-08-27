@@ -59,10 +59,7 @@ mod tests {
 
     fn setup_db() -> Database {
         let tmp_dir = tempdir().unwrap();
-        let mut db = Database::new(&tmp_dir.path().join("test.db")).unwrap();
-        db.init().unwrap();
-
-        db
+        Database::new(&tmp_dir.path().join("test.db")).unwrap()
     }
 
     #[test]
