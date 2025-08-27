@@ -1,8 +1,7 @@
 use agdb::{CountComparison, QueryBuilder};
 
 use crate::{
-    db::{Database, DatabaseError, GameId, Result, UniqueConstraint},
-    schema::v1::games::Game,
+    DatabaseError, GameId, Result, UniqueConstraint, db::Database, schema::v1::games::Game,
 };
 
 impl Database {

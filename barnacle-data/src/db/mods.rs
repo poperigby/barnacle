@@ -1,9 +1,6 @@
 use agdb::QueryBuilder;
 
-use crate::{
-    db::{Database, GameId, ModId, Result},
-    schema::v1::mods::Mod,
-};
+use crate::{GameId, ModId, Result, db::Database, schema::v1::mods::Mod};
 
 impl Database {
     /// Insert a new Mod, linked to the given Game node

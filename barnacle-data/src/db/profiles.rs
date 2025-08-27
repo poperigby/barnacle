@@ -1,7 +1,8 @@
 use agdb::{CountComparison, QueryBuilder};
 
 use crate::{
-    db::{Database, GameId, ModId, ProfileId, Result},
+    GameId, ModId, ProfileId, Result,
+    db::Database,
     schema::v1::{mods::ModEntry, profiles::Profile},
 };
 
