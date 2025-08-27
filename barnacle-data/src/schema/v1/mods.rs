@@ -1,5 +1,7 @@
 use agdb::{DbId, DbType};
 
+use crate::ModId;
+
 #[derive(Debug, Clone, DbType, PartialEq, PartialOrd)]
 pub struct Mod {
     db_id: Option<DbId>,
@@ -13,6 +15,14 @@ impl Mod {
             db_id: None,
             name: name.to_string(),
         }
+    }
+
+    pub fn id(&self) -> Option<ModId> {
+        Some(ModId(self.db_id?))
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 }
 
