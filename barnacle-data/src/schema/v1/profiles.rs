@@ -19,4 +19,8 @@ impl Profile {
     pub fn id(&self) -> Option<ProfileId> {
         Some(ProfileId(self.db_id?))
     }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }

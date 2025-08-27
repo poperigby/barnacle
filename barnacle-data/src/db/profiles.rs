@@ -1,14 +1,24 @@
 use agdb::{CountComparison, QueryBuilder};
 
 use crate::{
-    GameId, ModId, ProfileId, Result,
+    DatabaseError, GameId, ModId, ProfileId, Result, UniqueConstraint,
     db::Database,
     schema::v1::{mods::ModEntry, profiles::Profile},
 };
 
 impl Database {
-    /// Insert a new Profile, linked to the given Game node
-    pub fn insert_profile(&mut self, profile: &Profile, game_id: GameId) -> Result<ProfileId> {
+    /// Insert a new Profile, linked to the given Game node. The Profile name must be unique.
+    pub fn insert_profile(&mut self, profile: &Profile, game_id: &GameId) -> Result<ProfileId> {
+        if self
+            .profiles(game_id)?
+            .iter()
+            .any(|p| p.name() == profile.name())
+        {
+            return Err(DatabaseError::UniqueViolation(
+                UniqueConstraint::ProfileName,
+            ));
+        }
+
         self.0.transaction_mut(|t| {
             let profile_id = t
                 .exec_mut(QueryBuilder::insert().element(profile).query())?
@@ -29,7 +39,7 @@ impl Database {
     }
 
     /// Retrieve Profiles owned by the given game.
-    pub fn profiles(&self, game_id: GameId) -> Result<Vec<Profile>> {
+    pub fn profiles(&self, game_id: &GameId) -> Result<Vec<Profile>> {
         Ok(self
             .0
             .exec(

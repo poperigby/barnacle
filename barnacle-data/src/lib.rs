@@ -32,4 +32,5 @@ pub enum DatabaseError {
 #[derive(Debug, Display)]
 pub enum UniqueConstraint {
     GameName,
+    ProfileName,
 }
