@@ -106,12 +106,14 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn test_insert_duplicate_game() {
         let mut db = setup_db();
         let game = Game::new("Morrowind", DeployKind::OpenMW);
 
         db.insert_game(&game).unwrap();
-        db.insert_game(&game).unwrap();
+        assert_eq!(
+            db.insert_game(&game).unwrap_err(),
+            DatabaseError::UniqueViolation(UniqueConstraint::GameName)
+        );
     }
 }

@@ -19,7 +19,7 @@ pub struct ProfileId(DbId);
 #[derive(Debug)]
 pub struct ModId(DbId);
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum DatabaseError {
     #[error("Database error: {0}")]
     Db(#[from] DbError),
@@ -29,7 +29,7 @@ pub enum DatabaseError {
     UniqueViolation(UniqueConstraint),
 }
 
-#[derive(Debug, Display)]
+#[derive(Debug, Display, PartialEq)]
 pub enum UniqueConstraint {
     GameName,
     ProfileName,
