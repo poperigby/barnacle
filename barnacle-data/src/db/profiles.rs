@@ -124,4 +124,21 @@ impl Database {
             Ok(())
         })
     }
+
+    pub fn mod_entries(&self, profile_id: &ProfileId) -> Result<Vec<ModEntry>> {
+        Ok(self
+            .0
+            .exec(
+                QueryBuilder::select()
+                    .elements::<ModEntry>()
+                    .search()
+                    .from(profile_id.0)
+                    .where_()
+                    .node()
+                    .and()
+                    .distance(CountComparison::GreaterThan(1))
+                    .query(),
+            )?
+            .try_into()?)
+    }
 }
