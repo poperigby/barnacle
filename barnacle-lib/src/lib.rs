@@ -4,10 +4,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use barnacle_data::v1::{
-    games::{DeployKind, Game},
-    mods::Mod,
-    profiles::Profile,
+use barnacle_data::{
+    db::Database,
+    schema::v1::{
+        games::{DeployKind, Game},
+        profiles::Profile,
+    },
 };
 use compress_tools::{Ownership, uncompress_archive};
 use thiserror::Error;
@@ -54,51 +56,20 @@ pub fn data_dir() -> PathBuf {
         .unwrap()
 }
 
-// pub fn add_game(db: &mut Db, name: &str, game_type: DeployType, game_dir: &Path) {
-//     if !game_dir.exists() {
-//         warn!(
-//             "The game directory '{}' does not exist",
-//             game_dir.to_str().unwrap()
-//         );
-//     };
-//
-//     let new_game = Game::new(name, game_type, game_dir);
-//
-//     db.transaction_mut(|t| -> Result<DbId, QueryError> {
-//         if t.exec(
-//             QueryBuilder::search()
-//                 .from("users")
-//                 .where_()
-//                 .key("username")
-//                 .value(Equal(user.username.into()))
-//                 .query(),
-//         )?
-//         .result
-//             != 0
-//         {
-//             return Err(QueryError::from(format!(
-//                 "User {} already exists.",
-//                 user.username
-//             )));
-//         }
-//
-//         let user = t
-//             .exec_mut(QueryBuilder::insert().element(user).query())?
-//             .elements[0]
-//             .id;
-//
-//         t.exec_mut(
-//             QueryBuilder::insert()
-//                 .edges()
-//                 .from("users")
-//                 .to(user)
-//                 .query(),
-//         )?;
-//
-//         Ok(user)
-//     })
-// }
-//
+pub fn add_game(db: &mut Database, name: &str, game_type: DeployKind, game_dir: &Path) {
+    if !game_dir.exists() {
+        warn!(
+            "The game directory '{}' does not exist",
+            game_dir.to_str().unwrap()
+        );
+    };
+
+    create_dir_all(data_dir().join("games").join(&name)).unwrap();
+
+    let new_game = Game::new(name, game_type);
+    db.insert_game(&new_game).unwrap();
+}
+
 // pub fn add_profile(db: &Database, name: &str) {
 //     let new_profile = Profile::new(name);
 //
