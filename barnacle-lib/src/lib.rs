@@ -56,17 +56,21 @@ pub fn data_dir() -> PathBuf {
         .unwrap()
 }
 
-pub fn add_game(db: &mut Database, name: &str, game_type: DeployKind, game_dir: &Path) {
-    if !game_dir.exists() {
-        warn!(
-            "The game directory '{}' does not exist",
-            game_dir.to_str().unwrap()
-        );
-    };
+/// Path to a specific `Game`'s directory
+pub fn game_dir(game: &Game) -> PathBuf {
+    data_dir().join("games").join(game.name())
+}
 
-    create_dir_all(data_dir().join("games").join(&name)).unwrap();
+/// Path to a specific `Profile`'s directory
+pub fn profile_dir(game: &Game, profile: &Profile) -> PathBuf {
+    game_dir(game).join("profiles").join(profile.name())
+}
 
+pub fn add_game(db: &mut Database, name: &str, game_type: DeployKind) {
     let new_game = Game::new(name, game_type);
+
+    create_dir_all(game_dir(&new_game)).unwrap();
+
     db.insert_game(&new_game).unwrap();
 }
 
