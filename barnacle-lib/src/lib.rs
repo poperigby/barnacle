@@ -1,16 +1,22 @@
-use std::{fs::create_dir_all, io};
+use std::{
+    fs::{File, create_dir_all},
+    io,
+    path::Path,
+};
 
 use barnacle_data::{
     GameId,
     db::Database,
     schema::v1::{
         games::{DeployKind, Game},
+        mods::Mod,
         profiles::Profile,
     },
 };
+use compress_tools::{Ownership, uncompress_archive};
 use thiserror::Error;
 
-use crate::fs::{game_dir, profile_dir};
+use crate::fs::{Permissions, change_dir_permissions, game_dir, mod_dir, profile_dir};
 
 mod deployers;
 mod fs;
@@ -43,26 +49,33 @@ pub fn add_profile(db: &mut Database, game_id: &GameId, name: &str) {
     db.insert_profile(&new_profile, game_id).unwrap();
 }
 //
-// pub fn add_mod(db: &Database, input_path: &Path, name: Option<&str>) -> Result<(), AddModError> {
-//     // If mod name isn't provided, infer it from the file's name
-//     let name = name
-//         // TODO: Infer from directory name if the input path is a directory instead of an
-//         // archive
-//         .unwrap_or_else(|| input_path.file_stem().unwrap().to_str().unwrap())
-//         .to_string();
-//
-//     let new_mod = Mod::new(&name);
-//     let dir = data_dir().join("mods").join(new_mod.id().to_string());
-//
-//     // TODO: Only do attempt to open the archive if the input_path is an archive
-//     let archive = File::open(input_path).map_err(AddModError::OpenArchive)?;
-//     uncompress_archive(archive, &dir, Ownership::Preserve)?;
-//     change_dir_permissions(&dir, Permissions::ReadOnly);
-//
-//     db.insert_mod(new_mod).unwrap();
-//
-//     Ok(())
-// }
+pub fn add_mod(
+    db: &mut Database,
+    game_id: &GameId,
+    input_path: &Path,
+    name: Option<&str>,
+) -> Result<(), AddModError> {
+    // If mod name isn't provided, infer it from the file's name
+    let name = name
+        // TODO: Infer from directory name if the input path is a directory instead of an
+        // archive
+        .unwrap_or_else(|| input_path.file_stem().unwrap().to_str().unwrap())
+        .to_string();
+
+    let new_mod = Mod::new(&name);
+
+    let game = db.game(game_id).unwrap();
+    let dir = mod_dir(&game, &new_mod);
+
+    // TODO: Only do attempt to open the archive if the input_path is an archive
+    let archive = File::open(input_path).map_err(AddModError::OpenArchive)?;
+    uncompress_archive(archive, &dir, Ownership::Preserve)?;
+    change_dir_permissions(&dir, Permissions::ReadOnly);
+
+    db.insert_mod(&new_mod, game_id).unwrap();
+
+    Ok(())
+}
 //
 // pub fn delete_mod(db: &Database, id: ModId) {
 //     db.remove_mod(id).unwrap();

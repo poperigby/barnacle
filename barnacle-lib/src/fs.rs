@@ -3,16 +3,16 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use barnacle_data::schema::v1::{games::Game, profiles::Profile};
+use barnacle_data::schema::v1::{games::Game, mods::Mod, profiles::Profile};
 use walkdir::WalkDir;
 
 #[derive(PartialEq)]
-enum Permissions {
+pub enum Permissions {
     ReadOnly,
     ReadWrite,
 }
 
-fn change_dir_permissions(path: &Path, permissions: Permissions) {
+pub fn change_dir_permissions(path: &Path, permissions: Permissions) {
     use Permissions::*;
 
     for entry in WalkDir::new(path) {
@@ -42,4 +42,8 @@ pub fn game_dir(game: &Game) -> PathBuf {
 /// Path to a specific `Profile`'s directory
 pub fn profile_dir(game: &Game, profile: &Profile) -> PathBuf {
     game_dir(game).join("profiles").join(profile.name())
+}
+
+pub fn mod_dir(game: &Game, mod_: &Mod) -> PathBuf {
+    game_dir(game).join("mods").join(mod_.name())
 }
