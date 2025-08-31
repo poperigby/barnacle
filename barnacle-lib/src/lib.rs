@@ -1,8 +1,4 @@
-use std::{
-    fs::{File, create_dir_all, remove_dir_all, set_permissions},
-    io,
-    path::{Path, PathBuf},
-};
+use std::{fs::create_dir_all, io};
 
 use barnacle_data::{
     GameId,
@@ -12,12 +8,12 @@ use barnacle_data::{
         profiles::Profile,
     },
 };
-use compress_tools::{Ownership, uncompress_archive};
 use thiserror::Error;
-use tracing::warn;
-use walkdir::WalkDir;
+
+use crate::fs::{game_dir, profile_dir};
 
 mod deployers;
+mod fs;
 
 #[derive(Error, Debug)]
 pub enum AddModError {
@@ -27,44 +23,6 @@ pub enum AddModError {
     OpenArchive(io::Error),
     #[error("Failed to uncompress mod archive: {0}")]
     UncompressArchive(#[from] compress_tools::Error),
-}
-
-#[derive(PartialEq)]
-enum Permissions {
-    ReadOnly,
-    ReadWrite,
-}
-
-fn change_dir_permissions(path: &Path, permissions: Permissions) {
-    use Permissions::*;
-
-    for entry in WalkDir::new(path) {
-        let mut perms = entry.as_ref().unwrap().metadata().unwrap().permissions();
-        perms.set_readonly(permissions == ReadOnly);
-        set_permissions(entry.unwrap().path(), perms).unwrap();
-    }
-}
-
-pub fn config_dir() -> PathBuf {
-    xdg::BaseDirectories::with_prefix("barnacle")
-        .get_config_home()
-        .unwrap()
-}
-
-pub fn data_dir() -> PathBuf {
-    xdg::BaseDirectories::with_prefix("barnacle")
-        .get_data_home()
-        .unwrap()
-}
-
-/// Path to a specific `Game`'s directory
-pub fn game_dir(game: &Game) -> PathBuf {
-    data_dir().join("games").join(game.name())
-}
-
-/// Path to a specific `Profile`'s directory
-pub fn profile_dir(game: &Game, profile: &Profile) -> PathBuf {
-    game_dir(game).join("profiles").join(profile.name())
 }
 
 pub fn add_game(db: &mut Database, name: &str, game_type: DeployKind) {
