@@ -1,7 +1,7 @@
 [workspace]
 resolver = "3"
 members = [
-    "barnacle-data",
+    "barnacle-db",
     "barnacle-gui",
     "barnacle-lib",
 ]

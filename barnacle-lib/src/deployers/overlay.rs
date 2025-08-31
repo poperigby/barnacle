@@ -2,7 +2,7 @@ use std::{fs::create_dir_all, iter::once, path::Path};
 
 use damascus::{Filesystem, LinuxFilesystem, OverlayFs, overlay::OverlayFsOption};
 
-use barnacle_data::schema::v1::{games::Game, profiles::Profile};
+use barnacle_db::schema::v1::{games::Game, profiles::Profile};
 
 #[derive(Debug)]
 pub struct OverlayDeployer {

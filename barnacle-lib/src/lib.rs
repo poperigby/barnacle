@@ -4,7 +4,7 @@ use std::{
     path::Path,
 };
 
-use barnacle_data::{
+use barnacle_db::{
     GameId,
     db::Database,
     schema::v1::{
@@ -48,7 +48,7 @@ pub fn add_profile(db: &mut Database, game_id: &GameId, name: &str) {
 
     db.insert_profile(&new_profile, game_id).unwrap();
 }
-//
+
 pub fn add_mod(
     db: &mut Database,
     game_id: &GameId,
@@ -76,7 +76,7 @@ pub fn add_mod(
 
     Ok(())
 }
-//
+
 // pub fn delete_mod(db: &Database, id: ModId) {
 //     db.remove_mod(id).unwrap();
 //

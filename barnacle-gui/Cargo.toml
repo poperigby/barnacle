@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-barnacle-data = { path = "../barnacle-data" }
+barnacle-db = { path = "../barnacle-db" }
 slint = "1.12.1"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }

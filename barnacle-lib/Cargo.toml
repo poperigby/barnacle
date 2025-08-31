@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-barnacle-data = { path = "../barnacle-data" }
+barnacle-db = { path = "../barnacle-db" }
 clap = { version = "4.5.41", features = ["derive"] }
 compress-tools = "0.15.1"
 damascus = { version = "0.0.10", default-features=false, features = ["overlayfs"] }
