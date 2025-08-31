@@ -1,4 +1,4 @@
-use agdb::{CountComparison, QueryBuilder};
+use agdb::{CountComparison, QueryBuilder, QueryId};
 
 use crate::{
     DatabaseError, GameId, ModId, ProfileId, Result, UniqueConstraint,
@@ -25,11 +25,11 @@ impl Database {
                 .elements[0]
                 .id;
 
-            // Link Profile to the specified Game node
+            // Link Profile to the specified Game node and root "profiles" node
             t.exec_mut(
                 QueryBuilder::insert()
                     .edges()
-                    .from(game_id.0)
+                    .from([QueryId::from("profiles"), QueryId::from(game_id.0)])
                     .to(profile_id)
                     .query(),
             )?;

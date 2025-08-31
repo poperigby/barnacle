@@ -22,7 +22,7 @@ impl Database {
             db.exec_mut(
                 QueryBuilder::insert()
                     .nodes()
-                    .aliases(["games", "current_profile"])
+                    .aliases(["games", "profiles", "mods", "current_profile"])
                     .query(),
             )?;
         }

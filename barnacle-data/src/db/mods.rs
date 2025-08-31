@@ -1,4 +1,4 @@
-use agdb::QueryBuilder;
+use agdb::{QueryBuilder, QueryId};
 
 use crate::{GameId, ModId, Result, db::Database, schema::v1::mods::Mod};
 
@@ -11,11 +11,11 @@ impl Database {
                 .elements[0]
                 .id;
 
-            // Link Mod to the specified Game node
+            // Link Mod to the specified Game node and root "mods" node
             t.exec_mut(
                 QueryBuilder::insert()
                     .edges()
-                    .from(game_id.0)
+                    .from([QueryId::from("mods"), QueryId::from(game_id.0)])
                     .to(mod_id)
                     .query(),
             )?;
