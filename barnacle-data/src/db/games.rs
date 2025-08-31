@@ -29,6 +29,15 @@ impl Database {
         })
     }
 
+    /// Retrieve a game by ID
+    pub fn game(&self, game_id: &GameId) -> Result<Game> {
+        Ok(self
+            .0
+            .exec(QueryBuilder::select().ids(game_id.0).query())?
+            .try_into()?)
+    }
+
+    /// Retrieve the list of all games
     pub fn games(&self) -> Result<Vec<Game>> {
         Ok(self
             .0

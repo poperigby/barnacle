@@ -5,6 +5,7 @@ use std::{
 };
 
 use barnacle_data::{
+    GameId,
     db::Database,
     schema::v1::{
         games::{DeployKind, Game},
@@ -74,18 +75,15 @@ pub fn add_game(db: &mut Database, name: &str, game_type: DeployKind) {
     db.insert_game(&new_game).unwrap();
 }
 
-// pub fn add_profile(db: &Database, name: &str) {
-//     let new_profile = Profile::new(name);
-//
-//     create_dir_all(
-//         data_dir()
-//             .join("profiles")
-//             .join(new_profile.id().to_string()),
-//     )
-//     .unwrap();
-//
-//     db.insert_profile(new_profile).unwrap();
-// }
+pub fn add_profile(db: &mut Database, game_id: &GameId, name: &str) {
+    let new_profile = Profile::new(name);
+
+    let game = db.game(game_id).unwrap();
+
+    create_dir_all(profile_dir(&game, &new_profile)).unwrap();
+
+    db.insert_profile(&new_profile, game_id).unwrap();
+}
 //
 // pub fn add_mod(db: &Database, input_path: &Path, name: Option<&str>) -> Result<(), AddModError> {
 //     // If mod name isn't provided, infer it from the file's name
