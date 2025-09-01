@@ -2,8 +2,12 @@ use agdb::{QueryBuilder, QueryId};
 
 use crate::{GameId, ModId, Result, db::Database, models::mods::Mod};
 
+// Documentation imports
+#[allow(unused_imports)]
+use crate::models::games::Game;
+
 impl Database {
-    /// Insert a new Mod, linked to the given Game node
+    /// Insert a new [`Mod`], linked to the [`Game`] node given by ID
     pub fn insert_mod(&mut self, new_mod: &Mod, game_id: &GameId) -> Result<ModId> {
         self.0.transaction_mut(|t| {
             let mod_id = t

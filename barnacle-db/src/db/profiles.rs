@@ -5,8 +5,12 @@ use crate::{
     models::{mods::ModEntry, profiles::Profile},
 };
 
+// Documentation imports
+#[allow(unused_imports)]
+use crate::models::{games::Game, mods::Mod};
+
 impl Database {
-    /// Insert a new Profile, linked to the given Game node. The Profile name must be unique.
+    /// Insert a new [`Profile`], linked to the [`Game`] node given by ID. The [`Profile`] name must be unique.
     pub fn insert_profile(&mut self, profile: &Profile, game_id: &GameId) -> Result<ProfileId> {
         if self
             .profiles(game_id)?
@@ -37,7 +41,7 @@ impl Database {
         })
     }
 
-    /// Retrieve Profiles owned by the given game.
+    /// Retrieve [`Profile`]s owned by the [`Game`] given by ID.
     pub fn profiles(&self, game_id: &GameId) -> Result<Vec<Profile>> {
         Ok(self
             .0
@@ -94,7 +98,7 @@ impl Database {
         })
     }
 
-    /// Add a new ModEntry to a Profile that points to a Mod
+    /// Add a new [`ModEntry`] to a [`Profile`] that points to the [`Mod`] given by ID.
     pub fn link_mod_to_profile(&mut self, mod_id: &ModId, profile_id: &ProfileId) -> Result<()> {
         self.0.transaction_mut(|t| {
             let mod_entry = ModEntry::default();
