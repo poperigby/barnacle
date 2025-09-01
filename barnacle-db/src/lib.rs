@@ -10,15 +10,15 @@ pub use db::Database;
 
 type Result<T> = std::result::Result<T, DatabaseError>;
 
-/// ID pointing to a Game in the database
+/// ID pointing to a [`models::games::Game`] in the database
 #[derive(Debug)]
 pub struct GameId(DbId);
 
-/// ID pointing to a Profile in the database
+/// ID pointing to a [`models::profiles::Profile`] in the database
 #[derive(Debug)]
 pub struct ProfileId(DbId);
 
-/// ID pointing to a Mod in the database
+/// ID pointing to a [`models::mods::Mod`] in the database
 #[derive(Debug)]
 pub struct ModId(DbId);
 
