@@ -2,8 +2,11 @@ use agdb::{DbError, DbId};
 use derive_more::Display;
 use thiserror::Error;
 
-pub mod db;
-pub mod schema;
+mod db;
+mod schema;
+
+pub use db::Database;
+pub use schema::v1::{games, mods, profiles};
 
 type Result<T> = std::result::Result<T, DatabaseError>;
 

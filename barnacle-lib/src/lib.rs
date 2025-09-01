@@ -5,13 +5,10 @@ use std::{
 };
 
 use barnacle_db::{
-    GameId,
-    db::Database,
-    schema::v1::{
-        games::{DeployKind, Game},
-        mods::Mod,
-        profiles::Profile,
-    },
+    Database, GameId,
+    games::{DeployKind, Game},
+    mods::Mod,
+    profiles::Profile,
 };
 use compress_tools::{Ownership, uncompress_archive};
 use thiserror::Error;
