@@ -3,22 +3,22 @@ use derive_more::Display;
 use thiserror::Error;
 
 mod db;
-mod schema;
+mod models;
 
 pub use db::Database;
-pub use schema::v1::{games, mods, profiles};
+pub use models::v1::{games, mods, profiles};
 
 type Result<T> = std::result::Result<T, DatabaseError>;
 
-/// ID representing a Game in the database
+/// ID pointing to a Game in the database
 #[derive(Debug)]
 pub struct GameId(DbId);
 
-/// ID representing a Profile in the database
+/// ID pointing to a Profile in the database
 #[derive(Debug)]
 pub struct ProfileId(DbId);
 
-/// ID representing a Mod in the database
+/// ID pointing to a Mod in the database
 #[derive(Debug)]
 pub struct ModId(DbId);
 

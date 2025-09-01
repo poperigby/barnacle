@@ -27,6 +27,8 @@ impl Database {
             )?;
         }
 
+        // TODO: Perform any needed migrations
+
         Ok(Database(db))
     }
 }

@@ -3,7 +3,7 @@ use agdb::{CountComparison, QueryBuilder, QueryId};
 use crate::{
     DatabaseError, GameId, ModId, ProfileId, Result, UniqueConstraint,
     db::Database,
-    schema::v1::{mods::ModEntry, profiles::Profile},
+    models::v1::{mods::ModEntry, profiles::Profile},
 };
 
 impl Database {
