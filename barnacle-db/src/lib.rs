@@ -4,7 +4,7 @@ use thiserror::Error;
 
 // Documentation imports
 #[allow(unused_imports)]
-use crate::models::{games::Game, mods::Mod, profiles::Profile};
+use crate::models::{Game, Mod, Profile};
 
 mod db;
 

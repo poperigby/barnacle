@@ -2,12 +2,12 @@ use agdb::{CountComparison, QueryBuilder, QueryId};
 
 use crate::{
     Database, DatabaseError, GameId, ModId, ProfileId, Result, UniqueConstraint,
-    models::{mods::ModEntry, profiles::Profile},
+    models::{ModEntry, Profile},
 };
 
 // Documentation imports
 #[allow(unused_imports)]
-use crate::models::{games::Game, mods::Mod};
+use crate::models::{Game, Mod};
 
 impl Database {
     /// Insert a new [`Profile`], linked to the [`Game`] node given by ID. The [`Profile`] name must be unique.

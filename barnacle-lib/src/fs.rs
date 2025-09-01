@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use barnacle_db::models::{games::Game, mods::Mod, profiles::Profile};
+use barnacle_db::models::{Game, Mod, Profile};
 use walkdir::WalkDir;
 
 #[derive(PartialEq)]

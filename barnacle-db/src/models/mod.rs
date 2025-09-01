@@ -16,3 +16,8 @@ pub mod mods {
 pub mod profiles {
     pub use super::v1::profiles::*;
 }
+
+// Also re-export the main types at models:: level for convenience
+pub use games::*;
+pub use mods::*;
+pub use profiles::*;

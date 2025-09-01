@@ -1,6 +1,6 @@
 use agdb::{CountComparison, QueryBuilder};
 
-use crate::{DatabaseError, GameId, Result, UniqueConstraint, db::Database, models::games::Game};
+use crate::{DatabaseError, GameId, Result, UniqueConstraint, db::Database, models::Game};
 
 impl Database {
     /// Insert a new [`Game`] into the database. The [`Game`] must have a unique name.
@@ -58,7 +58,7 @@ impl Database {
 
 #[cfg(test)]
 mod tests {
-    use crate::models::games::DeployKind;
+    use crate::models::DeployKind;
 
     use super::*;
     use pretty_assertions::assert_eq;

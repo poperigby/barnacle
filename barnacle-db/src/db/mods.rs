@@ -1,10 +1,10 @@
 use agdb::{QueryBuilder, QueryId};
 
-use crate::{GameId, ModId, Result, db::Database, models::mods::Mod};
+use crate::{GameId, ModId, Result, db::Database, models::Mod};
 
 // Documentation imports
 #[allow(unused_imports)]
-use crate::models::games::Game;
+use crate::models::Game;
 
 impl Database {
     /// Insert a new [`Mod`], linked to the [`Game`] node given by ID
