@@ -3,10 +3,10 @@ use derive_more::Display;
 use thiserror::Error;
 
 mod db;
-mod models;
+
+pub mod models;
 
 pub use db::Database;
-pub use models::v1::{games, mods, profiles};
 
 type Result<T> = std::result::Result<T, DatabaseError>;
 

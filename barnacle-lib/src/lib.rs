@@ -6,9 +6,11 @@ use std::{
 
 use barnacle_db::{
     Database, GameId,
-    games::{DeployKind, Game},
-    mods::Mod,
-    profiles::Profile,
+    models::{
+        games::{DeployKind, Game},
+        mods::Mod,
+        profiles::Profile,
+    },
 };
 use compress_tools::{Ownership, uncompress_archive};
 use thiserror::Error;
