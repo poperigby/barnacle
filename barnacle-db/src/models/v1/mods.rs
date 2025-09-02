@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use agdb::{DbId, DbType};
 
 use crate::ModId;
@@ -26,9 +28,33 @@ impl Mod {
     }
 }
 
-#[derive(Debug, Clone, DbType, Default, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, DbType, PartialEq, Eq)]
 pub struct ModEntry {
     db_id: Option<DbId>,
     enabled: bool,
+    load_order: u32,
     notes: String,
+}
+
+impl ModEntry {
+    pub fn new(enabled: bool, load_order: u32, notes: &str) -> Self {
+        ModEntry {
+            db_id: None,
+            enabled,
+            load_order,
+            notes: notes.to_string(),
+        }
+    }
+}
+
+impl Ord for ModEntry {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.load_order.cmp(&other.load_order)
+    }
+}
+
+impl PartialOrd for ModEntry {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
