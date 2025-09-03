@@ -14,17 +14,35 @@ pub use db::Database;
 
 type Result<T> = std::result::Result<T, DatabaseError>;
 
-/// ID pointing to a [`Game`] in the database
-#[derive(Debug)]
-pub struct GameId(DbId);
+/// A handle to a [`Game`] in the database.
+///
+/// This serves as a parent context for game-specific profiles and mods.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GameCtx {
+    pub(crate) id: DbId,
+}
 
-/// ID pointing to a [`Profile`] in the database
-#[derive(Debug)]
-pub struct ProfileId(DbId);
+/// A handle to a [`Profile`] within a specific [`Game`].
+///
+/// This context ensures that profile operations are scoped to the correct game
+/// and enables validation that profiles and mods belong to the same game before
+/// linking them together.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ProfileCtx {
+    pub(crate) id: DbId,
+    pub(crate) game_id: DbId,
+}
 
-/// ID pointing to a [`Mod`] in the database
-#[derive(Debug)]
-pub struct ModId(DbId);
+/// A handle to a [`Mod`] within a specific [`Game`].
+///
+/// This context ensures that mod operations are scoped to the correct game
+/// and enables validation that mods and profiles belong to the same game before
+/// linking them together.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ModCtx {
+    pub(crate) id: DbId,
+    pub(crate) game_id: DbId,
+}
 
 #[derive(Debug, Error, PartialEq)]
 pub enum DatabaseError {

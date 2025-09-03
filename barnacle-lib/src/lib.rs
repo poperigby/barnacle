@@ -5,7 +5,7 @@ use std::{
 };
 
 use barnacle_db::{
-    Database, GameId,
+    Database, GameCtx,
     models::{DeployKind, Game, Mod, Profile},
 };
 use compress_tools::{Ownership, uncompress_archive};
@@ -34,19 +34,19 @@ pub fn add_game(db: &mut Database, name: &str, game_type: DeployKind) {
     db.insert_game(&new_game).unwrap();
 }
 
-pub fn add_profile(db: &mut Database, game_id: &GameId, name: &str) {
+pub fn add_profile(db: &mut Database, game_ctx: GameCtx, name: &str) {
     let new_profile = Profile::new(name);
 
-    let game = db.game(game_id).unwrap();
+    let game = db.game(game_ctx).unwrap();
 
     create_dir_all(profile_dir(&game, &new_profile)).unwrap();
 
-    db.insert_profile(&new_profile, game_id).unwrap();
+    db.insert_profile(&new_profile, game_ctx).unwrap();
 }
 
 pub fn add_mod(
     db: &mut Database,
-    game_id: &GameId,
+    game_ctx: GameCtx,
     input_path: &Path,
     name: Option<&str>,
 ) -> Result<(), AddModError> {
@@ -59,7 +59,7 @@ pub fn add_mod(
 
     let new_mod = Mod::new(&name);
 
-    let game = db.game(game_id).unwrap();
+    let game = db.game(game_ctx).unwrap();
     let dir = mod_dir(&game, &new_mod);
 
     // TODO: Only do attempt to open the archive if the input_path is an archive
@@ -67,7 +67,7 @@ pub fn add_mod(
     uncompress_archive(archive, &dir, Ownership::Preserve)?;
     change_dir_permissions(&dir, Permissions::ReadOnly);
 
-    db.insert_mod(&new_mod, game_id).unwrap();
+    db.insert_mod(&new_mod, game_ctx).unwrap();
 
     Ok(())
 }

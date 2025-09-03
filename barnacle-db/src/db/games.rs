@@ -1,10 +1,10 @@
 use agdb::{CountComparison, QueryBuilder};
 
-use crate::{DatabaseError, GameId, Result, UniqueConstraint, db::Database, models::Game};
+use crate::{DatabaseError, GameCtx, Result, UniqueConstraint, db::Database, models::Game};
 
 impl Database {
     /// Insert a new [`Game`] into the database. The [`Game`] must have a unique name.
-    pub fn insert_game(&mut self, game: &Game) -> Result<GameId> {
+    pub fn insert_game(&mut self, game: &Game) -> Result<GameCtx> {
         if self.games()?.iter().any(|g| g.name() == game.name()) {
             return Err(DatabaseError::UniqueViolation(UniqueConstraint::GameName));
         }
@@ -23,15 +23,15 @@ impl Database {
                     .query(),
             )?;
 
-            Ok(GameId(game_id))
+            Ok(GameCtx { id: game_id })
         })
     }
 
     /// Retrieve a [`Game`] by ID
-    pub fn game(&self, game_id: &GameId) -> Result<Game> {
+    pub fn game(&self, game_ctx: GameCtx) -> Result<Game> {
         Ok(self
             .0
-            .exec(QueryBuilder::select().ids(game_id.0).query())?
+            .exec(QueryBuilder::select().ids(game_ctx.id).query())?
             .try_into()?)
     }
 

@@ -1,7 +1,5 @@
 use agdb::{DbId, DbSerialize, DbType, DbValue};
 
-use crate::GameId;
-
 #[derive(Debug, Clone, Default, DbValue, DbSerialize, Copy, PartialEq, PartialOrd)]
 pub enum DeployKind {
     /// Deploys directly to the game directory with OverlayFS.
@@ -30,10 +28,6 @@ impl Game {
             name: name.to_string(),
             deploy_kind,
         }
-    }
-
-    pub fn id(&self) -> Option<GameId> {
-        Some(GameId(self.db_id?))
     }
 
     pub fn name(&self) -> &str {

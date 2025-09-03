@@ -1,6 +1,6 @@
 use agdb::{QueryBuilder, QueryId};
 
-use crate::{GameId, ModId, Result, db::Database, models::Mod};
+use crate::{GameCtx, ModCtx, Result, db::Database, models::Mod};
 
 // Documentation imports
 #[allow(unused_imports)]
@@ -8,10 +8,10 @@ use crate::models::Game;
 
 impl Database {
     /// Insert a new [`Mod`], linked to the [`Game`] node given by ID
-    pub fn insert_mod(&mut self, new_mod: &Mod, game_id: &GameId) -> Result<ModId> {
+    pub fn insert_mod(&mut self, new_mod: &Mod, game_ctx: GameCtx) -> Result<ModCtx> {
         self.0.transaction_mut(|t| {
             let mod_id = t
-                .exec_mut(QueryBuilder::insert().element(new_mod).query())?
+                .exec_mut(QueryBuilder::insert().element(&new_mod).query())?
                 .elements[0]
                 .id;
 
@@ -19,12 +19,15 @@ impl Database {
             t.exec_mut(
                 QueryBuilder::insert()
                     .edges()
-                    .from([QueryId::from("mods"), QueryId::from(game_id.0)])
+                    .from([QueryId::from("mods"), QueryId::from(game_ctx.id)])
                     .to(mod_id)
                     .query(),
             )?;
 
-            Ok(ModId(mod_id))
+            Ok(ModCtx {
+                id: mod_id,
+                game_id: game_ctx.id,
+            })
         })
     }
 }

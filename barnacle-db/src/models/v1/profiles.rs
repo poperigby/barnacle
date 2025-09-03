@@ -1,7 +1,5 @@
 use agdb::{DbId, DbType};
 
-use crate::ProfileId;
-
 #[derive(Debug, Clone, DbType, PartialEq, PartialOrd)]
 pub struct Profile {
     db_id: Option<DbId>,
@@ -14,10 +12,6 @@ impl Profile {
             db_id: None,
             name: name.to_string(),
         }
-    }
-
-    pub fn id(&self) -> Option<ProfileId> {
-        Some(ProfileId(self.db_id?))
     }
 
     pub fn name(&self) -> &str {
