@@ -1,4 +1,4 @@
-use agdb::{CountComparison, QueryBuilder, QueryId};
+use agdb::{CountComparison, DbType, QueryBuilder, QueryId};
 
 use crate::{
     Database, DatabaseError, GameCtx, ModCtx, ProfileCtx, Result, UniqueConstraint,
@@ -8,6 +8,14 @@ use crate::{
 // Documentation imports
 #[allow(unused_imports)]
 use crate::models::{Game, Mod};
+
+/// An item in a [`Profile`]'s mod list, containing the [`Mod`] data and its profile-specific configuration.
+#[derive(Debug, Clone)]
+pub struct ModListItem {
+    ctx: ModCtx,
+    entry: ModEntry,
+    data: Mod,
+}
 
 impl Database {
     /// Insert a new [`Profile`], linked to the [`Game`] node given by ID. The [`Profile`] name must be unique.
@@ -107,33 +115,59 @@ impl Database {
 
     /// Add a new [`ModEntry`] to a [`Profile`] that points to the [`Mod`] given by ID.
     pub fn insert_mod_entry(&mut self, mod_ctx: ModCtx, profile_ctx: ProfileCtx) -> Result<()> {
+        /*
+        ModEntry nodes are stored in a linked list like data structure:
+                                   Game1
+                                     │
+                          ┌──────────┼──────────┐
+                          │          │          │
+                          ↓          ↓          ↓
+                       Mod1        Mod2        Mod3
+                          ↑          ↑          ↑
+                          │          │          │
+        Profile1 ──→ ModEntry1 ──→ ModEntry2 ──→ ModEntry3
+        */
+
         // TODO: Replace with real error
         assert_eq!(mod_ctx.game_id, profile_ctx.game_id);
 
+        let maybe_last_entry_id = self
+            .mod_entries(profile_ctx)?
+            .last()
+            .and_then(|e| e.db_id());
+
         self.0.transaction_mut(|t| {
+            // Insert new ModEntry
             let mod_entry = ModEntry::default();
             let mod_entry_id = t
                 .exec_mut(QueryBuilder::insert().element(&mod_entry).query())?
                 .elements[0]
                 .id;
 
-            // ModEntry nodes are stored in a linked list like data structure:
-            // Profile -> ModEntry1 -> ModEntry2 -> ModEntry3
-            // Each ModEntry points to a Mod under a Game
+            match maybe_last_entry_id {
+                Some(last_entry_id) => {
+                    // Connect last entry in list to new entry
+                    t.exec_mut(
+                        QueryBuilder::insert()
+                            .edges()
+                            .from(last_entry_id)
+                            .to(mod_entry_id)
+                            .query(),
+                    )?;
+                }
+                None => {
+                    // Connect profile node to new entry (first entry in the list)
+                    t.exec_mut(
+                        QueryBuilder::insert()
+                            .edges()
+                            .from(profile_ctx.id)
+                            .to(mod_entry_id)
+                            .query(),
+                    )?;
+                }
+            }
 
-            // TODO:
-            // Find last ModEntry in the list
-            // Append new ModEntry to that node
-
-            // Insert ModEntry in between Profile and Mod
-            // Profile -> ModEntry -> Mod
-            t.exec_mut(
-                QueryBuilder::insert()
-                    .edges()
-                    .from(profile_ctx.id)
-                    .to(mod_entry_id)
-                    .query(),
-            )?;
+            // Connect new entry to target mod
             t.exec_mut(
                 QueryBuilder::insert()
                     .edges()
@@ -146,7 +180,14 @@ impl Database {
         })
     }
 
-    pub fn mod_entries(&self, profile_ctx: ProfileCtx) -> Result<Vec<ModEntry>> {
+    pub fn mod_list(&self, profile_ctx: ProfileCtx) -> Result<Vec<ModListItem>> {
+        // Traverse the linked-list from the given profile, collecting the ModEntry and Mod nodes.
+        let entries = self.mod_entries(profile_ctx)?;
+
+        todo!()
+    }
+
+    fn mod_entries(&self, profile_ctx: ProfileCtx) -> Result<Vec<ModEntry>> {
         Ok(self
             .0
             .exec(
@@ -158,8 +199,48 @@ impl Database {
                     .node()
                     .and()
                     .distance(CountComparison::GreaterThan(1))
+                    .and()
+                    // Filter out Mod nodes
+                    .not()
+                    .keys(Mod::db_keys())
                     .query(),
             )?
             .try_into()?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use tempfile::tempdir;
+
+    use crate::{
+        Database,
+        models::{DeployKind, Game, Mod, Profile},
+    };
+
+    fn setup_db() -> Database {
+        let tmp_dir = tempdir().unwrap();
+        Database::new(&tmp_dir.path().join("test.db")).unwrap()
+    }
+
+    #[test]
+    fn test_insert_mod_entry() {
+        let mut db = setup_db();
+
+        let mod1 = Mod::new("TestMod1");
+        let mod2 = Mod::new("TestMod2");
+
+        let game_ctx = db
+            .insert_game(&Game::new("Morrowind", DeployKind::OpenMW))
+            .unwrap();
+        let profile_ctx = db.insert_profile(&Profile::new("Test"), game_ctx).unwrap();
+
+        let mod1_ctx = db.insert_mod(&mod1, game_ctx).unwrap();
+        let mod2_ctx = db.insert_mod(&mod2, game_ctx).unwrap();
+
+        db.insert_mod_entry(mod1_ctx, profile_ctx).unwrap();
+        db.insert_mod_entry(mod2_ctx, profile_ctx).unwrap();
+
+        dbg!(db.mod_entries(profile_ctx).unwrap());
     }
 }
