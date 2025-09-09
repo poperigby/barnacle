@@ -11,8 +11,8 @@ use crate::models::{Game, Mod};
 
 /// An item in a [`Profile`]'s mod list, containing the [`Mod`] data and its profile-specific configuration.
 #[derive(Debug, Clone)]
-pub struct ModListItem {
-    ctx: ModCtx,
+pub struct ProfileMod {
+    // ctx: ModCtx,
     entry: ModEntry,
     data: Mod,
 }
@@ -180,11 +180,31 @@ impl Database {
         })
     }
 
-    pub fn mod_list(&self, profile_ctx: ProfileCtx) -> Result<Vec<ModListItem>> {
+    pub fn profile_mods(&self, profile_ctx: ProfileCtx) -> Result<Vec<ProfileMod>> {
         // Traverse the linked-list from the given profile, collecting the ModEntry and Mod nodes.
         let entries = self.mod_entries(profile_ctx)?;
+        let mods: Vec<Mod> = self
+            .0
+            .exec(
+                QueryBuilder::select()
+                    .elements::<Mod>()
+                    .search()
+                    .from(profile_ctx.id)
+                    .where_()
+                    .node()
+                    .and()
+                    .distance(CountComparison::GreaterThan(1))
+                    .and()
+                    .keys(Mod::db_keys())
+                    .query(),
+            )?
+            .try_into()?;
 
-        todo!()
+        Ok(entries
+            .into_iter()
+            .zip(mods)
+            .map(|(entry, mod_)| ProfileMod { entry, data: mod_ })
+            .collect())
     }
 
     fn mod_entries(&self, profile_ctx: ProfileCtx) -> Result<Vec<ModEntry>> {
@@ -200,47 +220,9 @@ impl Database {
                     .and()
                     .distance(CountComparison::GreaterThan(1))
                     .and()
-                    // Filter out Mod nodes
-                    .not()
-                    .keys(Mod::db_keys())
+                    .keys(ModEntry::db_keys())
                     .query(),
             )?
             .try_into()?)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use tempfile::tempdir;
-
-    use crate::{
-        Database,
-        models::{DeployKind, Game, Mod, Profile},
-    };
-
-    fn setup_db() -> Database {
-        let tmp_dir = tempdir().unwrap();
-        Database::new(&tmp_dir.path().join("test.db")).unwrap()
-    }
-
-    #[test]
-    fn test_insert_mod_entry() {
-        let mut db = setup_db();
-
-        let mod1 = Mod::new("TestMod1");
-        let mod2 = Mod::new("TestMod2");
-
-        let game_ctx = db
-            .insert_game(&Game::new("Morrowind", DeployKind::OpenMW))
-            .unwrap();
-        let profile_ctx = db.insert_profile(&Profile::new("Test"), game_ctx).unwrap();
-
-        let mod1_ctx = db.insert_mod(&mod1, game_ctx).unwrap();
-        let mod2_ctx = db.insert_mod(&mod2, game_ctx).unwrap();
-
-        db.insert_mod_entry(mod1_ctx, profile_ctx).unwrap();
-        db.insert_mod_entry(mod2_ctx, profile_ctx).unwrap();
-
-        dbg!(db.mod_entries(profile_ctx).unwrap());
     }
 }
