@@ -586,7 +586,7 @@ dependencies = [
 name = "barnacle-gui"
 version = "0.1.0"
 dependencies = [
- "barnacle-db",
+ "barnacle-lib",
  "slint",
  "slint-build",
  "tracing",
