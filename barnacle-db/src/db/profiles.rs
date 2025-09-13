@@ -19,13 +19,14 @@ pub struct ProfileMod {
 
 impl Database {
     /// Insert a new [`Profile`], linked to the [`Game`] node given by ID. The [`Profile`] name must be unique.
-    pub fn insert_profile(
+    pub async fn insert_profile(
         &mut self,
         new_profile: &Profile,
         game_ctx: GameCtx,
     ) -> Result<ProfileCtx> {
         if self
-            .profiles(game_ctx)?
+            .profiles(game_ctx)
+            .await?
             .iter()
             .any(|p| p.name() == new_profile.name())
         {
@@ -34,7 +35,7 @@ impl Database {
             ));
         }
 
-        self.0.transaction_mut(|t| {
+        self.0.write_arc().await.transaction_mut(|t| {
             let profile_id = t
                 .exec_mut(QueryBuilder::insert().element(new_profile).query())?
                 .elements[0]
@@ -57,9 +58,11 @@ impl Database {
     }
 
     /// Retrieve [`Profile`]s owned by the [`Game`] given by ID.
-    pub fn profiles(&self, game_ctx: GameCtx) -> Result<Vec<Profile>> {
+    pub async fn profiles(&self, game_ctx: GameCtx) -> Result<Vec<Profile>> {
         Ok(self
             .0
+            .read_arc()
+            .await
             .exec(
                 QueryBuilder::select()
                     .elements::<Profile>()
@@ -74,9 +77,11 @@ impl Database {
             .try_into()?)
     }
 
-    pub fn current_profile(&self) -> Result<Profile> {
+    pub async fn current_profile(&self) -> Result<Profile> {
         let profile: Profile = self
             .0
+            .read_arc()
+            .await
             .exec(
                 QueryBuilder::select()
                     .elements::<Profile>()
@@ -89,8 +94,8 @@ impl Database {
         Ok(profile)
     }
 
-    pub fn set_current_profile(&mut self, profile_ctx: ProfileCtx) -> Result<()> {
-        self.0.transaction_mut(|t| {
+    pub async fn set_current_profile(&mut self, profile_ctx: ProfileCtx) -> Result<()> {
+        self.0.write_arc().await.transaction_mut(|t| {
             // Delete existing current_profile, if it exists
             t.exec_mut(
                 QueryBuilder::remove()
@@ -114,7 +119,11 @@ impl Database {
     }
 
     /// Add a new [`ModEntry`] to a [`Profile`] that points to the [`Mod`] given by ID.
-    pub fn insert_mod_entry(&mut self, mod_ctx: ModCtx, profile_ctx: ProfileCtx) -> Result<()> {
+    pub async fn insert_mod_entry(
+        &mut self,
+        mod_ctx: ModCtx,
+        profile_ctx: ProfileCtx,
+    ) -> Result<()> {
         /*
         ModEntry nodes are stored in a linked list like data structure:
                                    Game1
@@ -132,11 +141,12 @@ impl Database {
         assert_eq!(mod_ctx.game_id, profile_ctx.game_id);
 
         let maybe_last_entry_id = self
-            .mod_entries(profile_ctx)?
+            .mod_entries(profile_ctx)
+            .await?
             .last()
             .and_then(|e| e.db_id());
 
-        self.0.transaction_mut(|t| {
+        self.0.write_arc().await.transaction_mut(|t| {
             // Insert new ModEntry
             let mod_entry = ModEntry::default();
             let mod_entry_id = t
@@ -180,11 +190,13 @@ impl Database {
         })
     }
 
-    pub fn profile_mods(&self, profile_ctx: ProfileCtx) -> Result<Vec<ProfileMod>> {
+    pub async fn profile_mods(&self, profile_ctx: ProfileCtx) -> Result<Vec<ProfileMod>> {
         // Traverse the linked-list from the given profile, collecting the ModEntry and Mod nodes.
-        let entries = self.mod_entries(profile_ctx)?;
+        let entries = self.mod_entries(profile_ctx).await?;
         let mods: Vec<Mod> = self
             .0
+            .read_arc()
+            .await
             .exec(
                 QueryBuilder::select()
                     .elements::<Mod>()
@@ -207,9 +219,11 @@ impl Database {
             .collect())
     }
 
-    fn mod_entries(&self, profile_ctx: ProfileCtx) -> Result<Vec<ModEntry>> {
+    async fn mod_entries(&self, profile_ctx: ProfileCtx) -> Result<Vec<ModEntry>> {
         Ok(self
             .0
+            .read_arc()
+            .await
             .exec(
                 QueryBuilder::select()
                     .elements::<ModEntry>()

@@ -8,8 +8,8 @@ use crate::models::Game;
 
 impl Database {
     /// Insert a new [`Mod`], linked to the [`Game`] node given by ID
-    pub fn insert_mod(&mut self, new_mod: &Mod, game_ctx: GameCtx) -> Result<ModCtx> {
-        self.0.transaction_mut(|t| {
+    pub async fn insert_mod(&mut self, new_mod: &Mod, game_ctx: GameCtx) -> Result<ModCtx> {
+        self.0.write_arc().await.transaction_mut(|t| {
             let mod_id = t
                 .exec_mut(QueryBuilder::insert().element(&new_mod).query())?
                 .elements[0]

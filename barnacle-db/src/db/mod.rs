@@ -1,6 +1,7 @@
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 
 use agdb::{Db, QueryBuilder};
+use smol::lock::RwLock;
 
 use crate::{DatabaseError, Result};
 
@@ -10,7 +11,7 @@ pub mod profiles;
 
 /// Graph database for storing data related to Barnacle
 #[derive(Debug)]
-pub struct Database(Db);
+pub struct Database(Arc<RwLock<Db>>);
 
 impl Database {
     pub fn new(path: &Path) -> Result<Self> {
@@ -29,6 +30,6 @@ impl Database {
 
         // TODO: Perform any needed migrations
 
-        Ok(Database(db))
+        Ok(Database(Arc::new(RwLock::new(db))))
     }
 }
