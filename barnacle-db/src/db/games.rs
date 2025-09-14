@@ -1,4 +1,4 @@
-use agdb::{CountComparison, QueryBuilder};
+use agdb::QueryBuilder;
 
 use crate::{DatabaseError, GameCtx, Result, UniqueConstraint, db::Database, models::Game};
 
@@ -53,78 +53,73 @@ impl Database {
                     .node()
                     .and()
                     // Don't count the first node, which is the alias
-                    .distance(CountComparison::GreaterThan(1))
+                    .neighbor()
                     .query(),
             )?
             .try_into()?)
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use crate::models::DeployKind;
-//
-//     use super::*;
-//     use pretty_assertions::assert_eq;
-//     use tempfile::tempdir;
-//
-//     fn setup_db() -> Database {
-//         let tmp_dir = tempdir().unwrap();
-//         Database::new(&tmp_dir.path().join("test.db")).unwrap()
-//     }
-//
-//     #[test]
-//     fn async test_insert_game() {
-//         let mut db = setup_db();
-//
-//         let game = Game::new("Morrowind", DeployKind::OpenMW);
-//
-//         db.insert_game(&game).await.unwrap();
-//
-//         let games = db.games().unwrap();
-//         let inserted_game = games.first().unwrap();
-//
-//         assert_eq!(inserted_game.name(), "Morrowind");
-//         assert_eq!(inserted_game.deploy_kind(), DeployKind::OpenMW);
-//     }
-//
-//     #[test]
-//     fn test_games() {
-//         let mut db = setup_db();
-//
-//         let game1 = Game::new("Morrowind", DeployKind::OpenMW);
-//         let game2 = Game::new("Skyrim", DeployKind::Gamebryo);
-//
-//         db.insert_game(&game1).unwrap();
-//         db.insert_game(&game2).unwrap();
-//
-//         let games = db.games().unwrap();
-//
-//         let names: Vec<_> = games.iter().map(|g| g.name()).collect();
-//         assert!(names.contains(&"Morrowind"));
-//         assert!(names.contains(&"Skyrim"));
-//
-//         let deploy_kinds: Vec<_> = games.iter().map(|g| g.deploy_kind()).collect();
-//         assert!(deploy_kinds.contains(&DeployKind::OpenMW));
-//         assert!(deploy_kinds.contains(&DeployKind::Gamebryo));
-//     }
-//
-//     #[test]
-//     fn test_games_empty() {
-//         let db = setup_db();
-//         let games = db.games().unwrap();
-//         assert!(games.is_empty());
-//     }
-//
-//     #[test]
-//     fn test_insert_duplicate_game() {
-//         let mut db = setup_db();
-//         let game = Game::new("Morrowind", DeployKind::OpenMW);
-//
-//         db.insert_game(&game).unwrap();
-//         assert_eq!(
-//             db.insert_game(&game).unwrap_err(),
-//             DatabaseError::UniqueViolation(UniqueConstraint::GameName)
-//         );
-//     }
-// }
+#[cfg(test)]
+mod tests {
+    use crate::models::DeployKind;
+
+    use super::*;
+    use pretty_assertions::assert_eq;
+    use tempfile::tempdir;
+
+    // #[test]
+    // fn async test_insert_game() {
+    //     let mut db = setup_db();
+    //
+    //     let game = Game::new("Morrowind", DeployKind::OpenMW);
+    //
+    //     db.insert_game(&game).await.unwrap();
+    //
+    //     let games = db.games().unwrap();
+    //     let inserted_game = games.first().unwrap();
+    //
+    //     assert_eq!(inserted_game.name(), "Morrowind");
+    //     assert_eq!(inserted_game.deploy_kind(), DeployKind::OpenMW);
+    // }
+    //
+    // #[test]
+    // fn test_games() {
+    //     let mut db = setup_db();
+    //
+    //     let game1 = Game::new("Morrowind", DeployKind::OpenMW);
+    //     let game2 = Game::new("Skyrim", DeployKind::Gamebryo);
+    //
+    //     db.insert_game(&game1).unwrap();
+    //     db.insert_game(&game2).unwrap();
+    //
+    //     let games = db.games().unwrap();
+    //
+    //     let names: Vec<_> = games.iter().map(|g| g.name()).collect();
+    //     assert!(names.contains(&"Morrowind"));
+    //     assert!(names.contains(&"Skyrim"));
+    //
+    //     let deploy_kinds: Vec<_> = games.iter().map(|g| g.deploy_kind()).collect();
+    //     assert!(deploy_kinds.contains(&DeployKind::OpenMW));
+    //     assert!(deploy_kinds.contains(&DeployKind::Gamebryo));
+    // }
+    //
+    // #[test]
+    // fn test_games_empty() {
+    //     let db = setup_db();
+    //     let games = db.games().unwrap();
+    //     assert!(games.is_empty());
+    // }
+    //
+    // #[test]
+    // fn test_insert_duplicate_game() {
+    //     let mut db = setup_db();
+    //     let game = Game::new("Morrowind", DeployKind::OpenMW);
+    //
+    //     db.insert_game(&game).unwrap();
+    //     assert_eq!(
+    //         db.insert_game(&game).unwrap_err(),
+    //         DatabaseError::UniqueViolation(UniqueConstraint::GameName)
+    //     );
+    // }
+}

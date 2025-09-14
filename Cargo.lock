@@ -136,9 +136,9 @@ dependencies = [
 
 [[package]]
 name = "agdb"
-version = "0.12.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b20bdbe6e3ff887ffb32c72f35afb36b33800ef526b183e4157f8ae25e018b9"
+checksum = "35a1308c5815474dbd591cf5aebd3edc435a47a65e5a665bb868451d61422232"
 dependencies = [
  "agdb_derive",
  "serde",
@@ -146,9 +146,9 @@ dependencies = [
 
 [[package]]
 name = "agdb_derive"
-version = "0.12.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f90d6287d8de02646f5cd358157e74767de1a589ea2674f4cf06a77c0988382"
+checksum = "65a22244c59596f20e66abc58811360f4f740623a17c0ace41c0d1f20764a9b5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -635,7 +635,6 @@ dependencies = [
  "thiserror 2.0.16",
  "tracing",
  "tracing-subscriber",
- "uuid",
  "walkdir",
  "xdg",
  "zip",
@@ -5427,9 +5426,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f33196643e165781c20a5ead5582283a7dacbb87855d867fbc2df3f81eddc1be"
 dependencies = [
  "getrandom 0.3.3",
- "js-sys",
- "serde",
- "wasm-bindgen",
 ]
 
 [[package]]
