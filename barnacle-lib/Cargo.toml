@@ -17,7 +17,7 @@ slint = "1.12.1"
 tempfile = "3.20.0"
 thiserror = "2.0.12"
 tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 walkdir = "2.5.0"
 xdg = "3.0.0"
 zip = "5.1.1"
