@@ -35,7 +35,7 @@ impl Database {
             ));
         }
 
-        self.0.write_arc().await.transaction_mut(|t| {
+        self.0.write().await.transaction_mut(|t| {
             let profile_id = t
                 .exec_mut(QueryBuilder::insert().element(new_profile).query())?
                 .elements[0]
@@ -61,7 +61,7 @@ impl Database {
     pub async fn profiles(&self, game_ctx: GameCtx) -> Result<Vec<Profile>> {
         Ok(self
             .0
-            .read_arc()
+            .read()
             .await
             .exec(
                 QueryBuilder::select()
@@ -80,7 +80,7 @@ impl Database {
     pub async fn current_profile(&self) -> Result<Profile> {
         let profile: Profile = self
             .0
-            .read_arc()
+            .read()
             .await
             .exec(
                 QueryBuilder::select()
@@ -95,7 +95,7 @@ impl Database {
     }
 
     pub async fn set_current_profile(&mut self, profile_ctx: ProfileCtx) -> Result<()> {
-        self.0.write_arc().await.transaction_mut(|t| {
+        self.0.write().await.transaction_mut(|t| {
             // Delete existing current_profile, if it exists
             t.exec_mut(
                 QueryBuilder::remove()
@@ -146,7 +146,7 @@ impl Database {
             .last()
             .and_then(|e| e.db_id());
 
-        self.0.write_arc().await.transaction_mut(|t| {
+        self.0.write().await.transaction_mut(|t| {
             // Insert new ModEntry
             let mod_entry = ModEntry::default();
             let mod_entry_id = t
@@ -195,7 +195,7 @@ impl Database {
         let entries = self.mod_entries(profile_ctx).await?;
         let mods: Vec<Mod> = self
             .0
-            .read_arc()
+            .read()
             .await
             .exec(
                 QueryBuilder::select()
@@ -222,7 +222,7 @@ impl Database {
     async fn mod_entries(&self, profile_ctx: ProfileCtx) -> Result<Vec<ModEntry>> {
         Ok(self
             .0
-            .read_arc()
+            .read()
             .await
             .exec(
                 QueryBuilder::select()

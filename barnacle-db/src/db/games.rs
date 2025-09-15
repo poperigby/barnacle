@@ -9,7 +9,7 @@ impl Database {
             return Err(DatabaseError::UniqueViolation(UniqueConstraint::GameName));
         }
 
-        self.0.write_arc().await.transaction_mut(|t| {
+        self.0.write().await.transaction_mut(|t| {
             let game_id = t
                 .exec_mut(QueryBuilder::insert().element(game).query())?
                 .elements[0]
@@ -31,7 +31,7 @@ impl Database {
     pub async fn game(&self, game_ctx: GameCtx) -> Result<Game> {
         Ok(self
             .0
-            .read_arc()
+            .read()
             .await
             .exec(QueryBuilder::select().ids(game_ctx.id).query())?
             .try_into()?)
@@ -41,7 +41,7 @@ impl Database {
     pub async fn games(&self) -> Result<Vec<Game>> {
         Ok(self
             .0
-            .read_arc()
+            .read()
             .await
             .exec(
                 QueryBuilder::select()
