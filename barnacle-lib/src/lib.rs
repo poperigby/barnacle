@@ -48,16 +48,9 @@ pub async fn add_mod(
     db: &mut Database,
     game_ctx: GameCtx,
     input_path: &Path,
-    name: Option<&str>,
+    name: &str,
 ) -> Result<(), AddModError> {
-    // If mod name isn't provided, infer it from the file's name
-    let name = name
-        // TODO: Infer from directory name if the input path is a directory instead of an
-        // archive
-        .unwrap_or_else(|| input_path.file_stem().unwrap().to_str().unwrap())
-        .to_string();
-
-    let new_mod = Mod::new(&name);
+    let new_mod = Mod::new(name);
 
     let game = db.game(game_ctx).await.unwrap();
     let dir = mod_dir(&game, &new_mod);
