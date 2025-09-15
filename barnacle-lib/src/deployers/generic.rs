@@ -5,21 +5,21 @@ use damascus::{Filesystem, LinuxFilesystem, OverlayFs, overlay::OverlayFsOption}
 use barnacle_db::models::{Game, Profile};
 
 #[derive(Debug)]
-pub struct OverlayDeployer {
+pub struct GenericDeployer {
     overlay: OverlayFs,
 }
 
-impl OverlayDeployer {
+impl GenericDeployer {
     // fn setup(game: &Game, profile: &Profile) -> Self {
     //     let profile_dir = game.dir().join(profile.name());
     //
     //     // Initialize overlay directories if missing
     //     let overlay_dir = profile_dir.join("overlay");
     //     create_dir_all(overlay_dir.join("work")).unwrap();
-    //     create_dir_all(overlay_dir.join("upper")).unwrap();
+    //     create_dir_all(overlay_dir.join("override")).unwrap();
     //
     //     let work_dir = overlay_dir.join("work");
-    //     let upper_dir = overlay_dir.join("upper");
+    //     let upper_dir = overlay_dir.join("override");
     //
     //     let resolved_mod_entries = profile.resolve_mod_entries(game);
     //     let lower_dirs: Vec<&Path> = once(game.game_dir())
