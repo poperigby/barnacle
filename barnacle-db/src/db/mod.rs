@@ -10,7 +10,7 @@ pub mod mods;
 pub mod profiles;
 
 /// Graph database for storing data related to Barnacle
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Database(Arc<RwLock<DbAny>>);
 
 impl Database {

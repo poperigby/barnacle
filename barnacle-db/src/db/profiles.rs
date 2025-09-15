@@ -1,4 +1,4 @@
-use agdb::{DbType, QueryBuilder, QueryId};
+use agdb::{CountComparison, DbType, QueryBuilder, QueryId};
 
 use crate::{
     Database, DatabaseError, GameCtx, ModCtx, ProfileCtx, Result, UniqueConstraint,
@@ -205,7 +205,7 @@ impl Database {
                     .where_()
                     .node()
                     .and()
-                    .neighbor()
+                    .distance(CountComparison::GreaterThan(2))
                     .and()
                     .element::<Mod>()
                     .query(),
@@ -232,7 +232,7 @@ impl Database {
                     .where_()
                     .node()
                     .and()
-                    .neighbor()
+                    .distance(CountComparison::GreaterThan(2))
                     .and()
                     .element::<ModEntry>()
                     .query(),
