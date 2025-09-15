@@ -20,6 +20,7 @@ impl Database {
     }
 
     /// Create a memory backed database for use in tests
+    #[allow(dead_code)]
     fn new_memory() -> Result<Self> {
         Self::init(DbAny::new_memory("data.db")?)
     }

@@ -26,25 +26,25 @@ pub enum AddModError {
     UncompressArchive(#[from] compress_tools::Error),
 }
 
-pub fn add_game(db: &mut Database, name: &str, game_type: DeployKind) {
+pub async fn add_game(db: &mut Database, name: &str, game_type: DeployKind) {
     let new_game = Game::new(name, game_type);
 
     create_dir_all(game_dir(&new_game)).unwrap();
 
-    db.insert_game(&new_game).unwrap();
+    db.insert_game(&new_game).await.unwrap();
 }
 
-pub fn add_profile(db: &mut Database, game_ctx: GameCtx, name: &str) {
+pub async fn add_profile(db: &mut Database, game_ctx: GameCtx, name: &str) {
     let new_profile = Profile::new(name);
 
-    let game = db.game(game_ctx).unwrap();
+    let game = db.game(game_ctx).await.unwrap();
 
     create_dir_all(profile_dir(&game, &new_profile)).unwrap();
 
-    db.insert_profile(&new_profile, game_ctx).unwrap();
+    db.insert_profile(&new_profile, game_ctx).await.unwrap();
 }
 
-pub fn add_mod(
+pub async fn add_mod(
     db: &mut Database,
     game_ctx: GameCtx,
     input_path: &Path,
@@ -59,7 +59,7 @@ pub fn add_mod(
 
     let new_mod = Mod::new(&name);
 
-    let game = db.game(game_ctx).unwrap();
+    let game = db.game(game_ctx).await.unwrap();
     let dir = mod_dir(&game, &new_mod);
 
     // TODO: Only do attempt to open the archive if the input_path is an archive
@@ -67,7 +67,7 @@ pub fn add_mod(
     uncompress_archive(archive, &dir, Ownership::Preserve)?;
     change_dir_permissions(&dir, Permissions::ReadOnly);
 
-    db.insert_mod(&new_mod, game_ctx).unwrap();
+    db.insert_mod(&new_mod, game_ctx).await.unwrap();
 
     Ok(())
 }
