@@ -26,50 +26,59 @@ pub enum AddModError {
     UncompressArchive(#[from] compress_tools::Error),
 }
 
-pub async fn add_game(db: &mut Database, name: &str, game_type: DeployKind) {
-    let new_game = Game::new(name, game_type);
-
-    create_dir_all(game_dir(&new_game)).unwrap();
-
-    db.insert_game(&new_game).await.unwrap();
+pub struct State {
+    db: Database,
 }
 
-pub async fn add_profile(db: &mut Database, game_ctx: GameCtx, name: &str) {
-    let new_profile = Profile::new(name);
+impl State {
+    pub async fn add_game(&mut self, name: &str, game_type: DeployKind) {
+        let new_game = Game::new(name, game_type);
 
-    let game = db.game(game_ctx).await.unwrap();
+        create_dir_all(game_dir(&new_game)).unwrap();
 
-    create_dir_all(profile_dir(&game, &new_profile)).unwrap();
+        self.db.insert_game(&new_game).await.unwrap();
+    }
 
-    db.insert_profile(&new_profile, game_ctx).await.unwrap();
+    pub async fn add_profile(&mut self, game_ctx: GameCtx, name: &str) {
+        let new_profile = Profile::new(name);
+
+        let game = self.db.game(game_ctx).await.unwrap();
+
+        create_dir_all(profile_dir(&game, &new_profile)).unwrap();
+
+        self.db
+            .insert_profile(&new_profile, game_ctx)
+            .await
+            .unwrap();
+    }
+
+    pub async fn add_mod(
+        &mut self,
+        game_ctx: GameCtx,
+        input_path: &Path,
+        name: &str,
+    ) -> Result<(), AddModError> {
+        let new_mod = Mod::new(name);
+
+        let game = self.db.game(game_ctx).await.unwrap();
+        let dir = mod_dir(&game, &new_mod);
+
+        // TODO: Only do attempt to open the archive if the input_path is an archive
+        let archive = File::open(input_path).map_err(AddModError::OpenArchive)?;
+        uncompress_archive(archive, &dir, Ownership::Preserve)?;
+        change_dir_permissions(&dir, Permissions::ReadOnly);
+
+        self.db.insert_mod(&new_mod, game_ctx).await.unwrap();
+
+        Ok(())
+    }
+
+    // pub fn delete_mod(db: &Database, id: ModId) {
+    //     db.remove_mod(id).unwrap();
+    //
+    //     let dir = data_dir().join("mods").join(id.to_string());
+    //
+    //     change_dir_permissions(&dir, Permissions::ReadWrite);
+    //     remove_dir_all(&dir).unwrap();
+    // }
 }
-
-pub async fn add_mod(
-    db: &mut Database,
-    game_ctx: GameCtx,
-    input_path: &Path,
-    name: &str,
-) -> Result<(), AddModError> {
-    let new_mod = Mod::new(name);
-
-    let game = db.game(game_ctx).await.unwrap();
-    let dir = mod_dir(&game, &new_mod);
-
-    // TODO: Only do attempt to open the archive if the input_path is an archive
-    let archive = File::open(input_path).map_err(AddModError::OpenArchive)?;
-    uncompress_archive(archive, &dir, Ownership::Preserve)?;
-    change_dir_permissions(&dir, Permissions::ReadOnly);
-
-    db.insert_mod(&new_mod, game_ctx).await.unwrap();
-
-    Ok(())
-}
-
-// pub fn delete_mod(db: &Database, id: ModId) {
-//     db.remove_mod(id).unwrap();
-//
-//     let dir = data_dir().join("mods").join(id.to_string());
-//
-//     change_dir_permissions(&dir, Permissions::ReadWrite);
-//     remove_dir_all(&dir).unwrap();
-// }
