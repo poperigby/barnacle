@@ -1,12 +1,12 @@
 use agdb::QueryBuilder;
 
-use crate::{DatabaseError, GameCtx, Result, UniqueConstraint, db::Database, models::Game};
+use crate::{Error, GameCtx, Result, UniqueConstraint, db::Database, models::Game};
 
 impl Database {
     /// Insert a new [`Game`] into the database. The [`Game`] must have a unique name.
     pub async fn insert_game(&mut self, game: &Game) -> Result<GameCtx> {
         if self.games().await?.iter().any(|g| g.name() == game.name()) {
-            return Err(DatabaseError::UniqueViolation(UniqueConstraint::GameName));
+            return Err(Error::UniqueViolation(UniqueConstraint::GameName));
         }
 
         self.0.write().await.transaction_mut(|t| {
@@ -119,7 +119,7 @@ mod tests {
         db.insert_game(&game).await.unwrap();
         assert_eq!(
             db.insert_game(&game).await.unwrap_err(),
-            DatabaseError::UniqueViolation(UniqueConstraint::GameName)
+            Error::UniqueViolation(UniqueConstraint::GameName)
         );
     }
 }

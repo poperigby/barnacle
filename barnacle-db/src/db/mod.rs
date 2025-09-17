@@ -3,7 +3,7 @@ use std::{path::Path, sync::Arc};
 use agdb::{DbAny, QueryBuilder};
 use tokio::sync::RwLock;
 
-use crate::{DatabaseError, Result};
+use crate::{Error, Result};
 
 pub mod games;
 pub mod mods;
@@ -15,7 +15,7 @@ pub struct Database(Arc<RwLock<DbAny>>);
 
 impl Database {
     pub fn new(path: &Path) -> Result<Self> {
-        let path_str = path.to_str().ok_or(DatabaseError::PathInvalidUnicode)?;
+        let path_str = path.to_str().ok_or(Error::PathInvalidUnicode)?;
         Self::init(DbAny::new_file(path_str)?)
     }
 

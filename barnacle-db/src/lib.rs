@@ -12,7 +12,7 @@ pub mod models;
 
 pub use db::Database;
 
-type Result<T> = std::result::Result<T, DatabaseError>;
+type Result<T> = std::result::Result<T, Error>;
 
 /// A handle to a [`Game`] in the database.
 ///
@@ -45,7 +45,7 @@ pub struct ModCtx {
 }
 
 #[derive(Debug, Error, PartialEq)]
-pub enum DatabaseError {
+pub enum Error {
     #[error("Database error: {0}")]
     Db(#[from] DbError),
     #[error("The given path is invalid unicode")]

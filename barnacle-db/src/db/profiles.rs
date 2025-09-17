@@ -1,7 +1,7 @@
 use agdb::{CountComparison, DbType, QueryBuilder, QueryId};
 
 use crate::{
-    Database, DatabaseError, GameCtx, ModCtx, ProfileCtx, Result, UniqueConstraint,
+    Database, Error, GameCtx, ModCtx, ProfileCtx, Result, UniqueConstraint,
     models::{ModEntry, Profile},
 };
 
@@ -30,9 +30,7 @@ impl Database {
             .iter()
             .any(|p| p.name() == new_profile.name())
         {
-            return Err(DatabaseError::UniqueViolation(
-                UniqueConstraint::ProfileName,
-            ));
+            return Err(Error::UniqueViolation(UniqueConstraint::ProfileName));
         }
 
         self.0.write().await.transaction_mut(|t| {
