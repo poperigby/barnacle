@@ -75,8 +75,8 @@ impl Database {
             .try_into()?)
     }
 
-    pub async fn current_profile(&self) -> Result<Profile> {
-        let profile: Profile = self
+    pub async fn current_profile(&self) -> Result<ProfileCtx> {
+        let id = self
             .0
             .read()
             .await
@@ -85,11 +85,35 @@ impl Database {
                     .elements::<Profile>()
                     .search()
                     .from("current_profile")
+                    .where_()
+                    .neighbor()
                     .query(),
             )?
-            .try_into()?;
+            .elements
+            .first()
+            .unwrap()
+            .id;
 
-        Ok(profile)
+        let game_id = self
+            .0
+            .read()
+            .await
+            .exec(
+                QueryBuilder::select()
+                    .elements::<Game>()
+                    .search()
+                    .from("games")
+                    .to(id)
+                    .where_()
+                    .neighbor()
+                    .query(),
+            )?
+            .elements
+            .first()
+            .unwrap()
+            .id;
+
+        Ok(ProfileCtx { id, game_id })
     }
 
     pub async fn set_current_profile(&mut self, profile_ctx: ProfileCtx) -> Result<()> {
