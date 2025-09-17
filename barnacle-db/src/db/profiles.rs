@@ -75,11 +75,10 @@ impl Database {
             .try_into()?)
     }
 
-    pub async fn current_profile(&self) -> Result<ProfileCtx> {
-        let id = self
-            .0
-            .read()
-            .await
+    pub async fn current_profile(&self) -> Result<Option<ProfileCtx>> {
+        let read_guard = self.0.read().await;
+
+        let profile_id = read_guard
             .exec(
                 QueryBuilder::select()
                     .elements::<Profile>()
@@ -91,29 +90,27 @@ impl Database {
             )?
             .elements
             .first()
-            .unwrap()
-            .id;
+            .map(|p| p.id);
 
-        let game_id = self
-            .0
-            .read()
-            .await
-            .exec(
-                QueryBuilder::select()
-                    .elements::<Game>()
-                    .search()
-                    .from("games")
-                    .to(id)
-                    .where_()
-                    .neighbor()
-                    .query(),
-            )?
-            .elements
-            .first()
-            .unwrap()
-            .id;
+        let profile_ctx = profile_id.and_then(|id| {
+            read_guard
+                .exec(
+                    QueryBuilder::select()
+                        .elements::<Game>()
+                        .search()
+                        .from("games")
+                        .to(id)
+                        .where_()
+                        .neighbor()
+                        .query(),
+                )
+                .ok()?
+                .elements
+                .first()
+                .map(|g| ProfileCtx { id, game_id: g.id })
+        });
 
-        Ok(ProfileCtx { id, game_id })
+        Ok(profile_ctx)
     }
 
     pub async fn set_current_profile(&mut self, profile_ctx: ProfileCtx) -> Result<()> {
