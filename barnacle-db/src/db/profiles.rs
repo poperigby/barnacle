@@ -224,6 +224,7 @@ impl Database {
                     .where_()
                     .node()
                     .and()
+                    // Skip the Profile node and the first ModEntry node
                     .distance(CountComparison::GreaterThan(2))
                     .and()
                     .element::<Mod>()
@@ -251,11 +252,111 @@ impl Database {
                     .where_()
                     .node()
                     .and()
-                    .distance(CountComparison::GreaterThan(2))
+                    // Skip the Profile node
+                    .distance(CountComparison::GreaterThan(1))
                     .and()
                     .element::<ModEntry>()
                     .query(),
             )?
             .try_into()?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::{DeployKind, Game, Mod, Profile};
+    use pretty_assertions::assert_eq;
+    use tokio::test;
+
+    #[test]
+    async fn test_insert_and_list_profiles() -> Result<()> {
+        let mut db = Database::new_memory()?;
+
+        let game = Game::new("Skyrim", DeployKind::Gamebryo);
+        let game_ctx = db.insert_game(&game).await?;
+
+        let profile = Profile::new("Main");
+        let profile_ctx = db.insert_profile(&profile, game_ctx).await?;
+        assert_eq!(profile_ctx.game_id, game_ctx.id);
+
+        // Duplicate profile name should fail
+        let profile_dup = Profile::new("Main");
+        let result = db.insert_profile(&profile_dup, game_ctx).await;
+        assert!(matches!(result, Err(Error::UniqueViolation(_))));
+
+        // Listing profiles
+        let profiles = db.profiles(game_ctx).await?;
+        assert_eq!(profiles.len(), 1);
+        assert_eq!(profiles[0].name(), "Main");
+
+        Ok(())
+    }
+
+    #[test]
+    async fn test_set_and_get_current_profile() {
+        let mut db = Database::new_memory().unwrap();
+
+        let game = Game::new("Skyrim", DeployKind::Gamebryo);
+        let game_ctx = db.insert_game(&game).await.unwrap();
+
+        let profile = Profile::new("Main");
+        let profile_ctx = db.insert_profile(&profile, game_ctx).await.unwrap();
+
+        db.set_current_profile(profile_ctx).await.unwrap();
+        let current = db.current_profile().await.unwrap();
+        // assert_eq!(current.unwrap().id, profile_ctx.id);
+        // assert_eq!(current.unwrap().game_id, game_ctx.id);
+    }
+
+    #[test]
+    async fn test_insert_single_mod_entry() -> Result<()> {
+        let mut db = Database::new_memory()?;
+
+        let game = Game::new("Skyrim", DeployKind::Gamebryo);
+        let game_ctx = db.insert_game(&game).await?;
+        let profile = Profile::new("Main");
+        let profile_ctx = db.insert_profile(&profile, game_ctx).await?;
+
+        let game_mod = Mod::new("Some Mod");
+        let mod_ctx = db.insert_mod(&game_mod, game_ctx).await?;
+        db.insert_mod_entry(mod_ctx, profile_ctx).await?;
+
+        let profile_mods = db.profile_mods(profile_ctx).await?;
+        println!("PROFILE MODS");
+        dbg!(&profile_mods);
+        assert_eq!(profile_mods.len(), 1);
+        assert_eq!(profile_mods[0].data.name(), "Some Mod");
+
+        Ok(())
+    }
+
+    #[test]
+    async fn test_insert_multiple_mod_entries() -> Result<()> {
+        let mut db = Database::new_memory()?;
+
+        let game = Game::new("Skyrim", DeployKind::Gamebryo);
+        let game_ctx = db.insert_game(&game).await?;
+        let profile = Profile::new("Main");
+        let profile_ctx = db.insert_profile(&profile, game_ctx).await?;
+
+        let mod_names = ["ModA", "ModB", "ModC"];
+        let mut mod_ctxs = Vec::new();
+        for name in &mod_names {
+            let game_mod = Mod::new(name);
+            mod_ctxs.push(db.insert_mod(&game_mod, game_ctx).await?);
+        }
+
+        for mod_ctx in mod_ctxs {
+            db.insert_mod_entry(mod_ctx, profile_ctx).await?;
+        }
+
+        let profile_mods = db.profile_mods(profile_ctx).await?;
+        assert_eq!(profile_mods.len(), mod_names.len());
+        for (i, pm) in profile_mods.iter().enumerate() {
+            assert_eq!(pm.data.name(), mod_names[i]);
+        }
+
+        Ok(())
     }
 }

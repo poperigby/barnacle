@@ -5,7 +5,7 @@ use std::{
 };
 
 use barnacle_db::{
-    Database, GameCtx,
+    Database, GameCtx, ProfileCtx,
     models::{DeployKind, Game, Mod, Profile},
 };
 use compress_tools::{Ownership, uncompress_archive};
@@ -20,17 +20,19 @@ type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("I/O error: {0}")]
-    Io(#[from] io::Error),
     #[error("Archive error: {0}")]
     Archive(#[from] compress_tools::Error),
     #[error("Database error: {0}")]
     Db(#[from] barnacle_db::Error),
+    #[error("I/O error: {0}")]
+    Io(#[from] io::Error),
 }
 
 pub struct State {
     db: Database,
 }
+
+pub struct ProfileHandle(ProfileCtx);
 
 impl State {
     pub async fn add_game(&mut self, name: &str, game_type: DeployKind) -> Result<()> {
@@ -53,6 +55,10 @@ impl State {
         self.db.insert_profile(&new_profile, game_ctx).await?;
 
         Ok(())
+    }
+
+    pub async fn current_profile(&self) -> Result<Option<ProfileHandle>> {
+        Ok(self.db.current_profile().await?.map(ProfileHandle))
     }
 
     pub async fn add_mod(
