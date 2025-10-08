@@ -12,7 +12,7 @@ derive_more = { version = "2.0.1", features = ["from", "as_ref", "display"] }
 getset = "0.1.6"
 human-panic = "2.0.3"
 slint = "1.12.1"
-tempfile = "3.22.0"
+tempfile = "3.23.0"
 thiserror = "2.0.12"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
