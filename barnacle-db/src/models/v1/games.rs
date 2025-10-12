@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use agdb::{DbId, DbSerialize, DbType, DbValue};
 
 #[derive(Debug, Clone, Default, DbValue, DbSerialize, Copy, PartialEq, PartialOrd)]
@@ -18,6 +20,7 @@ pub enum DeployKind {
 pub struct Game {
     db_id: Option<DbId>,
     name: String,
+    targets: Vec<PathBuf>,
     deploy_kind: DeployKind,
 }
 
@@ -26,6 +29,7 @@ impl Game {
         Self {
             db_id: None,
             name: name.to_string(),
+            targets: Vec::new(),
             deploy_kind,
         }
     }
