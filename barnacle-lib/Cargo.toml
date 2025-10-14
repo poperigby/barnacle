@@ -18,7 +18,7 @@ tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 walkdir = "2.5.0"
 xdg = "3.0.0"
-zip = "5.1.1"
+zip = "6.0.0"
 
 [build-dependencies]
 slint-build = "1.12.1"
