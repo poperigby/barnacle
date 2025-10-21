@@ -45,14 +45,14 @@ impl State {
         Ok(())
     }
 
-    pub async fn add_profile(&mut self, game_ctx: GameId, name: &str) -> Result<()> {
+    pub async fn add_profile(&mut self, game_id: GameId, name: &str) -> Result<()> {
         let new_profile = Profile::new(name);
 
-        let game = self.db.game(game_ctx).await?;
+        let game = self.db.game(game_id).await?;
 
         create_dir_all(profile_dir(&game, &new_profile))?;
 
-        self.db.insert_profile(&new_profile, game_ctx).await?;
+        self.db.insert_profile(&new_profile, game_id).await?;
 
         Ok(())
     }
@@ -61,10 +61,10 @@ impl State {
         Ok(self.db.current_profile().await?.map(ProfileHandle))
     }
 
-    pub async fn add_mod(&mut self, game_ctx: GameId, input_path: &Path, name: &str) -> Result<()> {
+    pub async fn add_mod(&mut self, game_id: GameId, input_path: &Path, name: &str) -> Result<()> {
         let new_mod = Mod::new(name);
 
-        let game = self.db.game(game_ctx).await?;
+        let game = self.db.game(game_id).await?;
         let dir = mod_dir(&game, &new_mod);
 
         // TODO: Only do attempt to open the archive if the input_path is an archive
@@ -72,7 +72,7 @@ impl State {
         uncompress_archive(archive, &dir, Ownership::Preserve)?;
         change_dir_permissions(&dir, Permissions::ReadOnly);
 
-        self.db.insert_mod(&new_mod, game_ctx).await?;
+        self.db.insert_mod(&new_mod, game_id).await?;
 
         Ok(())
     }
