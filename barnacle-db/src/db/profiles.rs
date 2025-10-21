@@ -1,7 +1,7 @@
 use agdb::{CountComparison, DbType, QueryBuilder, QueryId};
 
 use crate::{
-    Database, Error, GameCtx, ModCtx, ProfileCtx, Result, UniqueConstraint,
+    Database, Error, GameId, ModId, ProfileId, Result, UniqueConstraint,
     models::{ModEntry, Profile},
 };
 
@@ -22,8 +22,8 @@ impl Database {
     pub async fn insert_profile(
         &mut self,
         new_profile: &Profile,
-        game_ctx: GameCtx,
-    ) -> Result<ProfileCtx> {
+        game_ctx: GameId,
+    ) -> Result<ProfileId> {
         if self
             .profiles(game_ctx)
             .await?
@@ -43,20 +43,17 @@ impl Database {
             t.exec_mut(
                 QueryBuilder::insert()
                     .edges()
-                    .from([QueryId::from("profiles"), QueryId::from(game_ctx.id)])
+                    .from([QueryId::from("profiles"), QueryId::from(game_ctx.0)])
                     .to(profile_id)
                     .query(),
             )?;
 
-            Ok(ProfileCtx {
-                id: profile_id,
-                game_id: game_ctx.id,
-            })
+            Ok(ProfileId(profile_id))
         })
     }
 
     /// Retrieve [`Profile`]s owned by the [`Game`] given by ID.
-    pub async fn profiles(&self, game_ctx: GameCtx) -> Result<Vec<Profile>> {
+    pub async fn profiles(&self, game_ctx: GameId) -> Result<Vec<Profile>> {
         Ok(self
             .0
             .read()
@@ -65,7 +62,7 @@ impl Database {
                 QueryBuilder::select()
                     .elements::<Profile>()
                     .search()
-                    .from(game_ctx.id)
+                    .from(game_ctx.0)
                     .where_()
                     .node()
                     .and()
@@ -75,7 +72,7 @@ impl Database {
             .try_into()?)
     }
 
-    pub async fn current_profile(&self) -> Result<Option<ProfileCtx>> {
+    pub async fn current_profile(&self) -> Result<Option<ProfileId>> {
         let read_guard = self.0.read().await;
 
         let profile_id = read_guard
@@ -90,30 +87,12 @@ impl Database {
             )?
             .elements
             .first()
-            .map(|p| p.id);
+            .map(|p| ProfileId(p.id));
 
-        let profile_ctx = profile_id.and_then(|id| {
-            read_guard
-                .exec(
-                    QueryBuilder::select()
-                        .elements::<Game>()
-                        .search()
-                        .from("games")
-                        .to(id)
-                        .where_()
-                        .neighbor()
-                        .query(),
-                )
-                .ok()?
-                .elements
-                .first()
-                .map(|g| ProfileCtx { id, game_id: g.id })
-        });
-
-        Ok(profile_ctx)
+        Ok(profile_id)
     }
 
-    pub async fn set_current_profile(&mut self, profile_ctx: ProfileCtx) -> Result<()> {
+    pub async fn set_current_profile(&mut self, profile_ctx: ProfileId) -> Result<()> {
         self.0.write().await.transaction_mut(|t| {
             // Delete existing current_profile, if it exists
             t.exec_mut(
@@ -129,7 +108,7 @@ impl Database {
                 QueryBuilder::insert()
                     .edges()
                     .from("current_profile")
-                    .to(profile_ctx.id)
+                    .to(profile_ctx.0)
                     .query(),
             )?;
 
@@ -138,11 +117,7 @@ impl Database {
     }
 
     /// Add a new [`ModEntry`] to a [`Profile`] that points to the [`Mod`] given by ID.
-    pub async fn insert_mod_entry(
-        &mut self,
-        mod_ctx: ModCtx,
-        profile_ctx: ProfileCtx,
-    ) -> Result<()> {
+    pub async fn insert_mod_entry(&mut self, mod_ctx: ModId, profile_ctx: ProfileId) -> Result<()> {
         /*
         ModEntry nodes are stored in a linked list like data structure:
                                    Game1
@@ -155,9 +130,6 @@ impl Database {
                           │          │          │
         Profile1 ──→ ModEntry1 ──→ ModEntry2 ──→ ModEntry3
         */
-
-        // TODO: Replace with real error
-        assert_eq!(mod_ctx.game_id, profile_ctx.game_id);
 
         let maybe_last_entry_id = self
             .mod_entries(profile_ctx)
@@ -189,7 +161,7 @@ impl Database {
                     t.exec_mut(
                         QueryBuilder::insert()
                             .edges()
-                            .from(profile_ctx.id)
+                            .from(profile_ctx.0)
                             .to(mod_entry_id)
                             .query(),
                     )?;
@@ -201,7 +173,7 @@ impl Database {
                 QueryBuilder::insert()
                     .edges()
                     .from(mod_entry_id)
-                    .to(mod_ctx.id)
+                    .to(mod_ctx.0)
                     .query(),
             )?;
 
@@ -209,7 +181,7 @@ impl Database {
         })
     }
 
-    pub async fn profile_mods(&self, profile_ctx: ProfileCtx) -> Result<Vec<ProfileMod>> {
+    pub async fn profile_mods(&self, profile_ctx: ProfileId) -> Result<Vec<ProfileMod>> {
         // Traverse the linked-list from the given profile, collecting the ModEntry and Mod nodes.
         let entries = self.mod_entries(profile_ctx).await?;
         let mods: Vec<Mod> = self
@@ -220,7 +192,7 @@ impl Database {
                 QueryBuilder::select()
                     .elements::<Mod>()
                     .search()
-                    .from(profile_ctx.id)
+                    .from(profile_ctx.0)
                     .where_()
                     .node()
                     .and()
@@ -239,7 +211,7 @@ impl Database {
             .collect())
     }
 
-    async fn mod_entries(&self, profile_ctx: ProfileCtx) -> Result<Vec<ModEntry>> {
+    async fn mod_entries(&self, profile_ctx: ProfileId) -> Result<Vec<ModEntry>> {
         Ok(self
             .0
             .read()
@@ -248,7 +220,7 @@ impl Database {
                 QueryBuilder::select()
                     .elements::<ModEntry>()
                     .search()
-                    .from(profile_ctx.id)
+                    .from(profile_ctx.0)
                     .where_()
                     .node()
                     .and()
@@ -278,7 +250,6 @@ mod tests {
 
         let profile = Profile::new("Main");
         let profile_ctx = db.insert_profile(&profile, game_ctx).await?;
-        assert_eq!(profile_ctx.game_id, game_ctx.id);
 
         // Duplicate profile name should fail
         let profile_dup = Profile::new("Main");

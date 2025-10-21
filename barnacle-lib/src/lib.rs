@@ -5,7 +5,7 @@ use std::{
 };
 
 use barnacle_db::{
-    Database, GameCtx, ProfileCtx,
+    Database, GameId, ProfileId,
     models::{DeployKind, Game, Mod, Profile},
 };
 use compress_tools::{Ownership, uncompress_archive};
@@ -32,7 +32,7 @@ pub struct State {
     db: Database,
 }
 
-pub struct ProfileHandle(ProfileCtx);
+pub struct ProfileHandle(ProfileId);
 
 impl State {
     pub async fn add_game(&mut self, name: &str, game_type: DeployKind) -> Result<()> {
@@ -45,7 +45,7 @@ impl State {
         Ok(())
     }
 
-    pub async fn add_profile(&mut self, game_ctx: GameCtx, name: &str) -> Result<()> {
+    pub async fn add_profile(&mut self, game_ctx: GameId, name: &str) -> Result<()> {
         let new_profile = Profile::new(name);
 
         let game = self.db.game(game_ctx).await?;
@@ -61,12 +61,7 @@ impl State {
         Ok(self.db.current_profile().await?.map(ProfileHandle))
     }
 
-    pub async fn add_mod(
-        &mut self,
-        game_ctx: GameCtx,
-        input_path: &Path,
-        name: &str,
-    ) -> Result<()> {
+    pub async fn add_mod(&mut self, game_ctx: GameId, input_path: &Path, name: &str) -> Result<()> {
         let new_mod = Mod::new(name);
 
         let game = self.db.game(game_ctx).await?;
