@@ -5,7 +5,6 @@ pub fn main() {
     let app = App::new().unwrap();
 
     // Load current profile
-    // let manager = ModManager::new();
     // let current_profile = manager.current_profile();
     // Get mods from current profile and build model from them
 

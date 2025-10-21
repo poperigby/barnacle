@@ -5,7 +5,7 @@ use std::{
 };
 
 use barnacle_db::{
-    Database, GameId, ProfileId,
+    Database, GameId, ModId, ProfileId,
     models::{DeployKind, Game, Mod, Profile},
 };
 use compress_tools::{Ownership, uncompress_archive};
@@ -32,7 +32,12 @@ pub struct State {
     db: Database,
 }
 
+#[derive(Debug)]
 pub struct ProfileHandle(ProfileId);
+#[derive(Debug)]
+pub struct GameHandle(GameId);
+#[derive(Debug)]
+pub struct ModHandle(ModId);
 
 impl State {
     pub async fn add_game(&mut self, name: &str, game_type: DeployKind) -> Result<()> {
@@ -45,14 +50,14 @@ impl State {
         Ok(())
     }
 
-    pub async fn add_profile(&mut self, game_id: GameId, name: &str) -> Result<()> {
+    pub async fn add_profile(&mut self, game_handle: GameHandle, name: &str) -> Result<()> {
         let new_profile = Profile::new(name);
 
-        let game = self.db.game(game_id).await?;
+        let game = self.db.game(game_handle.0).await?;
 
         create_dir_all(profile_dir(&game, &new_profile))?;
 
-        self.db.insert_profile(&new_profile, game_id).await?;
+        self.db.insert_profile(&new_profile, game_handle.0).await?;
 
         Ok(())
     }
@@ -61,10 +66,15 @@ impl State {
         Ok(self.db.current_profile().await?.map(ProfileHandle))
     }
 
-    pub async fn add_mod(&mut self, game_id: GameId, input_path: &Path, name: &str) -> Result<()> {
+    pub async fn add_mod(
+        &mut self,
+        game_handle: GameHandle,
+        input_path: &Path,
+        name: &str,
+    ) -> Result<()> {
         let new_mod = Mod::new(name);
 
-        let game = self.db.game(game_id).await?;
+        let game = self.db.game(game_handle.0).await?;
         let dir = mod_dir(&game, &new_mod);
 
         // TODO: Only do attempt to open the archive if the input_path is an archive
@@ -72,7 +82,7 @@ impl State {
         uncompress_archive(archive, &dir, Ownership::Preserve)?;
         change_dir_permissions(&dir, Permissions::ReadOnly);
 
-        self.db.insert_mod(&new_mod, game_id).await?;
+        self.db.insert_mod(&new_mod, game_handle.0).await?;
 
         Ok(())
     }
