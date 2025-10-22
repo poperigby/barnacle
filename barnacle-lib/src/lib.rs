@@ -11,7 +11,7 @@ use barnacle_db::{
 use compress_tools::{Ownership, uncompress_archive};
 use thiserror::Error;
 
-use crate::fs::{Permissions, change_dir_permissions, game_dir, mod_dir, profile_dir};
+use crate::fs::{Permissions, change_dir_permissions, data_dir, game_dir, mod_dir, profile_dir};
 
 mod deployers;
 mod fs;
@@ -40,6 +40,12 @@ pub struct GameHandle(GameId);
 pub struct ModHandle(ModId);
 
 impl State {
+    pub fn new() -> Result<Self> {
+        Ok(Self {
+            db: Database::new(&data_dir())?,
+        })
+    }
+
     pub async fn add_game(&mut self, name: &str, game_type: DeployKind) -> Result<()> {
         let new_game = Game::new(name, game_type);
 
