@@ -10,7 +10,7 @@ mod db;
 
 pub mod models;
 
-pub use db::Database;
+pub use db::{Database, profiles::ProfileMod};
 
 type Result<T> = std::result::Result<T, Error>;
 

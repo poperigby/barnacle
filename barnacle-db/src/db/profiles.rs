@@ -9,14 +9,6 @@ use crate::{
 #[allow(unused_imports)]
 use crate::models::{Game, Mod};
 
-/// An item in a [`Profile`]'s mod list, containing the [`Mod`] data and its profile-specific configuration.
-#[derive(Debug, Clone)]
-pub struct ProfileMod {
-    // id: Modid,
-    entry: ModEntry,
-    data: Mod,
-}
-
 impl Database {
     /// Insert a new [`Profile`], linked to the [`Game`] node given by ID. The [`Profile`] name must be unique.
     pub async fn insert_profile(
@@ -181,7 +173,7 @@ impl Database {
         })
     }
 
-    pub async fn profile_mods(&self, profile_id: ProfileId) -> Result<Vec<ProfileMod>> {
+    pub async fn mods(&self, profile_id: ProfileId) -> Result<Vec<ProfileMod>> {
         // Traverse the linked-list from the given profile, collecting the ModEntry and Mod nodes.
         let entries = self.mod_entries(profile_id).await?;
         let mods: Vec<Mod> = self
@@ -207,7 +199,7 @@ impl Database {
         Ok(entries
             .into_iter()
             .zip(mods)
-            .map(|(entry, mod_)| ProfileMod { entry, data: mod_ })
+            .map(|(entry, mod_)| ProfileMod::new(entry, mod_))
             .collect())
     }
 
@@ -293,11 +285,11 @@ mod tests {
         let mod_id = db.insert_mod(&game_mod, game_id).await?;
         db.insert_mod_entry(mod_id, profile_id).await?;
 
-        let profile_mods = db.profile_mods(profile_id).await?;
+        let profile_mods = db.mods(profile_id).await?;
         println!("PROFILE MODS");
         dbg!(&profile_mods);
         assert_eq!(profile_mods.len(), 1);
-        assert_eq!(profile_mods[0].data.name(), "Some Mod");
+        assert_eq!(profile_mods[0].data().name(), "Some Mod");
 
         Ok(())
     }
@@ -322,12 +314,34 @@ mod tests {
             db.insert_mod_entry(mod_id, profile_id).await?;
         }
 
-        let profile_mods = db.profile_mods(profile_id).await?;
+        let profile_mods = db.mods(profile_id).await?;
         assert_eq!(profile_mods.len(), mod_names.len());
         for (i, pm) in profile_mods.iter().enumerate() {
-            assert_eq!(pm.data.name(), mod_names[i]);
+            assert_eq!(pm.data().name(), mod_names[i]);
         }
 
         Ok(())
+    }
+}
+
+/// An item in a [`Profile`]'s mod list, containing the [`Mod`] data and its profile-specific configuration.
+#[derive(Debug, Clone)]
+pub struct ProfileMod {
+    // id: Modid,
+    entry: ModEntry,
+    data: Mod,
+}
+
+impl ProfileMod {
+    pub fn new(entry: ModEntry, data: Mod) -> Self {
+        Self { entry, data }
+    }
+
+    pub fn entry(&self) -> &ModEntry {
+        &self.entry
+    }
+
+    pub fn data(&self) -> &Mod {
+        &self.data
     }
 }

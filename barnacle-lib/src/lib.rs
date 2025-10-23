@@ -5,7 +5,7 @@ use std::{
 };
 
 use barnacle_db::{
-    Database, GameId, ModId, ProfileId,
+    Database, GameId, ModId, ProfileId, ProfileMod,
     models::{DeployKind, Game, Mod, Profile},
 };
 use compress_tools::{Ownership, uncompress_archive};
@@ -38,6 +38,8 @@ pub struct ProfileHandle(ProfileId);
 pub struct GameHandle(GameId);
 #[derive(Debug)]
 pub struct ModHandle(ModId);
+#[derive(Debug)]
+pub struct ProfileModHandle(ProfileMod);
 
 impl State {
     pub fn new() -> Result<Self> {
@@ -91,6 +93,16 @@ impl State {
         self.db.insert_mod(&new_mod, game_handle.0).await?;
 
         Ok(())
+    }
+
+    pub async fn mods(&self, profile_handle: ProfileHandle) -> Result<Vec<ProfileModHandle>> {
+        Ok(self
+            .db
+            .mods(profile_handle.0)
+            .await?
+            .into_iter()
+            .map(ProfileModHandle)
+            .collect())
     }
 
     // pub fn delete_mod(db: &Database, id: ModId) -> Result<()> {
