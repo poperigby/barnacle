@@ -1,9 +1,90 @@
 import { ModTableView, ModTableData } from "mod_table_view.slint";
-import { VerticalBox } from "std-widgets.slint";
+import { VerticalBox, HorizontalBox, ComboBox, Button, LineEdit } from "std-widgets.slint";
 export { ModTableData }
 
 export component App inherits Window {
+    title: "Barnacle";
+
     VerticalBox {
+        width: 100%;
+        height: 100%;
+
+        // Top bar
+        // Global context & high-level management
+        HorizontalBox {
+            Text {
+                text: @tr("Game:");
+            }
+
+            ComboBox { }
+
+            play-button := Button {
+                text: "▶";
+            }
+
+            manage-games-button := Button {
+                text: "🛠";
+            }
+
+            Text {
+                text: @tr("Profile:");
+            }
+
+            ComboBox { }
+
+            manage-profiles-button := Button {
+                text: "🛠";
+            }
+
+            Rectangle {
+                horizontal-stretch: 1;
+            }
+
+            manage-library-button := Button {
+                text: @tr("Library");
+            }
+
+            settings-button := Button {
+                text: " ";
+            }
+
+            notification-button := Button {
+                text: " ";
+            }
+        }
+
+        // Actions row
+        // Task-oriented commands relevant to the current profile
+        HorizontalBox {
+            install-button := Button {
+                text: @tr("Install");
+            }
+
+            deploy-button := Button {
+                text: @tr("Deploy");
+            }
+
+            Rectangle {
+                horizontal-stretch: 1;
+            }
+
+            tools-button := Button {
+                text: @tr("Tools");
+            }
+
+            manage-tools-button := Button {
+                text: "🛠";
+            }
+        }
+
+        // Search box
+        HorizontalBox {
+            LineEdit {
+                placeholder-text: @tr("Search...");
+            }
+        }
+
+        // Mod table
         ModTableView { }
     }
 }
