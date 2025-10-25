@@ -25,3 +25,13 @@ pub struct ModEntry {
     enabled: bool,
     notes: String,
 }
+
+impl ModEntry {
+    pub fn enabled(&self) -> bool {
+        self.enabled
+    }
+
+    pub fn notes(&self) -> &str {
+        &self.notes
+    }
+}
