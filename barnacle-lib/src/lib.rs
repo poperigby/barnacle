@@ -42,33 +42,34 @@ impl State {
         })
     }
 
-    pub async fn add_game(&mut self, name: &str, game_type: DeployKind) -> Result<()> {
+    pub async fn add_game(&mut self, name: &str, game_type: DeployKind) -> Result<GameId> {
         let new_game = Game::new(name, game_type);
 
         create_dir_all(game_dir(&new_game))?;
 
-        self.db.insert_game(&new_game).await?;
-
-        Ok(())
+        Ok(self.db.insert_game(&new_game).await?)
     }
 
-    pub async fn add_profile(&mut self, game_id: GameId, name: &str) -> Result<()> {
+    pub async fn add_profile(&mut self, game_id: GameId, name: &str) -> Result<ProfileId> {
         let new_profile = Profile::new(name);
 
         let game = self.db.game(game_id).await?;
 
         create_dir_all(profile_dir(&game, &new_profile))?;
 
-        self.db.insert_profile(&new_profile, game_id).await?;
-
-        Ok(())
+        Ok(self.db.insert_profile(&new_profile, game_id).await?)
     }
 
     pub async fn current_profile(&self) -> Result<Option<ProfileId>> {
         Ok(self.db.current_profile().await?)
     }
 
-    pub async fn add_mod(&mut self, game_id: GameId, input_path: &Path, name: &str) -> Result<()> {
+    pub async fn add_mod(
+        &mut self,
+        game_id: GameId,
+        input_path: &Path,
+        name: &str,
+    ) -> Result<ModId> {
         let new_mod = Mod::new(name);
 
         let game = self.db.game(game_id).await?;
@@ -79,9 +80,7 @@ impl State {
         uncompress_archive(archive, &dir, Ownership::Preserve)?;
         change_dir_permissions(&dir, Permissions::ReadOnly);
 
-        self.db.insert_mod(&new_mod, game_id).await?;
-
-        Ok(())
+        Ok(self.db.insert_mod(&new_mod, game_id).await?)
     }
 
     pub async fn mods(&self, profile_id: ProfileId) -> Result<Vec<ProfileMod>> {
