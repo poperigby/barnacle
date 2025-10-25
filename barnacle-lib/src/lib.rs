@@ -64,6 +64,12 @@ impl State {
         Ok(self.db.current_profile().await?)
     }
 
+    pub async fn set_current_profile(&mut self, profile_id: ProfileId) -> Result<()> {
+        self.db.set_current_profile(profile_id).await?;
+
+        Ok(())
+    }
+
     pub async fn add_mod(
         &mut self,
         game_id: GameId,
