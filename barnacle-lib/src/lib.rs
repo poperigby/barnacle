@@ -89,6 +89,12 @@ impl State {
         Ok(self.db.insert_mod(&new_mod, game_id).await?)
     }
 
+    pub async fn add_mod_entry(&mut self, mod_id: ModId, profile_id: ProfileId) -> Result<()> {
+        self.db.insert_mod_entry(mod_id, profile_id).await?;
+
+        Ok(())
+    }
+
     pub async fn mods(&self, profile_id: ProfileId) -> Result<Vec<ProfileMod>> {
         Ok(self.db.mods(profile_id).await?)
     }
