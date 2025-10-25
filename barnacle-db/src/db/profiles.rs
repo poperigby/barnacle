@@ -286,8 +286,6 @@ mod tests {
         db.insert_mod_entry(mod_id, profile_id).await?;
 
         let profile_mods = db.mods(profile_id).await?;
-        println!("PROFILE MODS");
-        dbg!(&profile_mods);
         assert_eq!(profile_mods.len(), 1);
         assert_eq!(profile_mods[0].data().name(), "Some Mod");
 
