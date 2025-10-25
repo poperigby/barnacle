@@ -1,8 +1,12 @@
-import { ModTableView, ModTableData } from "mod_table_view.slint";
 import { VerticalBox, HorizontalBox, ComboBox, Button, LineEdit } from "std-widgets.slint";
-export { ModTableData }
+import { LibraryManager } from "library_manager.slint";
+import { ModTableView, ModTableData } from "mod_table_view.slint";
+
+export { ModTableData, LibraryManager }
 
 export component App inherits Window {
+    callback open_library_manager();
+
     title: "Barnacle";
 
     VerticalBox {
@@ -18,11 +22,11 @@ export component App inherits Window {
 
             ComboBox { }
 
-            play-button := Button {
+            play_button := Button {
                 text: "▶";
             }
 
-            manage-games-button := Button {
+            manage_games_button := Button {
                 text: "🛠";
             }
 
@@ -32,7 +36,7 @@ export component App inherits Window {
 
             ComboBox { }
 
-            manage-profiles-button := Button {
+            manage_profiles_button := Button {
                 text: "🛠";
             }
 
@@ -40,15 +44,18 @@ export component App inherits Window {
                 horizontal-stretch: 1;
             }
 
-            manage-library-button := Button {
+            manage_library_button := Button {
                 text: @tr("Library");
+                clicked => {
+                    root.open_library_manager()
+                }
             }
 
-            settings-button := Button {
+            settings_button := Button {
                 text: " ";
             }
 
-            notification-button := Button {
+            notification_button := Button {
                 text: " ";
             }
         }
@@ -56,11 +63,11 @@ export component App inherits Window {
         // Actions row
         // Task-oriented commands relevant to the current profile
         HorizontalBox {
-            install-button := Button {
+            install_button := Button {
                 text: @tr("Install");
             }
 
-            deploy-button := Button {
+            deploy_button := Button {
                 text: @tr("Deploy");
             }
 
@@ -68,11 +75,11 @@ export component App inherits Window {
                 horizontal-stretch: 1;
             }
 
-            tools-button := Button {
+            tools_button := Button {
                 text: @tr("Tools");
             }
 
-            manage-tools-button := Button {
+            manage_tools_button := Button {
                 text: "🛠";
             }
         }
