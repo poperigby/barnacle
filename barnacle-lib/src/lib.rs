@@ -44,7 +44,7 @@ pub struct ProfileModHandle(ProfileMod);
 impl State {
     pub fn new() -> Result<Self> {
         Ok(Self {
-            db: Database::new(&data_dir())?,
+            db: Database::new(&data_dir().join("data.db"))?,
         })
     }
 
