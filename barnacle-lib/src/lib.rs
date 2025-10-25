@@ -5,9 +5,10 @@ use std::{
 };
 
 use barnacle_db::{
-    Database, GameId, ModId, ProfileId, ProfileMod,
-    models::{DeployKind, Game, Mod, Profile},
+    Database,
+    models::{Game, Mod, Profile},
 };
+
 use compress_tools::{Ownership, uncompress_archive};
 use thiserror::Error;
 
@@ -15,6 +16,8 @@ use crate::fs::{Permissions, change_dir_permissions, data_dir, game_dir, mod_dir
 
 mod deployers;
 mod fs;
+
+pub use barnacle_db::{GameId, ModId, ProfileId, ProfileMod, models::DeployKind};
 
 type Result<T> = std::result::Result<T, Error>;
 
