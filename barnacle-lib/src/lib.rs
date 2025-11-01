@@ -11,7 +11,7 @@ use thiserror::Error;
 
 use crate::fs::{Permissions, change_dir_permissions, data_dir, game_dir, mod_dir, profile_dir};
 
-mod deployers;
+// mod deployers;
 mod fs;
 
 pub use barnacle_db::{
@@ -74,10 +74,14 @@ impl State {
         Ok(())
     }
 
+    pub async fn profiles(&self, game_id: GameId) -> Result<Vec<Profile>> {
+        Ok(self.db.profiles(game_id).await?)
+    }
+
     pub async fn add_mod(
         &mut self,
         game_id: GameId,
-        input_path: &Path,
+        input_path: Option<&Path>,
         name: &str,
     ) -> Result<ModId> {
         let new_mod = Mod::new(name);
@@ -86,9 +90,11 @@ impl State {
         let dir = mod_dir(&game, &new_mod);
 
         // TODO: Only attempt to open the archive if the input_path is an archive
-        let archive = File::open(input_path)?;
-        uncompress_archive(archive, &dir, Ownership::Preserve)?;
-        change_dir_permissions(&dir, Permissions::ReadOnly);
+        if let Some(path) = input_path {
+            let archive = File::open(path)?;
+            uncompress_archive(archive, &dir, Ownership::Preserve)?;
+            change_dir_permissions(&dir, Permissions::ReadOnly);
+        }
 
         Ok(self.db.insert_mod(&new_mod, game_id).await?)
     }
