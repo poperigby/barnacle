@@ -27,4 +27,24 @@ impl Database {
             Ok(ModId(mod_id))
         })
     }
+
+    /// Every [`Mod`] under a the given [`Game`].
+    pub async fn mods(&self, game_id: GameId) -> Result<Vec<Mod>> {
+        Ok(self
+            .0
+            .read()
+            .await
+            .exec(
+                QueryBuilder::select()
+                    .elements::<Mod>()
+                    .search()
+                    .from(game_id.0)
+                    .where_()
+                    .node()
+                    .and()
+                    .neighbor()
+                    .query(),
+            )?
+            .try_into()?)
+    }
 }

@@ -16,7 +16,7 @@ mod fs;
 
 pub use barnacle_db::{
     GameId, ModId, ProfileId, ProfileMod,
-    models::{DeployKind, Game, Mod, Profile},
+    models::{DeployKind, Game, Mod, Profile, Tool},
 };
 
 type Result<T> = std::result::Result<T, Error>;
@@ -93,14 +93,18 @@ impl State {
         Ok(self.db.insert_mod(&new_mod, game_id).await?)
     }
 
+    pub async fn mods(&self, game_id: GameId) -> Result<Vec<Mod>> {
+        Ok(self.db.mods(game_id).await?)
+    }
+
     pub async fn add_mod_entry(&mut self, mod_id: ModId, profile_id: ProfileId) -> Result<()> {
         self.db.insert_mod_entry(mod_id, profile_id).await?;
 
         Ok(())
     }
 
-    pub async fn mods(&self, profile_id: ProfileId) -> Result<Vec<ProfileMod>> {
-        Ok(self.db.mods(profile_id).await?)
+    pub async fn profile_mods(&self, profile_id: ProfileId) -> Result<Vec<ProfileMod>> {
+        Ok(self.db.profile_mods(profile_id).await?)
     }
 
     // pub fn delete_mod(db: &Database, id: ModId) -> Result<()> {
