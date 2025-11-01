@@ -11,4 +11,4 @@ tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 
 [build-dependencies]
-slint-build = "1.12.1"
+slint-build = "1.14.1"
