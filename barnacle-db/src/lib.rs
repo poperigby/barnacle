@@ -4,7 +4,7 @@ use thiserror::Error;
 
 // Documentation imports
 #[allow(unused_imports)]
-use crate::models::{Game, Mod, Profile};
+use crate::models::{Game, Mod, Profile, Tool};
 
 mod db;
 
@@ -25,6 +25,10 @@ pub struct ProfileId(DbId);
 /// A handle to a [`Mod`] within a specific [`Game`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ModId(DbId);
+
+/// A handle to a [`Tool`] within a specific [`Game`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ToolId(DbId);
 
 #[derive(Debug, Error, PartialEq)]
 pub enum Error {

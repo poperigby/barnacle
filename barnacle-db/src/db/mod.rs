@@ -8,6 +8,7 @@ use crate::{Error, Result};
 pub mod games;
 pub mod mods;
 pub mod profiles;
+pub mod tools;
 
 /// Graph database for storing data related to Barnacle
 #[derive(Clone, Debug)]
@@ -31,7 +32,7 @@ impl Database {
             db.exec_mut(
                 QueryBuilder::insert()
                     .nodes()
-                    .aliases(["games", "profiles", "mods", "current_profile"])
+                    .aliases(["games", "profiles", "mods", "tools", "current_profile"])
                     .query(),
             )?;
         }

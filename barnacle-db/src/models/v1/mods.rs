@@ -3,7 +3,7 @@ use agdb::{DbId, DbType};
 #[derive(Debug, Clone, DbType, PartialEq, PartialOrd)]
 pub struct Mod {
     db_id: Option<DbId>,
-    /// A pretty name to display in the UI
+    /// A human friendly display name
     name: String,
 }
 
