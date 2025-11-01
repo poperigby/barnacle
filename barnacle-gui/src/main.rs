@@ -12,7 +12,7 @@ pub async fn main() {
     let app = App::new().unwrap();
     let library_manager = LibraryManager::new().unwrap();
 
-    app.on_start_window(move || {
+    app.on_open_library_manager(move || {
         let library_manager = library_manager.as_weak();
         library_manager.unwrap().show().unwrap();
     });
