@@ -28,7 +28,7 @@ impl Database {
         })
     }
 
-    /// Every [`Mod`] under a the given [`Game`].
+    /// Retrieve every [`Mod`] under the given [`Game`].
     pub async fn mods(&self, game_id: GameId) -> Result<Vec<Mod>> {
         Ok(self
             .0
