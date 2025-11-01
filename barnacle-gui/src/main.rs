@@ -1,11 +1,15 @@
-use barnacle_lib::{DeployKind, ProfileMod, State};
 use std::rc::Rc;
-use slint::{ModelRc, StandardListViewItem};
+
+use barnacle_lib::{DeployKind, Game, ProfileMod, State};
+use slint::{Model, ModelRc, SharedString, StandardListViewItem, VecModel};
+
+mod library_manager;
 
 slint::include_modules!();
 
 type TableRow = ModelRc<StandardListViewItem>;
 type TableModel = ModelRc<TableRow>;
+type StringModel = ModelRc<SharedString>;
 
 /// Run the GUI
 #[tokio::main]
@@ -13,10 +17,12 @@ pub async fn main() {
     let app = App::new().unwrap();
     let library_manager = LibraryManager::new().unwrap();
 
-    app.on_open_library_manager(move || {
-        let library_manager = library_manager.as_weak();
-        library_manager.unwrap().show().unwrap();
-    });
+    // app.on_open_library_manager({
+    //     let library_manager = library_manager.as_weak();
+    //     move || {
+    //         library_manager.unwrap().show().unwrap();
+    //     }
+    // });
 
     let mut state = State::new().unwrap();
 
@@ -31,13 +37,20 @@ pub async fn main() {
     // Get mods from current profile and build model from them
     let mods = state.mods(current_profile).await.unwrap();
 
-    app.global::<ModTableData>()
-        .set_model(build_table_model(&mods));
+    let model = build_library_manager_game_model(&state.games().await.unwrap());
+    dbg!(model.row_count());
 
+    app.global::<ModTableData>()
+        .set_model(build_mod_table_model(&mods));
+    library_manager
+        .global::<LibraryManagerData>()
+        .set_games(model);
+
+    library_manager.show().unwrap();
     app.run().unwrap();
 }
 
-fn build_table_model(profile_mods: &[ProfileMod]) -> TableModel {
+fn build_mod_table_model(profile_mods: &[ProfileMod]) -> TableModel {
     let mut rows = Vec::new();
 
     for profile_mod in profile_mods {
@@ -54,4 +67,10 @@ fn build_table_model(profile_mods: &[ProfileMod]) -> TableModel {
     }
 
     TableModel::from(rows.as_slice())
+}
+
+fn build_library_manager_game_model(games: &[Game]) -> StringModel {
+    let games: Vec<SharedString> = games.iter().map(|g| g.name().into()).collect();
+    let model = Rc::new(VecModel::from(games));
+    ModelRc::from(model)
 }

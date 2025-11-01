@@ -4,10 +4,7 @@ use std::{
     path::Path,
 };
 
-use barnacle_db::{
-    Database,
-    models::{Game, Mod, Profile},
-};
+use barnacle_db::Database;
 
 use compress_tools::{Ownership, uncompress_archive};
 use thiserror::Error;
@@ -17,7 +14,10 @@ use crate::fs::{Permissions, change_dir_permissions, data_dir, game_dir, mod_dir
 mod deployers;
 mod fs;
 
-pub use barnacle_db::{GameId, ModId, ProfileId, ProfileMod, models::DeployKind};
+pub use barnacle_db::{
+    GameId, ModId, ProfileId, ProfileMod,
+    models::{DeployKind, Game, Mod, Profile},
+};
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -48,6 +48,10 @@ impl State {
         create_dir_all(game_dir(&new_game))?;
 
         Ok(self.db.insert_game(&new_game).await?)
+    }
+
+    pub async fn games(&self) -> Result<Vec<Game>> {
+        Ok(self.db.games().await?)
     }
 
     pub async fn add_profile(&mut self, game_id: GameId, name: &str) -> Result<ProfileId> {

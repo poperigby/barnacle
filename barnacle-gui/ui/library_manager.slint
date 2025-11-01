@@ -1,3 +1,29 @@
+import { VerticalBox, ComboBox, TabWidget } from "std-widgets.slint";
+
+export global LibraryManagerData {
+    in property <[string]> games;
+}
+
 export component LibraryManager inherits Window {
     title: @tr("Manage Library");
+
+    VerticalBox {
+        ComboBox {
+            model: LibraryManagerData.games;
+        }
+
+        TabWidget {
+            Tab {
+                title: "Profiles";
+            }
+
+            Tab {
+                title: "Mods";
+            }
+
+            Tab {
+                title: "Tools";
+            }
+        }
+    }
 }
