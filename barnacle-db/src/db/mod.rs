@@ -3,7 +3,10 @@ use std::{path::Path, sync::Arc};
 use agdb::{DbAny, QueryBuilder};
 use tokio::sync::RwLock;
 
-use crate::{Error, Result};
+use crate::{
+    Error, Result,
+    models::{CURRENT_MODEL_VERSION, ModelVersion},
+};
 
 pub mod games;
 pub mod mods;
@@ -32,12 +35,60 @@ impl Database {
             db.exec_mut(
                 QueryBuilder::insert()
                     .nodes()
-                    .aliases(["games", "profiles", "mods", "tools", "current_profile"])
+                    .aliases([
+                        "games",
+                        "profiles",
+                        "mods",
+                        "tools",
+                        // State
+                        "current_profile",
+                        "model_version",
+                    ])
                     .query(),
             )?;
         }
 
-        // TODO: perform any migrations here
+        // Fetch the current model version (if any)
+        let result = db.exec(
+            QueryBuilder::select()
+                .elements::<ModelVersion>()
+                .search()
+                .from("model_version")
+                .where_()
+                .neighbor()
+                .query(),
+        )?;
+
+        let model_version: Option<ModelVersion> = result.try_into().into_iter().next();
+
+        if let Some(mv) = model_version {
+            if mv.version() < CURRENT_MODEL_VERSION {
+                // TODO: perform migrations
+                dbg!(mv);
+            }
+        } else {
+            // Insert default ModelVersion if missing
+            db.transaction_mut(|t| -> Result<()> {
+                let model_version_id = t
+                    .exec_mut(
+                        QueryBuilder::insert()
+                            .element(&ModelVersion::default())
+                            .query(),
+                    )?
+                    .elements[0]
+                    .id;
+
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .edges()
+                        .from("model_version")
+                        .to(model_version_id)
+                        .query(),
+                )?;
+
+                Ok(())
+            })?;
+        }
 
         Ok(Database(Arc::new(RwLock::new(db))))
     }
