@@ -1,4 +1,5 @@
 use barnacle_lib::{DeployKind, ProfileMod, State};
+use std::rc::Rc;
 use slint::{ModelRc, StandardListViewItem};
 
 slint::include_modules!();
