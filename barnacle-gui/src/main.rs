@@ -1,7 +1,9 @@
 use std::rc::Rc;
 
-use barnacle_lib::{DeployKind, Game, ProfileMod, State};
+use barnacle_lib::{DeployKind, Game, ProfileMod, state::State};
 use slint::{Model, ModelRc, SharedString, StandardListViewItem, VecModel};
+
+use crate::library_manager::LibraryManagerState;
 
 mod library_manager;
 
@@ -35,7 +37,8 @@ pub async fn main() {
 
     let current_profile = state.current_profile().await.unwrap().unwrap();
     // Get mods from current profile and build model from them
-    let mods = state.mods(current_profile).await.unwrap();
+    state.add_mod(game_id, None, "Test").await.unwrap();
+    let mods = state.profile_mods(current_profile).await.unwrap();
 
     let model = build_library_manager_game_model(&state.games().await.unwrap());
     dbg!(model.row_count());
@@ -45,6 +48,8 @@ pub async fn main() {
     library_manager
         .global::<LibraryManagerData>()
         .set_games(model);
+
+    dbg!(LibraryManagerState::load(&state).await);
 
     library_manager.show().unwrap();
     app.run().unwrap();

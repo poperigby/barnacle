@@ -1,19 +1,10 @@
-use std::{
-    fs::{File, create_dir_all},
-    io,
-    path::Path,
-};
+use std::io;
 
-use barnacle_db::Database;
-
-use compress_tools::{Ownership, uncompress_archive};
 use thiserror::Error;
-
-use crate::fs::{Permissions, change_dir_permissions, data_dir, game_dir, mod_dir, profile_dir};
 
 // mod deployers;
 mod fs;
-mod state;
+pub mod state;
 
 pub use barnacle_db::{
     GameId, ModId, ProfileId, ProfileMod,
