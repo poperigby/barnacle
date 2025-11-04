@@ -11,7 +11,7 @@ slint::include_modules!();
 
 type TableRow = ModelRc<StandardListViewItem>;
 type TableModel = ModelRc<TableRow>;
-type StringModel = ModelRc<SharedString>;
+type ListModel = ModelRc<SharedString>;
 
 /// Run the GUI
 #[tokio::main]
@@ -56,25 +56,25 @@ pub async fn main() {
 }
 
 fn build_mod_table_model(profile_mods: &[ProfileMod]) -> TableModel {
-    let mut rows = Vec::new();
-
-    for profile_mod in profile_mods {
-        let row = [
-            StandardListViewItem::from(if profile_mod.entry().enabled() {
-                "✅"
-            } else {
-                "❌"
-            }),
-            StandardListViewItem::from(profile_mod.data().name()),
-        ];
-
-        rows.push(TableRow::from(row));
-    }
-
-    TableModel::from(rows.as_slice())
+    TableModel::from(
+        profile_mods
+            .iter()
+            .map(|profile_mod| {
+                TableRow::from([
+                    StandardListViewItem::from(if profile_mod.entry().enabled() {
+                        "✅"
+                    } else {
+                        "❌"
+                    }),
+                    StandardListViewItem::from(profile_mod.data().name()),
+                ])
+            })
+            .collect::<Vec<TableRow>>()
+            .as_slice(),
+    )
 }
 
-fn build_library_manager_game_model(games: &[Game]) -> StringModel {
+fn build_library_manager_game_model(games: &[Game]) -> ListModel {
     let games: Vec<SharedString> = games.iter().map(|g| g.name().into()).collect();
     let model = Rc::new(VecModel::from(games));
     ModelRc::from(model)
