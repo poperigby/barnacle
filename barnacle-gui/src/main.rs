@@ -12,8 +12,7 @@ type TableModel = ModelRc<TableRow>;
 type ListModel = ModelRc<SharedString>;
 
 /// Run the GUI
-#[tokio::main]
-pub async fn main() {
+pub fn main() {
     let app = App::new().unwrap();
     let library_manager = LibraryManager::new().unwrap();
 
@@ -30,32 +29,32 @@ pub async fn main() {
 
     let mut state = State::new().unwrap();
 
-    state
-        .add_game("Morrowind", DeployKind::OpenMW)
-        .await
-        .unwrap();
-    let game_id = state
-        .add_game("Skyrim", DeployKind::Gamebryo)
-        .await
-        .unwrap();
-    let profile_id = state.add_profile(game_id, "Enderal").await.unwrap();
-    state.set_current_profile(profile_id).await.unwrap();
-
-    let current_profile = state.current_profile().await.unwrap().unwrap();
-    // Get mods from current profile and build model from them
-    state.add_mod(game_id, None, "Test").await.unwrap();
-    let mods = state.profile_mods(current_profile).await.unwrap();
-
-    app.global::<ModTableData>()
-        .set_model(build_mod_table_model(&mods));
-
-    let library_manager_state = LibraryManagerState::new(&state).await;
-    let library_manager_data = library_manager.global::<LibraryManagerData>();
-    library_manager_data.set_games(library_manager_state.games);
-    library_manager_data.set_profiles(library_manager_state.profiles);
-    library_manager_data.set_mods(library_manager_state.mods);
-    library_manager_data.set_tools(library_manager_state.tools);
-
+    // state
+    //     .add_game("Morrowind", DeployKind::OpenMW)
+    //     .await
+    //     .unwrap();
+    // let game_id = state
+    //     .add_game("Skyrim", DeployKind::Gamebryo)
+    //     .await
+    //     .unwrap();
+    // let profile_id = state.add_profile(game_id, "Enderal").await.unwrap();
+    // state.set_current_profile(profile_id).await.unwrap();
+    //
+    // let current_profile = state.current_profile().await.unwrap().unwrap();
+    // // Get mods from current profile and build model from them
+    // state.add_mod(game_id, None, "Test").await.unwrap();
+    // let mods = state.profile_mods(current_profile).await.unwrap();
+    //
+    // app.global::<ModTableData>()
+    //     .set_model(build_mod_table_model(&mods));
+    //
+    // let library_manager_state = LibraryManagerState::new(&state).await;
+    // let library_manager_data = library_manager.global::<LibraryManagerData>();
+    // library_manager_data.set_games(library_manager_state.games);
+    // library_manager_data.set_profiles(library_manager_state.profiles);
+    // library_manager_data.set_mods(library_manager_state.mods);
+    // library_manager_data.set_tools(library_manager_state.tools);
+    //
     library_manager.show().unwrap();
     app.run().unwrap();
 }
