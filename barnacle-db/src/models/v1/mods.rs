@@ -5,13 +5,16 @@ pub struct Mod {
     db_id: Option<DbId>,
     /// A human friendly display name
     name: String,
+    // TODO: Just to differentiate profiles and mods until I add more fields
+    is_mod: bool,
 }
 
 impl Mod {
     pub fn new(name: &str) -> Self {
         Self {
             db_id: None,
-            name: name.to_string(),
+            name: name.into(),
+            is_mod: true,
         }
     }
     pub fn name(&self) -> &str {
