@@ -4,18 +4,22 @@ export global LibraryManagerData {
     in property <[string]> games;
     in property <[[StandardListViewItem]]> profiles;
     in property <[[StandardListViewItem]]> mods;
+    in property <[[StandardListViewItem]]> tools;
 }
 
 export component LibraryManager inherits Window {
+    callback game_changed(string);
+
     title: @tr("Manage Library");
 
     VerticalBox {
-        ComboBox {
+        game_switcher := ComboBox {
             model: LibraryManagerData.games;
+            selected(selected_game) => game_changed(selected_game);
         }
 
         TabWidget {
-            profile_tab := Tab {
+            profiles_tab := Tab {
                 title: "Profiles";
                 StandardTableView {
                     width: 100%;
@@ -25,7 +29,7 @@ export component LibraryManager inherits Window {
                 }
             }
 
-            mod_tab := Tab {
+            mods_tab := Tab {
                 title: "Mods";
                 StandardTableView {
                     width: 100%;

@@ -17,6 +17,10 @@ pub async fn main() {
     let app = App::new().unwrap();
     let library_manager = LibraryManager::new().unwrap();
 
+    library_manager.on_game_changed(|selected_game| {
+        dbg!(selected_game);
+    });
+
     // app.on_open_library_manager({
     //     let library_manager = library_manager.as_weak();
     //     move || {
@@ -26,6 +30,10 @@ pub async fn main() {
 
     let mut state = State::new().unwrap();
 
+    state
+        .add_game("Morrowind", DeployKind::OpenMW)
+        .await
+        .unwrap();
     let game_id = state
         .add_game("Skyrim", DeployKind::Gamebryo)
         .await
@@ -41,11 +49,12 @@ pub async fn main() {
     app.global::<ModTableData>()
         .set_model(build_mod_table_model(&mods));
 
-    let library_manager_state = LibraryManagerState::load(&state).await;
+    let library_manager_state = LibraryManagerState::new(&state).await;
     let library_manager_data = library_manager.global::<LibraryManagerData>();
     library_manager_data.set_games(library_manager_state.games);
     library_manager_data.set_profiles(library_manager_state.profiles);
     library_manager_data.set_mods(library_manager_state.mods);
+    library_manager_data.set_tools(library_manager_state.tools);
 
     library_manager.show().unwrap();
     app.run().unwrap();
