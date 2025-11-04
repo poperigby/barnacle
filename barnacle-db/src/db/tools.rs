@@ -43,6 +43,8 @@ impl Database {
                     .node()
                     .and()
                     .neighbor()
+                    .and()
+                    .keys("is_tool")
                     .query(),
             )?
             .try_into()?)

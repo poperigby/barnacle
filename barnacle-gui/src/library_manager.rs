@@ -10,7 +10,7 @@ pub struct LibraryManagerState {
     pub current_game: Option<GameId>,
     pub profiles: TableModel,
     pub mods: TableModel,
-    // pub tools: TableModel,
+    pub tools: TableModel,
 }
 
 impl LibraryManagerState {
@@ -44,6 +44,16 @@ impl LibraryManagerState {
                     .unwrap()
                     .iter()
                     .map(|mod_| TableRow::from([StandardListViewItem::from(mod_.name())]))
+                    .collect::<Vec<TableRow>>()
+                    .as_slice(),
+            ),
+            tools: TableModel::from(
+                state
+                    .tools(current_game)
+                    .await
+                    .unwrap()
+                    .iter()
+                    .map(|tool| TableRow::from([StandardListViewItem::from(tool.name())]))
                     .collect::<Vec<TableRow>>()
                     .as_slice(),
             ),

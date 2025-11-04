@@ -5,6 +5,7 @@ use crate::{Result, fs::data_dir};
 mod games;
 mod mods;
 mod profiles;
+mod tools;
 
 pub struct State {
     db: Database,

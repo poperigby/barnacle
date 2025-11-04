@@ -11,6 +11,8 @@ pub struct Tool {
     path: PathBuf,
     /// Additional command-line arguments
     args: Option<String>,
+    // TODO: Just to differentiate profiles, mods, and tools until I add more fields
+    is_tool: bool,
 }
 
 impl Tool {
@@ -20,6 +22,7 @@ impl Tool {
             name: name.to_string(),
             path,
             args: args.map(str::to_string),
+            is_tool: true,
         }
     }
     pub fn name(&self) -> &str {
