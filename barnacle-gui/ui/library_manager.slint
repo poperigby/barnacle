@@ -1,7 +1,9 @@
-import { VerticalBox, ComboBox, TabWidget } from "std-widgets.slint";
+import { VerticalBox, ComboBox, TabWidget, StandardTableView } from "std-widgets.slint";
 
 export global LibraryManagerData {
     in property <[string]> games;
+    in property <[[StandardListViewItem]]> profiles;
+    in property <[[StandardListViewItem]]> mods;
 }
 
 export component LibraryManager inherits Window {
@@ -13,15 +15,27 @@ export component LibraryManager inherits Window {
         }
 
         TabWidget {
-            Tab {
+            profile_tab := Tab {
                 title: "Profiles";
+                StandardTableView {
+                    width: 100%;
+                    height: 100%;
+                    columns: [{ title: "Name" }];
+                    rows: LibraryManagerData.profiles;
+                }
             }
 
-            Tab {
+            mod_tab := Tab {
                 title: "Mods";
+                StandardTableView {
+                    width: 100%;
+                    height: 100%;
+                    columns: [{ title: "Name" }];
+                    rows: LibraryManagerData.mods;
+                }
             }
 
-            Tab {
+            tools_tab := Tab {
                 title: "Tools";
             }
         }

@@ -1,7 +1,5 @@
-use std::rc::Rc;
-
-use barnacle_lib::{DeployKind, Game, ProfileMod, state::State};
-use slint::{Model, ModelRc, SharedString, StandardListViewItem, VecModel};
+use barnacle_lib::{DeployKind, ProfileMod, state::State};
+use slint::{ModelRc, SharedString, StandardListViewItem};
 
 use crate::library_manager::LibraryManagerState;
 
@@ -40,16 +38,14 @@ pub async fn main() {
     state.add_mod(game_id, None, "Test").await.unwrap();
     let mods = state.profile_mods(current_profile).await.unwrap();
 
-    let model = build_library_manager_game_model(&state.games().await.unwrap());
-    dbg!(model.row_count());
-
     app.global::<ModTableData>()
         .set_model(build_mod_table_model(&mods));
-    library_manager
-        .global::<LibraryManagerData>()
-        .set_games(model);
 
-    dbg!(LibraryManagerState::load(&state).await);
+    let library_manager_state = LibraryManagerState::load(&state).await;
+    let library_manager_data = library_manager.global::<LibraryManagerData>();
+    library_manager_data.set_games(library_manager_state.games);
+    library_manager_data.set_profiles(library_manager_state.profiles);
+    library_manager_data.set_mods(library_manager_state.mods);
 
     library_manager.show().unwrap();
     app.run().unwrap();
@@ -72,10 +68,4 @@ fn build_mod_table_model(profile_mods: &[ProfileMod]) -> TableModel {
             .collect::<Vec<TableRow>>()
             .as_slice(),
     )
-}
-
-fn build_library_manager_game_model(games: &[Game]) -> ListModel {
-    let games: Vec<SharedString> = games.iter().map(|g| g.name().into()).collect();
-    let model = Rc::new(VecModel::from(games));
-    ModelRc::from(model)
 }
