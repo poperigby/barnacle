@@ -1,13 +1,16 @@
-use barnacle_lib::{Game, GameId, Mod, Profile, Tool, state::State};
+use barnacle_lib::{Game, GameId, state::State};
+use slint::StandardListViewItem;
+
+use crate::{TableModel, TableRow};
 
 /// Represents the currently loaded view of the library manager
 #[derive(Debug)]
 pub struct LibraryManagerState {
     pub games: Vec<Game>,
     pub current_game: Option<GameId>,
-    pub profiles: Vec<Profile>,
-    pub mods: Vec<Mod>,
-    pub tools: Vec<Tool>,
+    pub profiles: TableModel,
+    pub mods: TableModel,
+    // pub tools: TableModel,
 }
 
 impl LibraryManagerState {
@@ -18,9 +21,26 @@ impl LibraryManagerState {
         Self {
             games,
             current_game: Some(current_game),
-            profiles: state.profiles(current_game).await.unwrap(),
-            mods: state.mods(current_game).await.unwrap(),
-            tools: Vec::new(),
+            profiles: TableModel::from(
+                state
+                    .profiles(current_game)
+                    .await
+                    .unwrap()
+                    .iter()
+                    .map(|profile| TableRow::from([StandardListViewItem::from(profile.name())]))
+                    .collect::<Vec<TableRow>>()
+                    .as_slice(),
+            ),
+            mods: TableModel::from(
+                state
+                    .mods(current_game)
+                    .await
+                    .unwrap()
+                    .iter()
+                    .map(|mod_| TableRow::from([StandardListViewItem::from(mod_.name())]))
+                    .collect::<Vec<TableRow>>()
+                    .as_slice(),
+            ),
         }
     }
 }
