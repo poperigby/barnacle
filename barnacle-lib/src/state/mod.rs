@@ -7,7 +7,7 @@ mod mods;
 mod profiles;
 mod tools;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct State {
     db: Database,
 }

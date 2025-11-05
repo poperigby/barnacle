@@ -3,7 +3,7 @@ use std::io;
 use thiserror::Error;
 
 // mod deployers;
-mod fs;
+pub mod fs;
 pub mod state;
 
 pub use barnacle_db::{
