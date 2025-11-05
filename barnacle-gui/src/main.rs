@@ -1,5 +1,5 @@
 use barnacle_lib::{DeployKind, ProfileMod, state::State};
-use slint::{ModelRc, SharedString, StandardListViewItem};
+use slint::{ModelRc, SharedString, StandardListViewItem, spawn_local};
 
 use crate::library_manager::LibraryManagerState;
 
@@ -16,47 +16,53 @@ pub fn main() {
     let app = App::new().unwrap();
     let library_manager = LibraryManager::new().unwrap();
 
-    library_manager.on_game_changed(|selected_game| {
-        dbg!(selected_game);
-    });
+    spawn_local({
+        let app_weak = app.as_weak();
+        let library_manager_weak = library_manager.as_weak();
 
-    // app.on_open_library_manager({
-    //     let library_manager = library_manager.as_weak();
-    //     move || {
-    //         library_manager.unwrap().show().unwrap();
-    //     }
-    // });
+        app.show().unwrap();
 
-    let mut state = State::new().unwrap();
+        async move {
+            let mut state = State::new().unwrap();
 
-    // state
-    //     .add_game("Morrowind", DeployKind::OpenMW)
-    //     .await
-    //     .unwrap();
-    // let game_id = state
-    //     .add_game("Skyrim", DeployKind::Gamebryo)
-    //     .await
-    //     .unwrap();
-    // let profile_id = state.add_profile(game_id, "Enderal").await.unwrap();
-    // state.set_current_profile(profile_id).await.unwrap();
-    //
-    // let current_profile = state.current_profile().await.unwrap().unwrap();
-    // // Get mods from current profile and build model from them
-    // state.add_mod(game_id, None, "Test").await.unwrap();
-    // let mods = state.profile_mods(current_profile).await.unwrap();
-    //
-    // app.global::<ModTableData>()
-    //     .set_model(build_mod_table_model(&mods));
-    //
-    // let library_manager_state = LibraryManagerState::new(&state).await;
-    // let library_manager_data = library_manager.global::<LibraryManagerData>();
-    // library_manager_data.set_games(library_manager_state.games);
-    // library_manager_data.set_profiles(library_manager_state.profiles);
-    // library_manager_data.set_mods(library_manager_state.mods);
-    // library_manager_data.set_tools(library_manager_state.tools);
-    //
-    library_manager.show().unwrap();
-    app.run().unwrap();
+            // Example initialization
+            state
+                .add_game("Morrowind", DeployKind::OpenMW)
+                .await
+                .unwrap();
+            let game_id = state
+                .add_game("Skyrim", DeployKind::Gamebryo)
+                .await
+                .unwrap();
+            let profile_id = state.add_profile(game_id, "Enderal").await.unwrap();
+            state.set_current_profile(profile_id).await.unwrap();
+
+            let current_profile = state.current_profile().await.unwrap().unwrap();
+            state.add_mod(game_id, None, "Test").await.unwrap();
+            let mods = state.profile_mods(current_profile).await.unwrap();
+
+            // Update mod table
+            if let Some(app) = app_weak.upgrade() {
+                app.global::<ModTableData>()
+                    .set_model(build_mod_table_model(&mods));
+            }
+
+            // Setup library manager data
+            if let Some(library_manager) = library_manager_weak.upgrade() {
+                let library_manager_state = LibraryManagerState::new(&state).await;
+                let data = library_manager.global::<LibraryManagerData>();
+                data.set_games(library_manager_state.games);
+                data.set_profiles(library_manager_state.profiles);
+                data.set_mods(library_manager_state.mods);
+                data.set_tools(library_manager_state.tools);
+
+                library_manager.show().unwrap();
+            }
+        }
+    })
+    .unwrap();
+
+    slint::run_event_loop_until_quit().unwrap();
 }
 
 fn build_mod_table_model(profile_mods: &[ProfileMod]) -> TableModel {
