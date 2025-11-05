@@ -1,8 +1,7 @@
-use std::{fs::remove_dir_all, sync::Arc};
+use std::fs::remove_dir_all;
 
 use barnacle_lib::{DeployKind, ProfileMod, fs::data_dir, state::State};
 use slint::{ModelRc, SharedString, StandardListViewItem, run_event_loop, spawn_local};
-use smol::lock::RwLock;
 
 use crate::library_manager::LibraryManagerState;
 
@@ -29,14 +28,24 @@ pub fn main() {
         }
     });
 
+    library_manager.on_game_changed({
+        let global = library_manager.global::<LibraryManagerData>();
+
+        move |game_index| {
+            spawn_local(async move {
+                println!("{}", game_index);
+            })
+            .unwrap();
+        }
+    });
+
     spawn_local({
         let app_weak = app.as_weak();
-        let library_manager_weak = library_manager.as_weak();
-
-        app.show().unwrap();
-        library_manager.show().unwrap();
+        let lm_weak = library_manager.as_weak();
 
         async move {
+            let library_manager_state = LibraryManagerState::new(state.clone()).await;
+
             state
                 .add_game("Morrowind", DeployKind::OpenMW)
                 .await
@@ -61,6 +70,9 @@ pub fn main() {
     })
     .unwrap();
 
+    app.show().unwrap();
+    library_manager.show().unwrap();
+
     run_event_loop().unwrap();
 
     // TODO: For testing
@@ -84,4 +96,11 @@ fn build_mod_table_model(profile_mods: &[ProfileMod]) -> TableModel {
             .collect::<Vec<TableRow>>()
             .as_slice(),
     )
+}
+
+fn load_library_manager_data(state: LibraryManagerState, global: LibraryManagerData) {
+    global.set_games(state.games_model);
+    global.set_profiles(state.profiles_model);
+    global.set_mods(state.mods_model);
+    global.set_tools(state.tools_model);
 }

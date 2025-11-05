@@ -8,14 +8,14 @@ export global LibraryManagerData {
 }
 
 export component LibraryManager inherits Window {
-    callback game_changed(string);
+    callback game_changed(int);
 
     title: @tr("Manage Library");
 
     VerticalBox {
         game_switcher := ComboBox {
             model: LibraryManagerData.games;
-            selected(selected_game) => game_changed(selected_game);
+            selected(_) => game_changed(self.current-index);
         }
 
         TabWidget {
