@@ -1,5 +1,8 @@
-use barnacle_lib::{DeployKind, ProfileMod, state::State};
-use slint::{ModelRc, SharedString, StandardListViewItem, spawn_local};
+use std::{fs::remove_dir_all, sync::Arc};
+
+use barnacle_lib::{DeployKind, ProfileMod, fs::data_dir, state::State};
+use slint::{ModelRc, SharedString, StandardListViewItem, run_event_loop, spawn_local};
+use smol::lock::RwLock;
 
 use crate::library_manager::LibraryManagerState;
 
@@ -16,16 +19,24 @@ pub fn main() {
     let app = App::new().unwrap();
     let library_manager = LibraryManager::new().unwrap();
 
+    let mut state = State::new().unwrap();
+
+    app.on_open_library_manager({
+        let library_manager_weak = library_manager.as_weak().unwrap();
+
+        move || {
+            library_manager_weak.show().unwrap();
+        }
+    });
+
     spawn_local({
         let app_weak = app.as_weak();
         let library_manager_weak = library_manager.as_weak();
 
         app.show().unwrap();
+        library_manager.show().unwrap();
 
         async move {
-            let mut state = State::new().unwrap();
-
-            // Example initialization
             state
                 .add_game("Morrowind", DeployKind::OpenMW)
                 .await
@@ -46,23 +57,14 @@ pub fn main() {
                 app.global::<ModTableData>()
                     .set_model(build_mod_table_model(&mods));
             }
-
-            // Setup library manager data
-            if let Some(library_manager) = library_manager_weak.upgrade() {
-                let library_manager_state = LibraryManagerState::new(&state).await;
-                let data = library_manager.global::<LibraryManagerData>();
-                data.set_games(library_manager_state.games);
-                data.set_profiles(library_manager_state.profiles);
-                data.set_mods(library_manager_state.mods);
-                data.set_tools(library_manager_state.tools);
-
-                library_manager.show().unwrap();
-            }
         }
     })
     .unwrap();
 
-    slint::run_event_loop_until_quit().unwrap();
+    run_event_loop().unwrap();
+
+    // TODO: For testing
+    remove_dir_all(data_dir()).unwrap();
 }
 
 fn build_mod_table_model(profile_mods: &[ProfileMod]) -> TableModel {
