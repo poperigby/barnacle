@@ -19,7 +19,6 @@
   packages = with pkgs; [
     # Tools
     bacon
-    diesel-cli
     cargo-info
 
     # Dependencies
