@@ -71,7 +71,7 @@ pub fn main() {
     .unwrap();
 
     app.show().unwrap();
-    library_manager.show().unwrap();
+    // library_manager.show().unwrap();
 
     run_event_loop().unwrap();
 

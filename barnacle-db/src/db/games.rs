@@ -65,10 +65,11 @@ mod tests {
     use crate::models::DeployKind;
 
     use super::*;
+    use macro_rules_attribute::apply;
     use pretty_assertions::assert_eq;
-    use tokio::test;
+    use smol_macros::test;
 
-    #[test]
+    #[apply(test!)]
     async fn test_insert_game() {
         let mut db = Database::new_memory().unwrap();
 
@@ -83,7 +84,7 @@ mod tests {
         assert_eq!(inserted_game.deploy_kind(), DeployKind::OpenMW);
     }
 
-    #[test]
+    #[apply(test!)]
     async fn test_games() {
         let mut db = Database::new_memory().unwrap();
 
@@ -104,14 +105,14 @@ mod tests {
         assert!(deploy_kinds.contains(&DeployKind::Gamebryo));
     }
 
-    #[test]
+    #[apply(test!)]
     async fn test_games_empty() {
         let db = Database::new_memory().unwrap();
         let games = db.games().await.unwrap();
         assert!(games.is_empty());
     }
 
-    #[test]
+    #[apply(test!)]
     async fn test_insert_duplicate_game() {
         let mut db = Database::new_memory().unwrap();
         let game = Game::new("Morrowind", DeployKind::OpenMW);

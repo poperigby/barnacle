@@ -10,5 +10,7 @@ smol = "2.0.2"
 thiserror = "2.0.17"
 
 [dev-dependencies]
+macro_rules_attribute = "0.2.2"
 pretty_assertions = "1.4.1"
+smol-macros = "0.1.1"
 tempfile = "3.23.0"
