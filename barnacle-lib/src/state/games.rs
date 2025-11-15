@@ -5,9 +5,9 @@ use barnacle_db::{
     models::{DeployKind, Game},
 };
 
-use crate::{Result, fs::game_dir, db::Database};
+use crate::{Result, fs::game_dir, state::State};
 
-impl Database {
+impl State {
     pub async fn add_game(&mut self, name: &str, game_type: DeployKind) -> Result<GameId> {
         let new_game = Game::new(name, game_type);
 

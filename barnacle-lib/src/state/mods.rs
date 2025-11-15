@@ -6,10 +6,10 @@ use compress_tools::{Ownership, uncompress_archive};
 use crate::{
     Result,
     fs::{Permissions, change_dir_permissions, mod_dir},
-    db::Database,
+    state::State,
 };
 
-impl Database {
+impl State {
     pub async fn add_mod(
         &mut self,
         game_id: GameId,
