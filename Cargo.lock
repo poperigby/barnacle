@@ -639,6 +639,7 @@ dependencies = [
 name = "barnacle-gui"
 version = "0.1.0"
 dependencies = [
+ "barnacle-lib",
  "iced",
 ]
 

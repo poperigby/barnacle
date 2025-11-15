@@ -5,4 +5,9 @@ edition.workspace = true
 homepage.workspace = true
 
 [dependencies]
+barnacle-lib = { path = "../barnacle-lib" }
 iced = "0.13.1"
+
+[features]
+default = ["debug"]
+debug = ["iced/debug"]
