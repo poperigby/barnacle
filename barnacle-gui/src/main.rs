@@ -1,4 +1,4 @@
-use iced::{Element, Task, application};
+use iced::{Element, Task, Theme, application};
 
 use crate::{
     library_manager::{LibraryManagerMessage, LibraryManagerPage},
@@ -9,7 +9,9 @@ mod library_manager;
 mod mod_manager;
 
 fn main() -> iced::Result {
-    application("Barnacle", App::update, App::view).run_with(App::new)
+    application("Barnacle", App::update, App::view)
+        .theme(App::theme)
+        .run_with(App::new)
 }
 
 #[derive(Debug, Clone)]
@@ -26,6 +28,7 @@ enum Page {
 
 #[derive(Debug)]
 struct App {
+    theme: Theme,
     page: Page,
 }
 
@@ -33,6 +36,7 @@ impl App {
     fn new() -> (Self, Task<Message>) {
         (
             Self {
+                theme: Theme::Dark,
                 page: Page::ModManager(ModManagerPage::new()),
             },
             Task::none(),
@@ -46,5 +50,9 @@ impl App {
             Page::ModManager(p) => p.view(),
             Page::LibraryManager(p) => p.view(),
         }
+    }
+
+    fn theme(&self) -> Theme {
+        self.theme.clone()
     }
 }
