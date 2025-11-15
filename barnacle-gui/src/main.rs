@@ -1,4 +1,12 @@
-use iced::{Element, Task, application, widget::column};
+use iced::{Element, Task, application};
+
+use crate::{
+    library_manager::{LibraryManagerMessage, LibraryManagerPage},
+    mod_manager::{ModManagerMessage, ModManagerPage},
+};
+
+mod library_manager;
+mod mod_manager;
 
 fn main() -> iced::Result {
     application("Barnacle", App::update, App::view).run_with(App::new)
@@ -6,34 +14,37 @@ fn main() -> iced::Result {
 
 #[derive(Debug, Clone)]
 enum Message {
-    ModList,
-    LibraryManager,
+    ModManager(ModManagerMessage),
+    LibraryManager(LibraryManagerMessage),
 }
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 enum Page {
-    #[default]
-    ModList,
-    LibraryManager,
+    ModManager(ModManagerPage),
+    LibraryManager(LibraryManagerPage),
 }
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 struct App {
     page: Page,
 }
 
 impl App {
     fn new() -> (Self, Task<Message>) {
-        (Self::default(), Task::none())
+        (
+            Self {
+                page: Page::ModManager(ModManagerPage::new()),
+            },
+            Task::none(),
+        )
     }
 
     fn update(&mut self, _message: Message) {}
 
     fn view(&self) -> Element<'_, Message> {
-        match self.page {
-            Page::ModList => column!["Mod list!",],
-            Page::LibraryManager => column!["Library manager!"],
+        match &self.page {
+            Page::ModManager(p) => p.view(),
+            Page::LibraryManager(p) => p.view(),
         }
-        .into()
     }
 }
