@@ -1,3 +1,4 @@
+use barnacle_lib::state::State;
 use iced::{Element, Task, Theme, application};
 
 use crate::{
@@ -20,35 +21,50 @@ enum Message {
     LibraryManager(LibraryManagerMessage),
 }
 
-#[derive(Debug)]
 enum Page {
     ModManager(ModManagerPage),
     LibraryManager(LibraryManagerPage),
 }
 
-#[derive(Debug)]
 struct App {
+    state: State,
     theme: Theme,
     page: Page,
 }
 
 impl App {
     fn new() -> (Self, Task<Message>) {
+        let state = State::new().unwrap();
+
         (
             Self {
+                state: state.clone(),
                 theme: Theme::Dark,
-                page: Page::ModManager(ModManagerPage::new()),
+                page: Page::ModManager(ModManagerPage::new(state.clone())),
             },
             Task::none(),
         )
     }
 
-    fn update(&mut self, _message: Message) {}
+    // Update application state based on messages passed by view()
+    fn update(&mut self, message: Message) -> Task<Message> {
+        match (&mut self.page, message) {
+            // Route page specific messages to their handler
+            (Page::ModManager(p), Message::ModManager(msg)) => {
+                p.update(msg).map(Message::ModManager)
+            }
+            (Page::LibraryManager(p), Message::LibraryManager(msg)) => {
+                p.update(msg).map(Message::LibraryManager)
+            }
+            _ => Task::none(),
+        }
+    }
 
+    // Render the application and pass along messages from components to update()
     fn view(&self) -> Element<'_, Message> {
         match &self.page {
-            Page::ModManager(p) => p.view(),
-            Page::LibraryManager(p) => p.view(),
+            Page::ModManager(p) => p.view().map(Message::ModManager),
+            Page::LibraryManager(p) => p.view().map(Message::LibraryManager),
         }
     }
 

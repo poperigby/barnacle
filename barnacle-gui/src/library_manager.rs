@@ -1,6 +1,4 @@
-use iced::{Element, widget::column};
-
-use crate::Message;
+use iced::{Element, Task, widget::column};
 
 #[derive(Debug, Clone)]
 pub enum LibraryManagerMessage {}
@@ -13,9 +11,11 @@ impl LibraryManagerPage {
         Self
     }
 
-    pub fn update(&mut self, _message: LibraryManagerMessage) {}
+    pub fn update(&mut self, _message: LibraryManagerMessage) -> Task<LibraryManagerMessage> {
+        Task::none()
+    }
 
-    pub fn view(&self) -> Element<'_, Message> {
+    pub fn view(&self) -> Element<'_, LibraryManagerMessage> {
         column!["Mod list!",].into()
     }
 }

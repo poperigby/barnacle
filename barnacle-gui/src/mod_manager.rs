@@ -1,29 +1,41 @@
-use barnacle_lib::GameId;
+use barnacle_lib::{GameId, ProfileId, ProfileMod, state::State};
 use iced::{
-    Element,
+    Element, Task,
     widget::{button, column, combo_box, row},
 };
 
-use crate::Message;
-
 #[derive(Debug, Clone)]
-pub enum ModManagerMessage {}
+pub enum ModManagerMessage {
+    ModsLoaded(Vec<ProfileMod>),
+}
 
 #[derive(Debug)]
-pub struct ModManagerPage;
-// {
-// games: combo_box::State<GameId>,
-// current_game: GameId,
-// };
+pub struct ModManagerPage {
+    state: State,
+    current_profile: Option<ProfileId>,
+}
 
 impl ModManagerPage {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(state: State) -> Self {
+        Self {
+            state: state.clone(),
+            current_profile: None,
+        }
+        // Task::perform(
+        //     async move {
+        //         let current_profile = state.current_profile().await.unwrap().unwrap();
+        //
+        //         state.profile_mods(current_profile).await.unwrap()
+        //     },
+        //     ModManagerMessage::ModsLoaded,
+        // ),
     }
 
-    pub fn update(&mut self, _message: ModManagerMessage) {}
+    pub fn update(&mut self, _message: ModManagerMessage) -> Task<ModManagerMessage> {
+        Task::none()
+    }
 
-    pub fn view(&self) -> Element<'_, Message> {
+    pub fn view(&self) -> Element<'_, ModManagerMessage> {
         column![
             row![
                 "Game:",
