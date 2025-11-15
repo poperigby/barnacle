@@ -1,13 +1,11 @@
+use crate::icons::icon;
 use barnacle_lib::state::State;
-use iced::{Element, Task, Theme, application};
-
-use crate::{
-    library_manager::{LibraryManagerMessage, LibraryManagerPage},
-    mod_manager::{ModManagerMessage, ModManagerPage},
+use iced::{
+    Element, Task, Theme, application,
+    widget::{button, column, horizontal_space, row, text},
 };
 
-mod library_manager;
-mod mod_manager;
+mod icons;
 
 fn main() -> iced::Result {
     application("Barnacle", App::update, App::view)
@@ -16,20 +14,11 @@ fn main() -> iced::Result {
 }
 
 #[derive(Debug, Clone)]
-enum Message {
-    ModManager(ModManagerMessage),
-    LibraryManager(LibraryManagerMessage),
-}
-
-enum Page {
-    ModManager(ModManagerPage),
-    LibraryManager(LibraryManagerPage),
-}
+enum Message {}
 
 struct App {
     state: State,
     theme: Theme,
-    page: Page,
 }
 
 impl App {
@@ -40,7 +29,6 @@ impl App {
             Self {
                 state: state.clone(),
                 theme: Theme::Dark,
-                page: Page::ModManager(ModManagerPage::new(state.clone())),
             },
             Task::none(),
         )
@@ -48,24 +36,21 @@ impl App {
 
     // Update application state based on messages passed by view()
     fn update(&mut self, message: Message) -> Task<Message> {
-        match (&mut self.page, message) {
-            // Route page specific messages to their handler
-            (Page::ModManager(p), Message::ModManager(msg)) => {
-                p.update(msg).map(Message::ModManager)
-            }
-            (Page::LibraryManager(p), Message::LibraryManager(msg)) => {
-                p.update(msg).map(Message::LibraryManager)
-            }
-            _ => Task::none(),
-        }
+        Task::none()
     }
 
     // Render the application and pass along messages from components to update()
     fn view(&self) -> Element<'_, Message> {
-        match &self.page {
-            Page::ModManager(p) => p.view().map(Message::ModManager),
-            Page::LibraryManager(p) => p.view().map(Message::LibraryManager),
-        }
+        column![row![
+            text("Game:"),
+            button(icon("play")),
+            text("Profile:"),
+            horizontal_space(),
+            button(icon("library")),
+            button(icon("settings")),
+            button(icon("notifications"))
+        ]]
+        .into()
     }
 
     fn theme(&self) -> Theme {
