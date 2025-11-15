@@ -1,7 +1,7 @@
 use std::{path::Path, sync::Arc};
 
 use agdb::{DbAny, QueryBuilder};
-use smol::lock::RwLock;
+use tokio::sync::RwLock;
 
 use crate::{
     Error, Result,

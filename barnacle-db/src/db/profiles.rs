@@ -235,11 +235,10 @@ mod tests {
 
     use crate::models::{DeployKind, Game, Mod, Profile};
 
-    use macro_rules_attribute::apply;
     use pretty_assertions::assert_eq;
-    use smol_macros::test;
+    use tokio::test;
 
-    #[apply(test!)]
+    #[test]
     async fn test_insert_and_list_profiles() -> Result<()> {
         let mut db = Database::new_memory()?;
 
@@ -262,7 +261,7 @@ mod tests {
         Ok(())
     }
 
-    #[apply(test!)]
+    #[test]
     async fn test_set_and_get_current_profile() {
         let mut db = Database::new_memory().unwrap();
 
@@ -278,7 +277,7 @@ mod tests {
         // assert_eq!(current.unwrap().game_id, game_id.id);
     }
 
-    #[apply(test!)]
+    #[test]
     async fn test_insert_single_mod_entry() -> Result<()> {
         let mut db = Database::new_memory()?;
 
@@ -298,7 +297,7 @@ mod tests {
         Ok(())
     }
 
-    #[apply(test!)]
+    #[test]
     async fn test_insert_multiple_mod_entries() -> Result<()> {
         let mut db = Database::new_memory()?;
 
