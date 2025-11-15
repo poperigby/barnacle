@@ -1,4 +1,4 @@
-use barnacle_lib::{GameId, ProfileId, ProfileMod, state::State};
+use barnacle_lib::{GameId, ProfileId, ProfileMod, db::Database};
 use iced::{
     Element, Task,
     widget::{button, column, combo_box, row},
@@ -11,14 +11,14 @@ pub enum ModManagerMessage {
 
 #[derive(Debug)]
 pub struct ModManagerPage {
-    state: State,
+    db: Database,
     current_profile: Option<ProfileId>,
 }
 
 impl ModManagerPage {
-    pub fn new(state: State) -> Self {
+    pub fn new(db: Database) -> Self {
         Self {
-            state: state.clone(),
+            db: db.clone(),
             current_profile: None,
         }
         // Task::perform(

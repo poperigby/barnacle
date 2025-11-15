@@ -3,8 +3,8 @@ use std::io;
 use thiserror::Error;
 
 // mod deployers;
+pub mod db;
 pub mod fs;
-pub mod state;
 
 pub use barnacle_db::{
     GameId, ModId, ProfileId, ProfileMod,

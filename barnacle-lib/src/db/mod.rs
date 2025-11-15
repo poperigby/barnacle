@@ -1,5 +1,3 @@
-use barnacle_db::Database;
-
 use crate::{Result, fs::data_dir};
 
 mod games;
@@ -8,14 +6,14 @@ mod profiles;
 mod tools;
 
 #[derive(Clone, Debug)]
-pub struct State {
-    db: Database,
+pub struct Database {
+    db: barnacle_db::Database,
 }
 
-impl State {
+impl Database {
     pub fn new() -> Result<Self> {
         Ok(Self {
-            db: Database::new(&data_dir().join("data.db"))?,
+            db: barnacle_db::Database::new(&data_dir().join("data.db"))?,
         })
     }
 }

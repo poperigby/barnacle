@@ -1,4 +1,4 @@
-use barnacle_lib::state::State;
+use barnacle_lib::db::Database;
 use iced::{Element, Task, Theme, application};
 
 use crate::{
@@ -27,20 +27,20 @@ enum Page {
 }
 
 struct App {
-    state: State,
+    db: Database,
     theme: Theme,
     page: Page,
 }
 
 impl App {
     fn new() -> (Self, Task<Message>) {
-        let state = State::new().unwrap();
+        let db = Database::new().unwrap();
 
         (
             Self {
-                state: state.clone(),
+                db: db.clone(),
                 theme: Theme::Dark,
-                page: Page::ModManager(ModManagerPage::new(state.clone())),
+                page: Page::ModManager(ModManagerPage::new(db.clone())),
             },
             Task::none(),
         )
