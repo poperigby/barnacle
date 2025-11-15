@@ -27,7 +27,7 @@
     openssl
     pkg-config
 
-    # Slint
+    # GUI
     fontconfig
     xorg.libxcb
     wayland

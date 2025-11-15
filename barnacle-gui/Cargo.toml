@@ -2,13 +2,7 @@
 name = "barnacle-gui"
 version.workspace = true
 edition.workspace = true
+homepage.workspace = true
 
 [dependencies]
-barnacle-lib = { path = "../barnacle-lib" }
-slint = "1.14.1"
-smol = "2.0.2"
-tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
-
-[build-dependencies]
-slint-build = "1.14.1"
+iced = "0.13.1"
