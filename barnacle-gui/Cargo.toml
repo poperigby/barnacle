@@ -7,7 +7,7 @@ homepage.workspace = true
 [dependencies]
 barnacle-lib = { path = "../barnacle-lib" }
 iced = { version = "0.13.1", features = ["tokio", "svg"] }
-iced_aw = "0.12.2"
+iced_aw = {version = "0.12.2", features = ["tabs", "tab_bar"]}
 include_dir = "0.7.4"
 
 [features]

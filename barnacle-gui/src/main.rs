@@ -1,8 +1,12 @@
 use crate::{icons::icon, library_manager::LibraryManager, mod_list::ModList};
 use barnacle_lib::Repository;
 use iced::{
-    Element, Task, Theme, application,
-    widget::{button, column, horizontal_space, row, text},
+    Color, Element,
+    Length::Fill,
+    Task, Theme, application,
+    widget::{
+        button, center, column, container, horizontal_space, mouse_area, opaque, row, stack, text,
+    },
 };
 
 mod icons;
@@ -19,6 +23,8 @@ fn main() -> iced::Result {
 enum Message {
     ModList(mod_list::Message),
     LibraryManager(library_manager::Message),
+    ShowLibraryManager,
+    HideLibraryManager,
 }
 
 struct App {
@@ -28,6 +34,7 @@ struct App {
     // Components
     mod_list: ModList,
     library_manager: LibraryManager,
+    show_library_manager: bool,
 }
 
 impl App {
@@ -43,6 +50,7 @@ impl App {
                 theme: Theme::Dark,
                 mod_list,
                 library_manager,
+                show_library_manager: false,
             },
             Task::batch([
                 mod_list_task.map(Message::ModList),
@@ -63,25 +71,46 @@ impl App {
                 library_manager::Action::Task(t) => t.map(Message::LibraryManager),
                 library_manager::Action::None => Task::none(),
             },
+            Message::ShowLibraryManager => {
+                self.show_library_manager = true;
+                Task::none()
+            }
+            Message::HideLibraryManager => {
+                self.show_library_manager = false;
+                Task::none()
+            }
         }
     }
 
     // Render the application and pass along messages from components to update()
     fn view(&self) -> Element<'_, Message> {
-        column![
+        let content = column![
+            // Top bar
             row![
                 text("Game:"),
                 button(icon("play")),
                 text("Profile:"),
                 horizontal_space(),
-                button(icon("library")),
+                button(icon("library")).on_press(Message::ShowLibraryManager),
                 button(icon("settings")),
                 button(icon("notifications"))
             ],
+            // Action bar
+            row![],
+            // Mod list
             self.mod_list.view().map(Message::ModList),
-            self.library_manager.view().map(Message::LibraryManager)
         ]
-        .into()
+        .height(Fill);
+
+        if self.show_library_manager {
+            modal(
+                content,
+                self.library_manager.view().map(Message::LibraryManager),
+                Message::HideLibraryManager,
+            )
+        } else {
+            content.into()
+        }
     }
 
     fn title(&self) -> String {
@@ -91,4 +120,34 @@ impl App {
     fn theme(&self) -> Theme {
         self.theme.clone()
     }
+}
+
+/// Make an element modal, capturing mouse input and darkening the background.
+fn modal<'a, Message>(
+    base: impl Into<Element<'a, Message>>,
+    content: impl Into<Element<'a, Message>>,
+    on_blur: Message,
+) -> Element<'a, Message>
+where
+    Message: Clone + 'a,
+{
+    stack![
+        base.into(),
+        opaque(
+            mouse_area(center(opaque(content)).style(|_theme| {
+                container::Style {
+                    background: Some(
+                        Color {
+                            a: 0.8,
+                            ..Color::BLACK
+                        }
+                        .into(),
+                    ),
+                    ..container::Style::default()
+                }
+            }))
+            .on_press(on_blur)
+        )
+    ]
+    .into()
 }
