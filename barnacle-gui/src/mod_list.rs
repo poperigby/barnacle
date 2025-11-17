@@ -1,5 +1,8 @@
 use barnacle_lib::{ProfileMod, Repository};
-use iced::{Element, Task, widget::text};
+use iced::{
+    Element, Task,
+    widget::{Column, column, text},
+};
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -57,9 +60,9 @@ impl ModList {
 
     pub fn view(&self) -> Element<'_, Message> {
         match &self.state {
-            State::Loading => text("Loading..."),
-            State::Loaded(mods) => text("Loaded..."),
-            State::Error(e) => text(e),
+            State::Loading => column![text("Loading...")],
+            State::Loaded(mods) => column![text("Loaded!")],
+            State::Error(e) => column![text(e)],
         }
         .into()
     }
