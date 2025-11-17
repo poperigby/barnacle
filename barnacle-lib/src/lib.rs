@@ -4,12 +4,14 @@ use thiserror::Error;
 
 // mod deployers;
 pub mod fs;
-pub mod state;
+
+mod repository;
 
 pub use barnacle_db::{
     GameId, ModId, ProfileId, ProfileMod,
     models::{DeployKind, Game, Mod, Profile, Tool},
 };
+pub use repository::Repository;
 
 type Result<T> = std::result::Result<T, Error>;
 

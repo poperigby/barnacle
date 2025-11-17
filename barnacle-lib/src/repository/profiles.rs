@@ -2,9 +2,9 @@ use std::fs::create_dir_all;
 
 use barnacle_db::{GameId, ModId, ProfileId, ProfileMod, models::Profile};
 
-use crate::{Result, fs::profile_dir, state::State};
+use crate::{Result, fs::profile_dir, repository::Repository};
 
-impl State {
+impl Repository {
     pub async fn add_profile(&mut self, game_id: GameId, name: &str) -> Result<ProfileId> {
         let new_profile = Profile::new(name);
 

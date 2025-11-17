@@ -1,5 +1,5 @@
 use crate::icons::icon;
-use barnacle_lib::state::State;
+use barnacle_lib::Repository;
 use iced::{
     Element, Task, Theme, application,
     widget::{button, column, horizontal_space, row, text},
@@ -17,17 +17,17 @@ fn main() -> iced::Result {
 enum Message {}
 
 struct App {
-    state: State,
+    repo: Repository,
     theme: Theme,
 }
 
 impl App {
     fn new() -> (Self, Task<Message>) {
-        let state = State::new().unwrap();
+        let repo = Repository::new().unwrap();
 
         (
             Self {
-                state: state.clone(),
+                repo: repo.clone(),
                 theme: Theme::Dark,
             },
             Task::none(),

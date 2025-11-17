@@ -2,9 +2,9 @@ use std::path::Path;
 
 use barnacle_db::{GameId, ToolId, models::Tool};
 
-use crate::{Result, state::State};
+use crate::{Result, repository::Repository};
 
-impl State {
+impl Repository {
     pub async fn add_tool(
         &mut self,
         game_id: GameId,
