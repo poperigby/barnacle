@@ -1,0 +1,31 @@
+use iced::{Element, widget::text};
+use iced_aw::TabLabel;
+
+use crate::library_manager::Tab;
+
+#[derive(Debug, Clone)]
+pub enum Message {
+    Loaded,
+}
+
+pub struct ProfilesTab {}
+
+impl ProfilesTab {
+    pub fn update(&mut self, message: Message) {}
+}
+
+impl Tab for ProfilesTab {
+    type Message = Message;
+
+    fn title(&self) -> String {
+        "Profiles".into()
+    }
+
+    fn tab_label(&self) -> TabLabel {
+        TabLabel::Text(self.title())
+    }
+
+    fn content(&self) -> Element<'_, Self::Message> {
+        text("Profiles").into()
+    }
+}
