@@ -1,8 +1,8 @@
 use barnacle_lib::Repository;
 use iced::{
-    Alignment, Element, Length, Task,
+    Element, Length, Task,
     alignment::{Horizontal, Vertical},
-    widget::{column, container, text},
+    widget::container,
 };
 use iced_aw::{TabLabel, Tabs};
 
@@ -15,7 +15,6 @@ mod mods_tab;
 mod profiles_tab;
 mod tools_tab;
 
-const HEADER_SIZE: u16 = 32;
 const TAB_PADDING: u16 = 16;
 
 #[derive(Debug, Clone)]
@@ -34,8 +33,9 @@ pub enum Action {
     None,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-enum TabId {
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub enum TabId {
+    #[default]
     Games,
     Profiles,
     Mods,
@@ -54,16 +54,23 @@ pub struct LibraryManager {
 
 impl LibraryManager {
     pub fn new(repo: Repository) -> (Self, Task<Message>) {
+        let (games_tab, games_task) = GamesTab::new(repo.clone());
+        // let (profiles_tab, profiles_task) = ProfilesTab::new(repo.clone());
+        // let (mods_tab, mods_task) = ModsTab::new(repo.clone());
+        // let (tools_tab, tools_task) = ToolsTab::new(repo.clone());
+
+        let tasks = Task::batch([games_task.map(Message::GamesTab)]);
+
         (
             Self {
-                repo,
-                active_tab: TabId::Games,
-                games_tab: GamesTab {},
-                profiles_tab: ProfilesTab {},
-                mods_tab: ModsTab {},
-                tools_tab: ToolsTab {},
+                repo: repo.clone(),
+                active_tab: TabId::default(),
+                games_tab,
+                profiles_tab: ProfilesTab::new(repo.clone()),
+                mods_tab: ModsTab::new(repo.clone()),
+                tools_tab: ToolsTab::new(repo.clone()),
             },
-            Task::none(),
+            tasks,
         )
     }
 
@@ -117,8 +124,8 @@ impl LibraryManager {
                 )
                 .set_active_tab(&self.active_tab),
         )
-        .width(800)
-        .height(900)
+        .width(1000)
+        .height(800)
         .style(container::rounded_box)
         .into()
     }
@@ -132,17 +139,11 @@ trait Tab {
     fn tab_label(&self) -> TabLabel;
 
     fn view(&self) -> Element<'_, Self::Message> {
-        container(
-            column![text(self.title()).size(HEADER_SIZE), self.content()]
-                .spacing(20)
-                .align_x(Alignment::Center),
-        )
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .align_x(Horizontal::Center)
-        .align_y(Vertical::Center)
-        .padding(TAB_PADDING)
-        .into()
+        container(self.content())
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .padding(TAB_PADDING)
+            .into()
     }
 
     fn content(&self) -> Element<'_, Self::Message>;

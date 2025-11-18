@@ -1,27 +1,47 @@
-use barnacle_lib::Repository;
-use iced::{Element, widget::text};
+use barnacle_lib::{Game, Repository};
+use iced::{Element, Task, widget::text};
 use iced_aw::TabLabel;
 
 use crate::library_manager::Tab;
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    Loaded,
+    Loaded(Vec<Game>),
 }
 
 pub enum State {
     Loading,
-    Loaded,
     Error(String),
+    Loaded(Vec<Game>),
 }
 
 pub struct GamesTab {
-    // repo: Repository,
-    // state: State,
+    repo: Repository,
+    state: State,
 }
 
 impl GamesTab {
-    pub fn update(&mut self, message: Message) {}
+    pub fn new(repo: Repository) -> (Self, Task<Message>) {
+        (
+            Self {
+                repo: repo.clone(),
+                state: State::Loading,
+            },
+            Task::perform(
+                {
+                    let repo = repo.clone();
+                    async move { repo.games().await.unwrap() }
+                },
+                Message::Loaded,
+            ),
+        )
+    }
+
+    pub fn update(&mut self, message: Message) {
+        match message {
+            Message::Loaded(games) => self.state = State::Loaded(games),
+        }
+    }
 }
 
 impl Tab for GamesTab {
@@ -36,6 +56,11 @@ impl Tab for GamesTab {
     }
 
     fn content(&self) -> Element<'_, Self::Message> {
-        text("Games").into()
+        match &self.state {
+            State::Loading => text("Loading..."),
+            State::Error(e) => text("ERROR!"),
+            State::Loaded(games) => text("Loaded!"),
+        }
+        .into()
     }
 }

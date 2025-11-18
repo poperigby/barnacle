@@ -1,3 +1,4 @@
+use barnacle_lib::Repository;
 use iced::{Element, widget::text};
 use iced_aw::TabLabel;
 
@@ -8,9 +9,15 @@ pub enum Message {
     Loaded,
 }
 
-pub struct ModsTab {}
+pub struct ModsTab {
+    repo: Repository,
+}
 
 impl ModsTab {
+    pub fn new(repo: Repository) -> Self {
+        Self { repo }
+    }
+
     pub fn update(&mut self, message: Message) {}
 }
 
