@@ -2,6 +2,7 @@ use barnacle_lib::Repository;
 use iced::{
     Element, Length, Task,
     alignment::{Horizontal, Vertical},
+    border::width,
     widget::container,
 };
 use iced_aw::{TabLabel, Tabs};
@@ -142,7 +143,7 @@ trait Tab {
         container(self.content())
             .width(Length::Fill)
             .height(Length::Fill)
-            .padding(TAB_PADDING)
+            // .padding(TAB_PADDING)
             .into()
     }
 

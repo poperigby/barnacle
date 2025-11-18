@@ -2,7 +2,7 @@ use crate::{icons::icon, library_manager::LibraryManager, mod_list::ModList};
 use barnacle_lib::Repository;
 use iced::{
     Color, Element,
-    Length::Fill,
+    Length::{self, Fill},
     Task, Theme, application,
     widget::{
         button, center, column, container, horizontal_space, mouse_area, opaque, row, stack, text,
@@ -149,5 +149,7 @@ where
             .on_press(on_blur)
         )
     ]
+    .width(Length::Fill)
+    .height(Length::Fill)
     .into()
 }
