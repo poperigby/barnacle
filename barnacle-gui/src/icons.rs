@@ -1,21 +1,29 @@
+use std::collections::HashMap;
+
 use iced::{
     Length::Shrink,
     Theme,
-    advanced::svg,
+    advanced::svg::Handle,
     widget::{Svg, svg::Style},
 };
 use include_dir::{Dir, include_dir};
+use once_cell::sync::Lazy;
 
 static ICONS: Dir = include_dir!("$CARGO_MANIFEST_DIR/assets/icons");
+static HANDLES: Lazy<HashMap<&'static str, Handle>> = Lazy::new(|| {
+    ICONS
+        .files()
+        .filter_map(|file| {
+            let name = file.path().file_stem()?.to_str()?;
+            Some((name, Handle::from_memory(file.contents())))
+        })
+        .collect()
+});
 
 pub fn icon(name: &str) -> Svg<'_> {
-    let bytes = ICONS
-        .get_file(format!("{name}.svg"))
-        .expect("Missing icon")
-        .contents();
+    let handle = HANDLES.get(name).expect("Failed to find icon");
 
-    let handle = svg::Handle::from_memory(bytes);
-    Svg::new(handle)
+    Svg::new(handle.clone())
         .width(Shrink)
         .style(|theme: &Theme, _| Style {
             color: Some(theme.palette().text),

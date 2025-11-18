@@ -429,6 +429,7 @@ dependencies = [
  "iced",
  "iced_aw",
  "include_dir",
+ "once_cell",
 ]
 
 [[package]]
