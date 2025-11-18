@@ -1,7 +1,9 @@
 use barnacle_lib::{Game, Repository};
 use iced::{
     Element, Length, Task,
-    widget::{Column, button, column, container, horizontal_space, row, scrollable, text},
+    widget::{
+        Column, button, column, container, horizontal_space, row, scrollable, text, text_input,
+    },
 };
 use iced_aw::TabLabel;
 
@@ -33,6 +35,7 @@ pub struct GamesTab {
     repo: Repository,
     state: State,
     show_new_dialog: bool,
+    new_dialog_name: String,
 }
 
 impl GamesTab {
@@ -42,6 +45,7 @@ impl GamesTab {
                 repo: repo.clone(),
                 state: State::Loading,
                 show_new_dialog: false,
+                new_dialog_name: "".into(),
             },
             Task::perform(
                 {
@@ -96,7 +100,16 @@ impl Tab for GamesTab {
                 .padding(TAB_PADDING);
 
                 if self.show_new_dialog {
-                    modal(content, text("HOOP"), Message::HideNewDialog)
+                    let new_dialog = container(column![row![
+                        text("Name: "),
+                        text_input("Name", &self.new_dialog_name),
+                    ],])
+                    .padding(20)
+                    .width(400)
+                    .height(600)
+                    .style(container::rounded_box);
+
+                    modal(content, new_dialog, Message::HideNewDialog)
                 } else {
                     content.into()
                 }
