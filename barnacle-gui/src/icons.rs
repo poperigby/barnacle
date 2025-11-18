@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use iced::{
-    Length::Shrink,
     Theme,
     advanced::svg::Handle,
     widget::{Svg, svg::Style},
@@ -24,7 +23,8 @@ pub fn icon(name: &str) -> Svg<'_> {
     let handle = HANDLES.get(name).expect("Failed to find icon");
 
     Svg::new(handle.clone())
-        .width(Shrink)
+        .width(24)
+        .height(24)
         .style(|theme: &Theme, _| Style {
             color: Some(theme.palette().text),
         })
