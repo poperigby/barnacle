@@ -20,11 +20,6 @@ pub enum Message {
     HideNewDialog,
 }
 
-pub enum Action {
-    Task(Task<Message>),
-    None,
-}
-
 pub enum State {
     Loading,
     Error(String),
@@ -57,21 +52,14 @@ impl GamesTab {
         )
     }
 
-    pub fn update(&mut self, message: Message) -> Action {
+    pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::Loaded(games) => {
-                self.state = State::Loaded(games);
-                Action::None
-            }
-            Message::ShowNewDialog => {
-                self.show_new_dialog = true;
-                Action::None
-            }
-            Message::HideNewDialog => {
-                self.show_new_dialog = false;
-                Action::None
-            }
+            Message::Loaded(games) => self.state = State::Loaded(games),
+            Message::ShowNewDialog => self.show_new_dialog = true,
+            Message::HideNewDialog => self.show_new_dialog = false,
         }
+
+        Task::none()
     }
 }
 
