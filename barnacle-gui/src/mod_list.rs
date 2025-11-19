@@ -1,12 +1,10 @@
-use barnacle_gui::Component;
+use barnacle_gui::{Component, icons::icon};
 use barnacle_lib::{ModId, ProfileMod, Repository};
 use iced::{
     Element, Length, Task,
     widget::{Column, button, column, container, horizontal_space, row, text},
 };
 use iced_aw::Spinner;
-
-use crate::icons::icon;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -30,13 +28,13 @@ impl Component for ModList {
     fn new(repo: Repository) -> (Self, Task<Message>) {
         let task = Task::perform(
             {
-                let mut repo = repo.clone();
+                let repo = repo.clone();
                 async move {
-                    let game_id = repo.games().await.unwrap().first().unwrap().id().unwrap();
+                    // let game_id = repo.games().await.unwrap().first().unwrap().id().unwrap();
                     let current_profile = repo.clone().current_profile().await.unwrap().unwrap();
 
-                    let mod_id = repo.add_mod(game_id, None, "Test").await.unwrap();
-                    repo.add_mod_entry(mod_id, current_profile).await.unwrap();
+                    // let mod_id = repo.add_mod(game_id, None, "Test").await.unwrap();
+                    // repo.add_mod_entry(mod_id, current_profile).await.unwrap();
 
                     repo.profile_mods(current_profile).await.unwrap()
                 }

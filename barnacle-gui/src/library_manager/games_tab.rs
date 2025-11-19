@@ -1,4 +1,4 @@
-use barnacle_gui::Component;
+use barnacle_gui::{Component, icons::icon};
 use barnacle_lib::{Game, Repository};
 use iced::{
     Element, Length, Task,
@@ -7,7 +7,7 @@ use iced::{
     },
 };
 
-use crate::{icons::icon, library_manager::TAB_PADDING, modal};
+use crate::{library_manager::TAB_PADDING, modal};
 
 #[derive(Debug, Clone)]
 pub enum Message {

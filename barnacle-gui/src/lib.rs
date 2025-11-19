@@ -4,6 +4,8 @@ use iced::{
     widget::{center, container, mouse_area, opaque, stack},
 };
 
+pub mod icons;
+
 pub trait Component
 where
     Self: Sized,

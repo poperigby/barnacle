@@ -1,5 +1,5 @@
-use crate::{icons::icon, library_manager::LibraryManager, mod_list::ModList};
-use barnacle_gui::{Component, modal};
+use crate::{library_manager::LibraryManager, mod_list::ModList};
+use barnacle_gui::{Component, icons::icon, modal};
 use barnacle_lib::Repository;
 use iced::{
     Element,
@@ -8,7 +8,6 @@ use iced::{
     widget::{button, column, horizontal_space, row, text},
 };
 
-mod icons;
 mod library_manager;
 mod mod_list;
 
