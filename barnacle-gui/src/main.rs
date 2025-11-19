@@ -1,4 +1,4 @@
-use crate::{library_manager::LibraryManager, mod_list::ModList};
+use crate::components::{library_manager::LibraryManager, mod_list::ModList};
 use barnacle_gui::{Component, icons::icon, modal};
 use barnacle_lib::Repository;
 use iced::{
@@ -8,8 +8,7 @@ use iced::{
     widget::{button, column, horizontal_space, row, text},
 };
 
-mod library_manager;
-mod mod_list;
+mod components;
 
 fn main() -> iced::Result {
     application(App::title, App::update, App::view)
@@ -19,8 +18,8 @@ fn main() -> iced::Result {
 
 #[derive(Debug, Clone)]
 enum Message {
-    ModList(mod_list::Message),
-    LibraryManager(library_manager::Message),
+    ModList(components::mod_list::Message),
+    LibraryManager(components::library_manager::Message),
     ShowLibraryManager,
     HideLibraryManager,
 }

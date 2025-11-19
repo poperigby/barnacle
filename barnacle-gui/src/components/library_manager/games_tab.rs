@@ -7,7 +7,7 @@ use iced::{
     },
 };
 
-use crate::{library_manager::TAB_PADDING, modal};
+use crate::{components::library_manager::TAB_PADDING, modal};
 
 #[derive(Debug, Clone)]
 pub enum Message {

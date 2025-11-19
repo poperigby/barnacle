@@ -3,7 +3,7 @@ use barnacle_lib::Repository;
 use iced::{Element, Task, widget::container};
 use iced_aw::{TabLabel, Tabs};
 
-use crate::library_manager::games_tab::GamesTab;
+use crate::components::library_manager::games_tab::GamesTab;
 
 mod games_tab;
 
