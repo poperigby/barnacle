@@ -63,14 +63,11 @@ impl App {
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             // Redirect messages to relevant child components
-            Message::ModList(msg) => match self.mod_list.update(msg) {
-                mod_list::Action::Task(t) => t.map(Message::ModList),
-                mod_list::Action::None => Task::none(),
-            },
-            Message::LibraryManager(msg) => match self.library_manager.update(msg) {
-                library_manager::Action::Task(t) => t.map(Message::LibraryManager),
-                library_manager::Action::None => Task::none(),
-            },
+            Message::ModList(msg) => self.mod_list.update(msg).map(Message::ModList),
+            Message::LibraryManager(msg) => self
+                .library_manager
+                .update(msg)
+                .map(Message::LibraryManager),
             Message::ShowLibraryManager => {
                 self.show_library_manager = true;
                 Task::none()
@@ -120,6 +117,17 @@ impl App {
     fn theme(&self) -> Theme {
         self.theme.clone()
     }
+}
+
+pub trait Component
+where
+    Self: Sized,
+{
+    type Message;
+
+    fn new(repo: Repository) -> (Self, Task<Self::Message>);
+    fn update(&mut self, message: Self::Message) -> Task<Self::Message>;
+    fn view(&self) -> Element<'_, Self::Message>;
 }
 
 /// Make an element modal, capturing mouse input and darkening the background.

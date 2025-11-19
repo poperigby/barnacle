@@ -4,6 +4,8 @@ use iced::{
     widget::{Column, column, text},
 };
 
+use crate::Component;
+
 #[derive(Debug, Clone)]
 pub enum Message {
     Loaded(Vec<ProfileMod>),
@@ -15,19 +17,15 @@ pub enum State {
     Error(String),
 }
 
-// Action the ModList wants the App to perform for it
-pub enum Action {
-    Task(Task<Message>),
-    None,
-}
-
 pub struct ModList {
     repo: Repository,
     state: State,
 }
 
-impl ModList {
-    pub fn new(repo: Repository) -> (Self, Task<Message>) {
+impl Component for ModList {
+    type Message = Message;
+
+    fn new(repo: Repository) -> (Self, Task<Message>) {
         let task = Task::perform(
             {
                 let repo = repo.clone();
@@ -49,16 +47,15 @@ impl ModList {
         )
     }
 
-    pub fn update(&mut self, message: Message) -> Action {
+    fn update(&mut self, message: Message) -> Task<Self::Message> {
         match message {
-            Message::Loaded(mods) => {
-                self.state = State::Loaded(mods);
-                Action::None
-            }
+            Message::Loaded(mods) => self.state = State::Loaded(mods),
         }
+
+        Task::none()
     }
 
-    pub fn view(&self) -> Element<'_, Message> {
+    fn view(&self) -> Element<'_, Message> {
         match &self.state {
             State::Loading => column![text("Loading...")],
             State::Loaded(mods) => column![text("Loaded!")],
