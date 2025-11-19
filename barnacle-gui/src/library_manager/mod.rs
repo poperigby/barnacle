@@ -1,10 +1,5 @@
 use barnacle_lib::Repository;
-use iced::{
-    Element, Length, Task,
-    alignment::{Horizontal, Vertical},
-    border::width,
-    widget::container,
-};
+use iced::{Element, Task, widget::container};
 use iced_aw::{TabLabel, Tabs};
 
 use crate::{Component, library_manager::games_tab::GamesTab};
@@ -24,9 +19,6 @@ pub enum Message {
 pub enum TabId {
     #[default]
     Games,
-    Profiles,
-    Mods,
-    Tools,
 }
 
 pub struct LibraryManager {
@@ -64,9 +56,7 @@ impl Component for LibraryManager {
                 Task::none()
             }
             Message::GamesTab(msg) => self.games_tab.update(msg).map(Message::GamesTab),
-        };
-
-        Task::none()
+        }
     }
 
     fn view(&self) -> Element<'_, Message> {
@@ -74,7 +64,7 @@ impl Component for LibraryManager {
             Tabs::new(Message::TabSelected)
                 .push(
                     TabId::Games,
-                    self.games_tab.tab_label(),
+                    TabLabel::Text("Games".into()),
                     self.games_tab.view().map(Message::GamesTab),
                 )
                 .set_active_tab(&self.active_tab),
@@ -84,22 +74,4 @@ impl Component for LibraryManager {
         .style(container::rounded_box)
         .into()
     }
-}
-
-trait Tab {
-    type Message;
-
-    fn title(&self) -> String;
-
-    fn tab_label(&self) -> TabLabel;
-
-    fn view(&self) -> Element<'_, Self::Message> {
-        container(self.content())
-            .width(Length::Fill)
-            .height(Length::Fill)
-            // .padding(TAB_PADDING)
-            .into()
-    }
-
-    fn content(&self) -> Element<'_, Self::Message>;
 }

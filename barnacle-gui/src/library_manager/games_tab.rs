@@ -5,13 +5,8 @@ use iced::{
         Column, button, column, container, horizontal_space, row, scrollable, text, text_input,
     },
 };
-use iced_aw::TabLabel;
 
-use crate::{
-    icons::icon,
-    library_manager::{TAB_PADDING, Tab},
-    modal,
-};
+use crate::{Component, icons::icon, library_manager::TAB_PADDING, modal};
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -33,8 +28,10 @@ pub struct GamesTab {
     new_dialog_name: String,
 }
 
-impl GamesTab {
-    pub fn new(repo: Repository) -> (Self, Task<Message>) {
+impl Component for GamesTab {
+    type Message = Message;
+
+    fn new(repo: Repository) -> (Self, Task<Message>) {
         (
             Self {
                 repo: repo.clone(),
@@ -52,7 +49,7 @@ impl GamesTab {
         )
     }
 
-    pub fn update(&mut self, message: Message) -> Task<Message> {
+    fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Loaded(games) => self.state = State::Loaded(games),
             Message::ShowNewDialog => self.show_new_dialog = true,
@@ -61,20 +58,8 @@ impl GamesTab {
 
         Task::none()
     }
-}
 
-impl Tab for GamesTab {
-    type Message = Message;
-
-    fn title(&self) -> String {
-        "Games".into()
-    }
-
-    fn tab_label(&self) -> TabLabel {
-        TabLabel::Text(self.title())
-    }
-
-    fn content(&self) -> Element<'_, Self::Message> {
+    fn view(&self) -> Element<'_, Self::Message> {
         match &self.state {
             State::Loading => column![text("Loading...")].into(),
             State::Error(e) => column![text("ERROR!")].into(),
