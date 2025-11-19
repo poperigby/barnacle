@@ -1,12 +1,11 @@
 use crate::{icons::icon, library_manager::LibraryManager, mod_list::ModList};
+use barnacle_gui::{Component, modal};
 use barnacle_lib::Repository;
 use iced::{
-    Color, Element,
-    Length::{self, Fill},
+    Element,
+    Length::Fill,
     Task, Theme, application,
-    widget::{
-        button, center, column, container, horizontal_space, mouse_area, opaque, row, stack, text,
-    },
+    widget::{button, column, horizontal_space, row, text},
 };
 
 mod icons;
@@ -117,47 +116,4 @@ impl App {
     fn theme(&self) -> Theme {
         self.theme.clone()
     }
-}
-
-pub trait Component
-where
-    Self: Sized,
-{
-    type Message;
-
-    fn new(repo: Repository) -> (Self, Task<Self::Message>);
-    fn update(&mut self, message: Self::Message) -> Task<Self::Message>;
-    fn view(&self) -> Element<'_, Self::Message>;
-}
-
-/// Make an element modal, capturing mouse input and darkening the background.
-fn modal<'a, Message>(
-    base: impl Into<Element<'a, Message>>,
-    content: impl Into<Element<'a, Message>>,
-    on_blur: Message,
-) -> Element<'a, Message>
-where
-    Message: Clone + 'a,
-{
-    stack![
-        base.into(),
-        opaque(
-            mouse_area(center(opaque(content)).style(|_theme| {
-                container::Style {
-                    background: Some(
-                        Color {
-                            a: 0.8,
-                            ..Color::BLACK
-                        }
-                        .into(),
-                    ),
-                    ..container::Style::default()
-                }
-            }))
-            .on_press(on_blur)
-        )
-    ]
-    .width(Length::Fill)
-    .height(Length::Fill)
-    .into()
 }
