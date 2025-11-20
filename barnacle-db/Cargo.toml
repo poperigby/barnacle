@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-agdb = { version = "0.12.3"}
+agdb = { version = "0.12.4"}
 derive_more = { version = "2.0.1", features = ["display"] }
 thiserror = "2.0.17"
 tokio = { version = "1.48.0", features = ["sync", "fs", "macros", "test-util", "rt-multi-thread"] }

@@ -4,8 +4,6 @@ use agdb::{DbId, DbType};
 pub struct Profile {
     db_id: Option<DbId>,
     name: String,
-    // TODO: Just to differentiate profiles and mods until I add more fields
-    is_profile: bool,
 }
 
 impl Profile {
@@ -13,7 +11,6 @@ impl Profile {
         Self {
             db_id: None,
             name: name.to_string(),
-            is_profile: true,
         }
     }
 

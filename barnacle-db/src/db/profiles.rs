@@ -59,9 +59,6 @@ impl Database {
                     .node()
                     .and()
                     .neighbor()
-                    .and()
-                    // TODO: Use non-temp field
-                    .keys("is_profile")
                     .query(),
             )?
             .try_into()?)

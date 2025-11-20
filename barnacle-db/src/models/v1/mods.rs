@@ -5,8 +5,6 @@ pub struct Mod {
     db_id: Option<DbId>,
     /// A human friendly display name
     name: String,
-    // TODO: Just to differentiate profiles and mods until I add more fields
-    is_mod: bool,
 }
 
 impl Mod {
@@ -14,7 +12,6 @@ impl Mod {
         Self {
             db_id: None,
             name: name.into(),
-            is_mod: true,
         }
     }
     pub fn name(&self) -> &str {

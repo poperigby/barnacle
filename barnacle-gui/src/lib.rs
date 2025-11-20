@@ -1,7 +1,7 @@
 use barnacle_lib::Repository;
 use iced::{
     Color, Element, Length, Task,
-    widget::{center, container, mouse_area, opaque, stack},
+    widget::{Column, center, container, mouse_area, opaque, stack},
 };
 
 pub mod icons;
@@ -48,3 +48,9 @@ where
     .height(Length::Fill)
     .into()
 }
+
+// pub fn list<Item, Message>(items: &[Item], row_fn: Fn) -> Element<'_, Message> {
+//     let children = items.iter().map(|i| row_fn(i));
+//
+//     Column::with_children(children).into()
+// }

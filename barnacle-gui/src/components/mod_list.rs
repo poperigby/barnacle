@@ -28,14 +28,22 @@ impl Component for ModList {
     fn new(repo: Repository) -> (Self, Task<Message>) {
         let task = Task::perform(
             {
-                let repo = repo.clone();
+                let mut repo = repo.clone();
                 async move {
-                    // let game_id = repo.games().await.unwrap().first().unwrap().id().unwrap();
+                    if repo.games().await.unwrap().is_empty() {
+                        let game_id = repo
+                            .add_game("Skyrim", barnacle_lib::DeployKind::CreationEngine)
+                            .await
+                            .unwrap();
+                        let profile_id = repo.add_profile(game_id, "Test").await.unwrap();
+
+                        repo.set_current_profile(profile_id).await.unwrap();
+
+                        let mod_id = repo.add_mod(game_id, None, "Test").await.unwrap();
+                        repo.add_mod_entry(mod_id, profile_id).await.unwrap();
+                    }
+
                     let current_profile = repo.clone().current_profile().await.unwrap().unwrap();
-
-                    // let mod_id = repo.add_mod(game_id, None, "Test").await.unwrap();
-                    // repo.add_mod_entry(mod_id, current_profile).await.unwrap();
-
                     repo.profile_mods(current_profile).await.unwrap()
                 }
             },

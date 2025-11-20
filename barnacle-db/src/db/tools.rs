@@ -11,7 +11,7 @@ impl Database {
     pub async fn insert_tool(&mut self, new_tool: &Tool, game_id: GameId) -> Result<ToolId> {
         self.0.write().await.transaction_mut(|t| {
             let tool_id = t
-                .exec_mut(QueryBuilder::insert().element(&new_tool).query())?
+                .exec_mut(QueryBuilder::insert().element(new_tool).query())?
                 .elements[0]
                 .id;
 
@@ -43,8 +43,6 @@ impl Database {
                     .node()
                     .and()
                     .neighbor()
-                    .and()
-                    .keys("is_tool")
                     .query(),
             )?
             .try_into()?)

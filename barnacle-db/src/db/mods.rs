@@ -11,7 +11,7 @@ impl Database {
     pub async fn insert_mod(&mut self, new_mod: &Mod, game_id: GameId) -> Result<ModId> {
         self.0.write().await.transaction_mut(|t| {
             let mod_id = t
-                .exec_mut(QueryBuilder::insert().element(&new_mod).query())?
+                .exec_mut(QueryBuilder::insert().element(new_mod).query())?
                 .elements[0]
                 .id;
 
@@ -43,8 +43,6 @@ impl Database {
                     .node()
                     .and()
                     .neighbor()
-                    .and()
-                    .keys("is_mod")
                     .query(),
             )?
             .try_into()?)
