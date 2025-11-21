@@ -27,6 +27,15 @@ impl Database {
         })
     }
 
+    pub async fn remove_game(&mut self, id: GameId) -> Result<()> {
+        self.0
+            .write()
+            .await
+            .exec_mut(QueryBuilder::remove().ids(id.0).query())?;
+
+        Ok(())
+    }
+
     /// Retrieve a [`Game`] by ID
     pub async fn game(&self, game_id: GameId) -> Result<Game> {
         Ok(self
