@@ -1,16 +1,20 @@
 use std::path::PathBuf;
 
 use agdb::{DbId, DbSerialize, DbType, DbValue};
+use strum::{Display, EnumIter};
 
 use crate::GameId;
 
-#[derive(Debug, Clone, Default, DbValue, DbSerialize, Copy, PartialEq, PartialOrd)]
+#[derive(
+    Debug, Clone, Default, DbValue, DbSerialize, Copy, PartialEq, PartialOrd, Display, EnumIter,
+)]
 pub enum DeployKind {
     /// Deploys directly to the game directory with OverlayFS.
     #[default]
     Overlay,
     /// Same as the overlay type, but with support for Gamebryo/Creation Engine `plugins.txt`.
     Gamebryo,
+    #[strum(to_string = "Creation Engine")]
     CreationEngine,
     /// Deploys mods to an intermediary staging directory with OverlayFS, preventing the mod store
     /// from needing to be modified. The individual mod directories are then added to `openmw.cfg`.
