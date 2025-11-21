@@ -33,6 +33,7 @@ pub struct Tab {
     repo: Repository,
     state: State,
     show_new_dialog: bool,
+    // Components
     new_dialog: NewDialog,
 }
 
@@ -40,7 +41,7 @@ impl Component for Tab {
     type Message = Message;
 
     fn new(repo: Repository) -> (Self, Task<Message>) {
-        let (new_dialog, new_dialog_task) = NewDialog::new(repo.clone());
+        let (new_dialog, _) = NewDialog::new(repo.clone());
 
         (
             Self {
@@ -78,6 +79,13 @@ impl Component for Tab {
                     self.show_new_dialog = false;
                     Task::none()
                 }
+                new_dialog::Message::GameCreated => Task::perform(
+                    {
+                        let repo = self.repo.clone();
+                        async move { repo.games().await.unwrap() }
+                    },
+                    Message::Loaded,
+                ),
                 _ => self.new_dialog.update(msg).map(Message::NewDialog),
             },
         }

@@ -1,9 +1,9 @@
 use barnacle_gui::Component;
-use barnacle_lib::{DeployKind, Repository};
+use barnacle_lib::{DeployKind, GameId, Repository};
 use iced::{
     Element, Task,
     widget::{
-        button, column, combo_box, container, horizontal_space, pick_list, row, text, text_input,
+        button, column, combo_box, container, horizontal_space, row, text, text_input,
         vertical_space,
     },
 };
@@ -15,9 +15,11 @@ pub enum Message {
     DeployKindSelected(DeployKind),
     CancelPressed,
     CreatePressed,
+    GameCreated,
 }
 
 pub struct NewDialog {
+    repo: Repository,
     name: String,
     deploy_kind: Option<DeployKind>,
     deploy_kind_state: combo_box::State<DeployKind>,
@@ -29,6 +31,7 @@ impl Component for NewDialog {
     fn new(repo: Repository) -> (Self, Task<Self::Message>) {
         (
             Self {
+                repo,
                 name: "".into(),
                 deploy_kind: None,
                 deploy_kind_state: combo_box::State::new(DeployKind::iter().collect()),
@@ -47,14 +50,20 @@ impl Component for NewDialog {
                 self.deploy_kind = Some(kind);
                 Task::none()
             }
-            Message::CancelPressed => {
-                println!(");");
-                Task::none()
-            }
+            Message::CancelPressed => Task::none(),
             Message::CreatePressed => {
-                println!("HOOPLA");
-                Task::none()
+                let mut repo = self.repo.clone();
+                let name = self.name.clone();
+                let deploy_kind = self.deploy_kind.unwrap();
+
+                Task::perform(
+                    async move {
+                        repo.add_game(&name, deploy_kind).await.unwrap();
+                    },
+                    |_| Message::GameCreated,
+                )
             }
+            Message::GameCreated => Task::none(),
         }
     }
 
