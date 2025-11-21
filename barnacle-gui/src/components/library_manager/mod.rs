@@ -3,8 +3,6 @@ use barnacle_lib::Repository;
 use iced::{Element, Task, widget::container};
 use iced_aw::{TabLabel, Tabs};
 
-use crate::components::library_manager::games_tab::GamesTab;
-
 mod games_tab;
 
 const TAB_PADDING: u16 = 16;
@@ -26,14 +24,14 @@ pub struct LibraryManager {
     repo: Repository,
     active_tab: TabId,
     // Components
-    games_tab: GamesTab,
+    games_tab: games_tab::Tab,
 }
 
 impl Component for LibraryManager {
     type Message = Message;
 
     fn new(repo: Repository) -> (Self, Task<Message>) {
-        let (games_tab, games_task) = GamesTab::new(repo.clone());
+        let (games_tab, games_task) = games_tab::Tab::new(repo.clone());
         // let (profiles_tab, profiles_task) = ProfilesTab::new(repo.clone());
         // let (mods_tab, mods_task) = ModsTab::new(repo.clone());
         // let (tools_tab, tools_task) = ToolsTab::new(repo.clone());

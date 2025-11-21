@@ -7,13 +7,20 @@ use iced::{
     },
 };
 
-use crate::{components::library_manager::TAB_PADDING, modal};
+use crate::{
+    components::library_manager::{TAB_PADDING, games_tab::new_dialog::NewDialog},
+    modal,
+};
+
+mod new_dialog;
 
 #[derive(Debug, Clone)]
 pub enum Message {
     Loaded(Vec<Game>),
     ShowNewDialog,
     HideNewDialog,
+    // Components
+    NewDialog(new_dialog::Message),
 }
 
 pub enum State {
@@ -22,23 +29,25 @@ pub enum State {
     Loaded(Vec<Game>),
 }
 
-pub struct GamesTab {
+pub struct Tab {
     repo: Repository,
     state: State,
     show_new_dialog: bool,
-    new_dialog_name: String,
+    new_dialog: NewDialog,
 }
 
-impl Component for GamesTab {
+impl Component for Tab {
     type Message = Message;
 
     fn new(repo: Repository) -> (Self, Task<Message>) {
+        let (new_dialog, new_dialog_task) = NewDialog::new(repo.clone());
+
         (
             Self {
                 repo: repo.clone(),
                 state: State::Loading,
                 show_new_dialog: false,
-                new_dialog_name: "".into(),
+                new_dialog,
             },
             Task::perform(
                 {
@@ -52,12 +61,20 @@ impl Component for GamesTab {
 
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::Loaded(games) => self.state = State::Loaded(games),
-            Message::ShowNewDialog => self.show_new_dialog = true,
-            Message::HideNewDialog => self.show_new_dialog = false,
+            Message::Loaded(games) => {
+                self.state = State::Loaded(games);
+                Task::none()
+            }
+            Message::ShowNewDialog => {
+                self.show_new_dialog = true;
+                Task::none()
+            }
+            Message::HideNewDialog => {
+                self.show_new_dialog = false;
+                Task::none()
+            }
+            Message::NewDialog(msg) => self.new_dialog.update(msg).map(Message::NewDialog),
         }
-
-        Task::none()
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
@@ -74,16 +91,11 @@ impl Component for GamesTab {
                 .padding(TAB_PADDING);
 
                 if self.show_new_dialog {
-                    let new_dialog = container(column![row![
-                        text("Name: "),
-                        text_input("Name", &self.new_dialog_name),
-                    ],])
-                    .padding(20)
-                    .width(400)
-                    .height(600)
-                    .style(container::rounded_box);
-
-                    modal(content, new_dialog, Message::HideNewDialog)
+                    modal(
+                        content,
+                        self.new_dialog.view().map(Message::NewDialog),
+                        Message::HideNewDialog,
+                    )
                 } else {
                     content.into()
                 }
