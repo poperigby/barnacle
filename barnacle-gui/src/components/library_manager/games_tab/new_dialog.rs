@@ -1,17 +1,26 @@
 use barnacle_gui::Component;
-use barnacle_lib::Repository;
+use barnacle_lib::{DeployKind, Repository};
 use iced::{
     Element, Task,
-    widget::{column, container, row, text, text_input},
+    widget::{
+        button, column, combo_box, container, horizontal_space, pick_list, row, text, text_input,
+        vertical_space,
+    },
 };
+use strum::IntoEnumIterator;
 
 #[derive(Debug, Clone)]
 pub enum Message {
     NameInput(String),
+    DeployKindSelected(DeployKind),
+    CancelPressed,
+    CreatePressed,
 }
 
 pub struct NewDialog {
-    name_content: String,
+    name: String,
+    deploy_kind: Option<DeployKind>,
+    deploy_kind_state: combo_box::State<DeployKind>,
 }
 
 impl Component for NewDialog {
@@ -20,7 +29,9 @@ impl Component for NewDialog {
     fn new(repo: Repository) -> (Self, Task<Self::Message>) {
         (
             Self {
-                name_content: "".into(),
+                name: "".into(),
+                deploy_kind: None,
+                deploy_kind_state: combo_box::State::new(DeployKind::iter().collect()),
             },
             Task::none(),
         )
@@ -29,17 +40,46 @@ impl Component for NewDialog {
     fn update(&mut self, message: Self::Message) -> Task<Self::Message> {
         match message {
             Message::NameInput(content) => {
-                self.name_content = content;
+                self.name = content;
+                Task::none()
+            }
+            Message::DeployKindSelected(kind) => {
+                self.deploy_kind = Some(kind);
+                Task::none()
+            }
+            Message::CancelPressed => {
+                println!(");");
+                Task::none()
+            }
+            Message::CreatePressed => {
+                println!("HOOPLA");
                 Task::none()
             }
         }
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        container(column![row![
-            text("Name: "),
-            text_input("Name", &self.name_content).on_input(Message::NameInput)
-        ],])
+        container(column![
+            row![
+                text("Name: "),
+                text_input("Name", &self.name).on_input(Message::NameInput),
+            ],
+            row![
+                text("Deploy kind: "),
+                combo_box(
+                    &self.deploy_kind_state,
+                    "Select a deploy kind",
+                    self.deploy_kind.as_ref(),
+                    Message::DeployKindSelected
+                ),
+            ],
+            vertical_space(),
+            row![
+                horizontal_space(),
+                button("Cancel").on_press(Message::CancelPressed),
+                button("Create").on_press(Message::CreatePressed),
+            ],
+        ])
         .padding(20)
         .width(400)
         .height(600)

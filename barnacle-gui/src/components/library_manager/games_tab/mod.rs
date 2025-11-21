@@ -73,7 +73,13 @@ impl Component for Tab {
                 self.show_new_dialog = false;
                 Task::none()
             }
-            Message::NewDialog(msg) => self.new_dialog.update(msg).map(Message::NewDialog),
+            Message::NewDialog(msg) => match msg {
+                new_dialog::Message::CancelPressed => {
+                    self.show_new_dialog = false;
+                    Task::none()
+                }
+                _ => self.new_dialog.update(msg).map(Message::NewDialog),
+            },
         }
     }
 
