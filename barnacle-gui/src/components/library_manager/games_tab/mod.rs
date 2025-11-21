@@ -48,13 +48,7 @@ impl Component for Tab {
                 show_new_dialog: false,
                 new_dialog,
             },
-            Task::perform(
-                {
-                    let repo = repo.clone();
-                    async move { repo.games().await.unwrap() }
-                },
-                Message::Loaded,
-            ),
+            update_games_list(&repo),
         )
     }
 
@@ -79,13 +73,7 @@ impl Component for Tab {
                 }
                 new_dialog::Message::GameCreated => {
                     self.show_new_dialog = false;
-                    Task::perform(
-                        {
-                            let repo = self.repo.clone();
-                            async move { repo.games().await.unwrap() }
-                        },
-                        Message::Loaded,
-                    )
+                    update_games_list(&self.repo)
                 }
                 _ => self.new_dialog.update(msg).map(Message::NewDialog),
             },
@@ -117,6 +105,16 @@ impl Component for Tab {
             }
         }
     }
+}
+
+fn update_games_list(repo: &Repository) -> Task<Message> {
+    Task::perform(
+        {
+            let repo = repo.clone();
+            async move { repo.games().await.unwrap() }
+        },
+        Message::Loaded,
+    )
 }
 
 fn game_row<'a>(name: &'a str) -> Element<'a, Message> {
