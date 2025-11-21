@@ -56,6 +56,10 @@ impl Component for NewDialog {
                 let name = self.name.clone();
                 let deploy_kind = self.deploy_kind.unwrap();
 
+                // Reset dialog state
+                self.name.clear();
+                self.deploy_kind = None;
+
                 Task::perform(
                     async move {
                         repo.add_game(&name, deploy_kind).await.unwrap();

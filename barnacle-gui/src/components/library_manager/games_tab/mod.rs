@@ -2,9 +2,7 @@ use barnacle_gui::{Component, icons::icon};
 use barnacle_lib::{Game, Repository};
 use iced::{
     Element, Length, Task,
-    widget::{
-        Column, button, column, container, horizontal_space, row, scrollable, text, text_input,
-    },
+    widget::{Column, button, column, container, horizontal_space, row, scrollable, text},
 };
 
 use crate::{
@@ -79,13 +77,16 @@ impl Component for Tab {
                     self.show_new_dialog = false;
                     Task::none()
                 }
-                new_dialog::Message::GameCreated => Task::perform(
-                    {
-                        let repo = self.repo.clone();
-                        async move { repo.games().await.unwrap() }
-                    },
-                    Message::Loaded,
-                ),
+                new_dialog::Message::GameCreated => {
+                    self.show_new_dialog = false;
+                    Task::perform(
+                        {
+                            let repo = self.repo.clone();
+                            async move { repo.games().await.unwrap() }
+                        },
+                        Message::Loaded,
+                    )
+                }
                 _ => self.new_dialog.update(msg).map(Message::NewDialog),
             },
         }
