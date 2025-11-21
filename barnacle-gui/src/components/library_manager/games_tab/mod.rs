@@ -1,5 +1,5 @@
 use barnacle_gui::{Component, icons::icon};
-use barnacle_lib::{Game, Repository};
+use barnacle_lib::{Game, GameId, Repository};
 use iced::{
     Element, Length, Task,
     widget::{Column, button, column, container, horizontal_space, row, scrollable, text},
@@ -14,10 +14,13 @@ mod new_dialog;
 
 #[derive(Debug, Clone)]
 pub enum Message {
+    // State
     Loaded(Vec<Game>),
+    GameDeleted(GameId),
+    // Components
     ShowNewDialog,
     HideNewDialog,
-    // Components
+    DeleteButtonPressed(GameId),
     NewDialog(new_dialog::Message),
 }
 
@@ -54,10 +57,13 @@ impl Component for Tab {
 
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
+            // State
             Message::Loaded(games) => {
                 self.state = State::Loaded(games);
                 Task::none()
             }
+            Message::GameDeleted(_) => update_games_list(&self.repo),
+            // Components
             Message::ShowNewDialog => {
                 self.show_new_dialog = true;
                 Task::none()
@@ -66,6 +72,16 @@ impl Component for Tab {
                 self.show_new_dialog = false;
                 Task::none()
             }
+            Message::DeleteButtonPressed(id) => Task::perform(
+                {
+                    let mut repo = self.repo.clone();
+                    async move {
+                        repo.delete_game(id).await.unwrap();
+                        id
+                    }
+                },
+                Message::GameDeleted,
+            ),
             Message::NewDialog(msg) => match msg {
                 new_dialog::Message::CancelPressed => {
                     self.show_new_dialog = false;
@@ -85,7 +101,7 @@ impl Component for Tab {
             State::Loading => column![text("Loading...")].into(),
             State::Error(e) => column![text("ERROR!")].into(),
             State::Loaded(games) => {
-                let children = games.iter().map(|g| game_row(g.name()));
+                let children = games.iter().map(|g| game_row(g));
 
                 let content = column![
                     row![button("New").on_press(Message::ShowNewDialog)],
@@ -117,13 +133,13 @@ fn update_games_list(repo: &Repository) -> Task<Message> {
     )
 }
 
-fn game_row<'a>(name: &'a str) -> Element<'a, Message> {
+fn game_row(game: &'_ Game) -> Element<'_, Message> {
     container(
         row![
-            text(name),
+            text(game.name()),
             horizontal_space(),
             button(icon("edit")),
-            button(icon("delete"))
+            button(icon("delete")).on_press(Message::DeleteButtonPressed(game.id().unwrap()))
         ]
         .padding(12),
     )
