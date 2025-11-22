@@ -28,7 +28,9 @@ impl Database {
         self.0.write().await.transaction_mut(|t| {
             let profile_id = t
                 .exec_mut(QueryBuilder::insert().element(new_profile).query())?
-                .elements[0]
+                .elements
+                .first()
+                .ok_or(Error::EmptyInsertResult)?
                 .id;
 
             // Link Profile to the specified Game node and root "profiles" node
@@ -134,7 +136,9 @@ impl Database {
             let mod_entry = ModEntry::default();
             let mod_entry_id = t
                 .exec_mut(QueryBuilder::insert().element(&mod_entry).query())?
-                .elements[0]
+                .elements
+                .first()
+                .ok_or(Error::EmptyInsertResult)?
                 .id;
 
             match maybe_last_entry_id {
@@ -253,7 +257,7 @@ mod tests {
         // Listing profiles
         let profiles = db.profiles(game_id).await?;
         assert_eq!(profiles.len(), 1);
-        assert_eq!(profiles[0].name(), "Main");
+        assert_eq!(profiles.first().unwrap().name(), "Main");
 
         Ok(())
     }

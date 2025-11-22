@@ -72,10 +72,12 @@ impl Database {
                 let model_version_id = t
                     .exec_mut(
                         QueryBuilder::insert()
-                            .element(&ModelVersion::default())
+                            .element(ModelVersion::default())
                             .query(),
                     )?
-                    .elements[0]
+                    .elements
+                    .first()
+                    .ok_or(Error::EmptyInsertResult)?
                     .id;
 
                 t.exec_mut(

@@ -34,6 +34,8 @@ pub struct ToolId(DbId);
 pub enum Error {
     #[error("Database error: {0}")]
     Db(#[from] DbError),
+    #[error("The insertion returned no elements")]
+    EmptyInsertResult,
     #[error("The given path is invalid unicode")]
     PathInvalidUnicode,
     #[error("Unique, constraint violated for: {0}")]

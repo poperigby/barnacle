@@ -1,6 +1,6 @@
 use agdb::{QueryBuilder, QueryId};
 
-use crate::{GameId, Result, ToolId, db::Database};
+use crate::{Error, GameId, Result, ToolId, db::Database};
 
 // Documentation imports
 #[allow(unused_imports)]
@@ -12,7 +12,9 @@ impl Database {
         self.0.write().await.transaction_mut(|t| {
             let tool_id = t
                 .exec_mut(QueryBuilder::insert().element(new_tool).query())?
-                .elements[0]
+                .elements
+                .first()
+                .ok_or(Error::EmptyInsertResult)?
                 .id;
 
             // Link Tool to the specified Game node and root "tools" node

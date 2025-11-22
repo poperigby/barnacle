@@ -91,7 +91,11 @@ impl Component for Tab {
                     self.show_new_dialog = false;
                     update_games_list(&self.repo)
                 }
-                _ => self.new_dialog.update(msg).map(Message::NewDialog),
+                new_dialog::Message::NameInput(_)
+                | new_dialog::Message::DeployKindSelected(_)
+                | new_dialog::Message::CreatePressed => {
+                    self.new_dialog.update(msg).map(Message::NewDialog)
+                }
             },
         }
     }

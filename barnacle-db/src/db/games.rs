@@ -12,7 +12,9 @@ impl Database {
         self.0.write().await.transaction_mut(|t| {
             let game_id = t
                 .exec_mut(QueryBuilder::insert().element(game).query())?
-                .elements[0]
+                .elements
+                .first()
+                .ok_or(Error::EmptyInsertResult)?
                 .id;
 
             t.exec_mut(
