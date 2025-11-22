@@ -3,6 +3,9 @@ name = "barnacle-lib"
 version.workspace = true
 edition.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 barnacle-db = { path = "../barnacle-db" }
 clap = { version = "4.5.51", features = ["derive"] }
