@@ -5,13 +5,13 @@ use barnacle_db::{
     models::{DeployKind, Game},
 };
 
-use crate::{Result, fs::game_dir, repository::Repository};
+use crate::{Result, repository::Repository};
 
 impl Repository {
     pub async fn add_game(&mut self, name: &str, game_type: DeployKind) -> Result<GameId> {
         let new_game = Game::new(name, game_type);
 
-        create_dir_all(game_dir(&new_game))?;
+        create_dir_all(self.cfg().core().game_dir(&new_game))?;
 
         Ok(self.db.insert_game(&new_game).await?)
     }
@@ -20,7 +20,7 @@ impl Repository {
         let game = self.db.game(id).await?;
         self.db.remove_game(id).await?;
 
-        remove_dir_all(game_dir(&game))?;
+        remove_dir_all(self.cfg().core().game_dir(&game))?;
 
         Ok(())
     }

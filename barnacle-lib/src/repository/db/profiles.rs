@@ -2,7 +2,7 @@ use std::fs::create_dir_all;
 
 use barnacle_db::{GameId, ModId, ProfileId, ProfileMod, models::Profile};
 
-use crate::{Result, fs::profile_dir, repository::Repository};
+use crate::{Result, repository::Repository};
 
 impl Repository {
     pub async fn add_profile(&mut self, game_id: GameId, name: &str) -> Result<ProfileId> {
@@ -10,7 +10,7 @@ impl Repository {
 
         let game = self.db.game(game_id).await?;
 
-        create_dir_all(profile_dir(&game, &new_profile))?;
+        create_dir_all(self.cfg().core().profile_dir(&game, &new_profile))?;
 
         Ok(self.db.insert_profile(&new_profile, game_id).await?)
     }

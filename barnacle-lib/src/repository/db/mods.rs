@@ -5,7 +5,7 @@ use compress_tools::{Ownership, uncompress_archive};
 
 use crate::{
     Result,
-    fs::{Permissions, change_dir_permissions, mod_dir},
+    fs::{Permissions, change_dir_permissions},
     repository::Repository,
 };
 
@@ -19,7 +19,7 @@ impl Repository {
         let new_mod = Mod::new(name);
 
         let game = self.db.game(game_id).await?;
-        let dir = mod_dir(&game, &new_mod);
+        let dir = self.cfg().core().mod_dir(&game, &new_mod);
 
         // TODO: Only attempt to open the archive if the input_path is an archive
         if let Some(path) = input_path {

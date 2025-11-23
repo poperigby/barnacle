@@ -3,7 +3,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use barnacle_db::models::{Game, Mod, Profile};
 use walkdir::WalkDir;
 
 #[derive(PartialEq)]
@@ -44,18 +43,4 @@ pub fn data_dir() -> PathBuf {
     create_dir_all(&path).unwrap();
 
     path
-}
-
-/// Path to a specific `Game`'s directory
-pub fn game_dir(game: &Game) -> PathBuf {
-    data_dir().join("games").join(game.name())
-}
-
-/// Path to a specific `Profile`'s directory
-pub fn profile_dir(game: &Game, profile: &Profile) -> PathBuf {
-    game_dir(game).join("profiles").join(profile.name())
-}
-
-pub fn mod_dir(game: &Game, mod_: &Mod) -> PathBuf {
-    game_dir(game).join("mods").join(mod_.name())
 }

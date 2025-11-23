@@ -1,0 +1,51 @@
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
+
+use barnacle_db::models::{Game, Mod, Profile};
+use serde::{Deserialize, Serialize};
+
+const CURRENT_CONFIG_VERSION: u16 = 1;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoreConfig {
+    version: u16,
+    library_dir: PathBuf,
+}
+
+impl CoreConfig {
+    /// Returns the path to the Barnacle library directory. This is where
+    /// Barnacle stores its game, profile, and mod files. If it doesn't
+    /// exist when this function is called, it will be created.
+    pub fn library_dir(&self) -> &Path {
+        fs::create_dir_all(&self.library_dir).unwrap();
+        &self.library_dir
+    }
+
+    /// Path to a specific [`Game`]'s directory
+    pub fn game_dir(&self, game: &Game) -> PathBuf {
+        self.library_dir().join("games").join(game.name())
+    }
+
+    /// Path to a specific [`Profile`]'s directory
+    pub fn profile_dir(&self, game: &Game, profile: &Profile) -> PathBuf {
+        self.game_dir(game).join("profiles").join(profile.name())
+    }
+
+    /// Path to a specific [`Mod`]'s directory
+    pub fn mod_dir(&self, game: &Game, mod_: &Mod) -> PathBuf {
+        self.game_dir(game).join("mods").join(mod_.name())
+    }
+}
+
+impl Default for CoreConfig {
+    fn default() -> Self {
+        Self {
+            version: CURRENT_CONFIG_VERSION,
+            library_dir: xdg::BaseDirectories::with_prefix("barnacle")
+                .get_data_home()
+                .unwrap(),
+        }
+    }
+}
