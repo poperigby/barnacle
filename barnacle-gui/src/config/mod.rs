@@ -3,10 +3,22 @@ use std::fs::{self, create_dir_all};
 use barnacle_lib::{config::CoreConfig, fs::config_dir};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Default, Serialize, Deserialize)]
-pub struct GuiConfig {}
+use crate::config::theme::Theme;
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+mod theme;
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct GuiConfig {
+    theme: Theme,
+}
+
+impl GuiConfig {
+    pub fn theme(&self) -> iced::Theme {
+        (&self.theme).into()
+    }
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Config {
     core: CoreConfig,
     gui: GuiConfig,
@@ -33,5 +45,13 @@ impl Config {
         create_dir_all(config_dir()).unwrap();
 
         fs::write(config_dir().join("config.toml"), contents).unwrap();
+    }
+
+    pub fn core(&self) -> &CoreConfig {
+        &self.core
+    }
+
+    pub fn gui(&self) -> &GuiConfig {
+        &self.gui
     }
 }

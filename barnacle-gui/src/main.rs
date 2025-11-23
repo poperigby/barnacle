@@ -44,6 +44,9 @@ struct App {
 impl App {
     fn new() -> (Self, Task<Message>) {
         let repo = Repository::new().unwrap();
+        let cfg = Arc::new(RwLock::new(Config::load()));
+        let theme = cfg.blocking_read().gui().theme();
+
         let (mod_list, mod_list_task) = ModList::new(repo.clone());
         let (library_manager, library_manager_task) = LibraryManager::new(repo.clone());
 
@@ -51,8 +54,8 @@ impl App {
             Self {
                 title: "Barnacle".into(),
                 repo: repo.clone(),
-                cfg: Arc::new(RwLock::new(Config::load())),
-                theme: Theme::Dark,
+                cfg,
+                theme,
                 mod_list,
                 library_manager,
                 show_library_manager: false,

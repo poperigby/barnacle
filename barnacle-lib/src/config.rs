@@ -6,7 +6,7 @@ use crate::fs::data_dir;
 
 const CURRENT_CONFIG_VERSION: u32 = 1;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoreConfig {
     version: u32,
     data_dir: PathBuf,
