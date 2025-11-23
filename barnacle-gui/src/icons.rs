@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
 use iced::{
     Theme,
@@ -6,10 +7,9 @@ use iced::{
     widget::{Svg, svg::Style},
 };
 use include_dir::{Dir, include_dir};
-use once_cell::sync::Lazy;
 
 static ICONS: Dir = include_dir!("$CARGO_MANIFEST_DIR/assets/icons");
-static HANDLES: Lazy<HashMap<&'static str, Handle>> = Lazy::new(|| {
+static HANDLES: LazyLock<HashMap<&'static str, Handle>> = LazyLock::new(|| {
     ICONS
         .files()
         .filter_map(|file| {

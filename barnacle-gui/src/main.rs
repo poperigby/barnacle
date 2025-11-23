@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use crate::components::{library_manager::LibraryManager, mod_list::ModList};
+use crate::components::{
+    library_manager::{self, LibraryManager},
+    mod_list::{self, ModList},
+};
 use barnacle_gui::{Component, config::Config, icons::icon, modal};
 use barnacle_lib::Repository;
 use iced::{
@@ -21,8 +24,8 @@ fn main() -> iced::Result {
 
 #[derive(Debug, Clone)]
 enum Message {
-    ModList(components::mod_list::Message),
-    LibraryManager(components::library_manager::Message),
+    ModList(mod_list::Message),
+    LibraryManager(library_manager::Message),
     ShowLibraryManager,
     HideLibraryManager,
 }
