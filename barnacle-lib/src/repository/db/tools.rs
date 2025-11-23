@@ -14,10 +14,10 @@ impl Repository {
     ) -> Result<ToolId> {
         let new_tool = Tool::new(name, path.to_path_buf(), args);
 
-        Ok(self.db.insert_tool(&new_tool, game_id).await?)
+        Ok(self.db.write().await.insert_tool(&new_tool, game_id)?)
     }
 
     pub async fn tools(&self, game_id: GameId) -> Result<Vec<Tool>> {
-        Ok(self.db.tools(game_id).await?)
+        Ok(self.db.read().await.tools(game_id)?)
     }
 }

@@ -18,8 +18,8 @@ impl Repository {
     ) -> Result<ModId> {
         let new_mod = Mod::new(name);
 
-        let game = self.db.game(game_id).await?;
-        let dir = self.cfg().core().mod_dir(&game, &new_mod);
+        let game = self.db.read().await.game(game_id)?;
+        let dir = self.cfg().await.core().mod_dir(&game, &new_mod);
 
         // TODO: Only attempt to open the archive if the input_path is an archive
         if let Some(path) = input_path {
@@ -28,7 +28,7 @@ impl Repository {
             change_dir_permissions(&dir, Permissions::ReadOnly);
         }
 
-        Ok(self.db.insert_mod(&new_mod, game_id).await?)
+        Ok(self.db.write().await.insert_mod(&new_mod, game_id)?)
     }
 
     // pub fn delete_mod(db: &Database, id: ModId) -> Result<()> {
@@ -41,6 +41,6 @@ impl Repository {
     // }
 
     pub async fn mods(&self, game_id: GameId) -> Result<Vec<Mod>> {
-        Ok(self.db.mods(game_id).await?)
+        Ok(self.db.read().await.mods(game_id)?)
     }
 }

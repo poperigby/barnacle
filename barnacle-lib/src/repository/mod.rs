@@ -1,4 +1,7 @@
+use std::sync::Arc;
+
 use barnacle_db::Database;
+use tokio::sync::{RwLock, RwLockReadGuard};
 
 use crate::{Result, fs::data_dir, repository::config::Config};
 
@@ -12,19 +15,19 @@ pub mod db;
 /// and writing game data, mods, and profiles.
 #[derive(Clone, Debug)]
 pub struct Repository {
-    db: Database,
-    cfg: Config,
+    db: Arc<RwLock<Database>>,
+    cfg: Arc<RwLock<Config>>,
 }
 
 impl Repository {
     pub fn new() -> Result<Self> {
         Ok(Self {
-            db: Database::new(&data_dir().join("data.db"))?,
-            cfg: Config::load(),
+            db: Arc::new(RwLock::new(Database::new(&data_dir().join("data.db"))?)),
+            cfg: Arc::new(RwLock::new(Config::load())),
         })
     }
 
-    pub fn cfg(&self) -> &Config {
-        &self.cfg
+    pub async fn cfg(&'_ self) -> RwLockReadGuard<'_, Config> {
+        self.cfg.read().await
     }
 }
