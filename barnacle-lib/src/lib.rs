@@ -3,6 +3,7 @@ use std::io;
 use thiserror::Error;
 
 // mod deployers;
+pub mod config;
 pub mod fs;
 
 mod repository;

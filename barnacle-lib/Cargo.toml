@@ -14,6 +14,7 @@ damascus = { version = "0.0.10", default-features=false, features = ["overlayfs"
 derive_more = { version = "2.0.1", features = ["from", "as_ref", "display"] }
 getset = "0.1.6"
 human-panic = "2.0.4"
+serde = { version = "1.0.228", features = ["derive"] }
 tempfile = "3.23.0"
 thiserror = "2.0.17"
 tracing = "0.1.41"

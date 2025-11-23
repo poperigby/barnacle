@@ -4,6 +4,7 @@ use iced::{
     widget::{Column, center, container, mouse_area, opaque, stack},
 };
 
+pub mod config;
 pub mod icons;
 
 pub trait Component
