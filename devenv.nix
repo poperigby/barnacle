@@ -7,6 +7,7 @@
 {
   languages.rust = {
     enable = true;
+    mold.enable = true;
     components = [
       "cargo"
       "rustc"
