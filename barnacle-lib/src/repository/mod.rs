@@ -11,8 +11,8 @@ pub mod db;
 /// Central access point for all persistent data.
 ///
 /// The [`Repository`] handles both on-disk filesystem operations and all
-/// database queries. It provides a single, consistent interface for reading
-/// and writing game data, mods, and profiles.
+/// database and configuration file queries. It provides a single, consistent interface
+/// for reading and writing game data, mods, and profiles.
 #[derive(Clone, Debug)]
 pub struct Repository {
     db: Arc<RwLock<Database>>,

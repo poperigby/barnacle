@@ -2,13 +2,18 @@ use std::fs;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{fs::config_dir, repository::config::core::CoreConfig};
+use crate::{
+    fs::config_dir,
+    repository::config::{core::CoreConfig, gui::GuiConfig},
+};
 
 mod core;
+mod gui;
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Config {
     core: CoreConfig,
+    gui: GuiConfig,
 }
 
 impl Config {
