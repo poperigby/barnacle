@@ -8,8 +8,8 @@ use crate::models::{Game, Tool};
 
 impl Database {
     /// Insert a new [`Tool`], linked to the [`Game`] node given by ID
-    pub async fn insert_tool(&mut self, new_tool: &Tool, game_id: GameId) -> Result<ToolId> {
-        self.0.write().await.transaction_mut(|t| {
+    pub fn insert_tool(&mut self, new_tool: &Tool, game_id: GameId) -> Result<ToolId> {
+        self.0.transaction_mut(|t| {
             let tool_id = t
                 .exec_mut(QueryBuilder::insert().element(new_tool).query())?
                 .elements
@@ -31,11 +31,9 @@ impl Database {
     }
 
     /// Retrieve [`Tool`]s owned by the [`Game`] given by ID.
-    pub async fn tools(&self, game_id: GameId) -> Result<Vec<Tool>> {
+    pub fn tools(&self, game_id: GameId) -> Result<Vec<Tool>> {
         Ok(self
             .0
-            .read()
-            .await
             .exec(
                 QueryBuilder::select()
                     .elements::<Tool>()

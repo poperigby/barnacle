@@ -4,12 +4,12 @@ use crate::{Error, GameId, Result, UniqueConstraint, db::Database, models::Game}
 
 impl Database {
     /// Insert a new [`Game`] into the database. The [`Game`] must have a unique name.
-    pub async fn insert_game(&mut self, game: &Game) -> Result<GameId> {
-        if self.games().await?.iter().any(|g| g.name() == game.name()) {
+    pub fn insert_game(&mut self, game: &Game) -> Result<GameId> {
+        if self.games()?.iter().any(|g| g.name() == game.name()) {
             return Err(Error::UniqueViolation(UniqueConstraint::GameName));
         }
 
-        self.0.write().await.transaction_mut(|t| {
+        self.0.transaction_mut(|t| {
             let game_id = t
                 .exec_mut(QueryBuilder::insert().element(game).query())?
                 .elements
@@ -29,31 +29,24 @@ impl Database {
         })
     }
 
-    pub async fn remove_game(&mut self, id: GameId) -> Result<()> {
-        self.0
-            .write()
-            .await
-            .exec_mut(QueryBuilder::remove().ids(id.0).query())?;
+    pub fn remove_game(&mut self, id: GameId) -> Result<()> {
+        self.0.exec_mut(QueryBuilder::remove().ids(id.0).query())?;
 
         Ok(())
     }
 
     /// Retrieve a [`Game`] by ID
-    pub async fn game(&self, game_id: GameId) -> Result<Game> {
+    pub fn game(&self, game_id: GameId) -> Result<Game> {
         Ok(self
             .0
-            .read()
-            .await
             .exec(QueryBuilder::select().ids(game_id.0).query())?
             .try_into()?)
     }
 
     /// Retrieve the list of all [`Game`]s
-    pub async fn games(&self) -> Result<Vec<Game>> {
+    pub fn games(&self) -> Result<Vec<Game>> {
         Ok(self
             .0
-            .read()
-            .await
             .exec(
                 QueryBuilder::select()
                     .elements::<Game>()
@@ -77,17 +70,16 @@ mod tests {
 
     use super::*;
     use pretty_assertions::assert_eq;
-    use tokio::test;
 
     #[test]
-    async fn test_insert_game() {
+    fn test_insert_game() {
         let mut db = Database::new_memory().unwrap();
 
         let game = Game::new("Morrowind", DeployKind::OpenMW);
 
-        db.insert_game(&game).await.unwrap();
+        db.insert_game(&game).unwrap();
 
-        let games = db.games().await.unwrap();
+        let games = db.games().unwrap();
         let inserted_game = games.first().unwrap();
 
         assert_eq!(inserted_game.name(), "Morrowind");
@@ -95,16 +87,16 @@ mod tests {
     }
 
     #[test]
-    async fn test_games() {
+    fn test_games() {
         let mut db = Database::new_memory().unwrap();
 
         let game1 = Game::new("Morrowind", DeployKind::OpenMW);
         let game2 = Game::new("Skyrim", DeployKind::Gamebryo);
 
-        db.insert_game(&game1).await.unwrap();
-        db.insert_game(&game2).await.unwrap();
+        db.insert_game(&game1).unwrap();
+        db.insert_game(&game2).unwrap();
 
-        let games = db.games().await.unwrap();
+        let games = db.games().unwrap();
 
         let names: Vec<_> = games.iter().map(|g| g.name()).collect();
         assert!(names.contains(&"Morrowind"));
@@ -116,20 +108,20 @@ mod tests {
     }
 
     #[test]
-    async fn test_games_empty() {
+    fn test_games_empty() {
         let db = Database::new_memory().unwrap();
-        let games = db.games().await.unwrap();
+        let games = db.games().unwrap();
         assert!(games.is_empty());
     }
 
     #[test]
-    async fn test_insert_duplicate_game() {
+    fn test_insert_duplicate_game() {
         let mut db = Database::new_memory().unwrap();
         let game = Game::new("Morrowind", DeployKind::OpenMW);
 
-        db.insert_game(&game).await.unwrap();
+        db.insert_game(&game).unwrap();
         assert_eq!(
-            db.insert_game(&game).await.unwrap_err(),
+            db.insert_game(&game).unwrap_err(),
             Error::UniqueViolation(UniqueConstraint::GameName)
         );
     }

@@ -8,8 +8,8 @@ use crate::models::Game;
 
 impl Database {
     /// Insert a new [`Mod`], linked to the [`Game`] node given by ID
-    pub async fn insert_mod(&mut self, new_mod: &Mod, game_id: GameId) -> Result<ModId> {
-        self.0.write().await.transaction_mut(|t| {
+    pub fn insert_mod(&mut self, new_mod: &Mod, game_id: GameId) -> Result<ModId> {
+        self.0.transaction_mut(|t| {
             let mod_id = t
                 .exec_mut(QueryBuilder::insert().element(new_mod).query())?
                 .elements
@@ -31,11 +31,9 @@ impl Database {
     }
 
     /// Retrieve every [`Mod`] under the given [`Game`].
-    pub async fn mods(&self, game_id: GameId) -> Result<Vec<Mod>> {
+    pub fn mods(&self, game_id: GameId) -> Result<Vec<Mod>> {
         Ok(self
             .0
-            .read()
-            .await
             .exec(
                 QueryBuilder::select()
                     .elements::<Mod>()

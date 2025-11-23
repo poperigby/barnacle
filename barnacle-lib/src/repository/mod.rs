@@ -10,8 +10,6 @@ pub mod db;
 /// The [`Repository`] handles both on-disk filesystem operations and all
 /// database queries. It provides a single, consistent interface for reading
 /// and writing game data, mods, and profiles.
-///
-/// It can be freely cloned, as it internally uses an Arc<RwLock>.
 #[derive(Clone, Debug)]
 pub struct Repository {
     db: Database,

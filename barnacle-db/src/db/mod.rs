@@ -1,7 +1,6 @@
-use std::{path::Path, sync::Arc};
+use std::path::Path;
 
 use agdb::{DbAny, QueryBuilder};
-use tokio::sync::RwLock;
 
 use crate::{
     Error, Result,
@@ -14,8 +13,8 @@ pub mod profiles;
 pub mod tools;
 
 /// Graph database for storing data related to Barnacle
-#[derive(Clone, Debug)]
-pub struct Database(Arc<RwLock<DbAny>>);
+#[derive(Debug)]
+pub struct Database(DbAny);
 
 impl Database {
     pub fn new(path: &Path) -> Result<Self> {
@@ -92,6 +91,6 @@ impl Database {
             })?;
         }
 
-        Ok(Database(Arc::new(RwLock::new(db))))
+        Ok(Database(db))
     }
 }
