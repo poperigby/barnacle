@@ -1,10 +1,8 @@
-use std::sync::Arc;
-
 use crate::components::{
     library_manager::{self, LibraryManager},
     mod_list::{self, ModList},
 };
-use barnacle_gui::{Component, config::Config, icons::icon, modal};
+use barnacle_gui::{Component, icons::icon, modal};
 use barnacle_lib::Repository;
 use iced::{
     Element,
@@ -12,7 +10,6 @@ use iced::{
     Task, Theme, application,
     widget::{button, column, horizontal_space, row, text},
 };
-use tokio::sync::RwLock;
 
 mod components;
 
@@ -33,7 +30,6 @@ enum Message {
 struct App {
     title: String,
     repo: Repository,
-    cfg: Arc<RwLock<Config>>,
     theme: Theme,
     // Components
     mod_list: ModList,
@@ -44,8 +40,6 @@ struct App {
 impl App {
     fn new() -> (Self, Task<Message>) {
         let repo = Repository::new().unwrap();
-        let cfg = Arc::new(RwLock::new(Config::load()));
-        let theme = cfg.blocking_read().gui().theme();
 
         let (mod_list, mod_list_task) = ModList::new(repo.clone());
         let (library_manager, library_manager_task) = LibraryManager::new(repo.clone());
@@ -54,8 +48,7 @@ impl App {
             Self {
                 title: "Barnacle".into(),
                 repo: repo.clone(),
-                cfg,
-                theme,
+                theme: Theme::Dark,
                 mod_list,
                 library_manager,
                 show_library_manager: false,
