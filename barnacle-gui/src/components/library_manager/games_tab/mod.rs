@@ -18,15 +18,14 @@ mod new_dialog;
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    // State
     Loaded(Vec<Game>),
     GameDeleted,
-    // Components
     ShowNewDialog,
     HideNewDialog,
     ShowEditDialog(Game),
     HideEditDialog,
     DeleteButtonPressed(GameId),
+    // Child messages
     NewDialog(new_dialog::Message),
     EditDialog(edit_dialog::Message),
 }

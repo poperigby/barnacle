@@ -1,10 +1,9 @@
 use barnacle_lib::Repository;
 use iced::{
     Color, Element, Length, Task,
-    widget::{Column, center, container, mouse_area, opaque, stack},
+    widget::{center, container, mouse_area, opaque, stack},
 };
 
-pub mod config;
 pub mod icons;
 
 pub trait Component
@@ -22,7 +21,7 @@ where
 pub fn modal<'a, Message>(
     base: impl Into<Element<'a, Message>>,
     content: impl Into<Element<'a, Message>>,
-    on_blur: Message,
+    on_click_outside: Message,
 ) -> Element<'a, Message>
 where
     Message: Clone + 'a,
@@ -42,7 +41,7 @@ where
                     ..container::Style::default()
                 }
             }))
-            .on_press(on_blur)
+            .on_press(on_click_outside)
         )
     ]
     .width(Length::Fill)
