@@ -9,7 +9,9 @@ use serde::{Deserialize, Serialize};
 use crate::fs::config_dir;
 
 const CURRENT_CONFIG_VERSION: u16 = 1;
+const FILE_NAME: &str = "core.toml";
 
+/// The backend's core configuration, serialized to TOML.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoreConfig {
     version: u16,
@@ -18,7 +20,7 @@ pub struct CoreConfig {
 
 impl CoreConfig {
     pub fn load() -> Self {
-        let path = config_dir().join("core.toml");
+        let path = config_dir().join(FILE_NAME);
 
         if path.exists() {
             let contents = fs::read_to_string(path).unwrap();
@@ -36,7 +38,7 @@ impl CoreConfig {
         // Make sure config_dir exists
         fs::create_dir_all(config_dir()).unwrap();
 
-        fs::write(config_dir().join("core.toml"), contents).unwrap();
+        fs::write(config_dir().join(FILE_NAME), contents).unwrap();
     }
 
     /// Returns the path to the Barnacle library directory. This is where
