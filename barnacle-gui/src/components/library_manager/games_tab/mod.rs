@@ -6,17 +6,21 @@ use iced::{
 };
 
 use crate::{
-    components::library_manager::{TAB_PADDING, games_tab::new_dialog::NewDialog},
+    components::library_manager::{
+        TAB_PADDING,
+        games_tab::{edit_dialog::EditDialog, new_dialog::NewDialog},
+    },
     modal,
 };
 
+mod edit_dialog;
 mod new_dialog;
 
 #[derive(Debug, Clone)]
 pub enum Message {
     // State
     Loaded(Vec<Game>),
-    GameDeleted(GameId),
+    GameDeleted,
     // Components
     ShowNewDialog,
     HideNewDialog,
@@ -36,6 +40,7 @@ pub struct Tab {
     show_new_dialog: bool,
     // Components
     new_dialog: NewDialog,
+    edit_dialog: EditDialog,
 }
 
 impl Component for Tab {
@@ -43,6 +48,7 @@ impl Component for Tab {
 
     fn new(repo: Repository) -> (Self, Task<Message>) {
         let (new_dialog, _) = NewDialog::new(repo.clone());
+        let (edit_dialog, _) = EditDialog::new(repo.clone());
 
         (
             Self {
@@ -50,6 +56,7 @@ impl Component for Tab {
                 state: State::Loading,
                 show_new_dialog: false,
                 new_dialog,
+                edit_dialog,
             },
             update_games_list(&repo),
         )
@@ -62,7 +69,7 @@ impl Component for Tab {
                 self.state = State::Loaded(games);
                 Task::none()
             }
-            Message::GameDeleted(_) => update_games_list(&self.repo),
+            Message::GameDeleted => update_games_list(&self.repo),
             // Components
             Message::ShowNewDialog => {
                 self.show_new_dialog = true;
@@ -80,7 +87,7 @@ impl Component for Tab {
                         id
                     }
                 },
-                Message::GameDeleted,
+                |_| Message::GameDeleted,
             ),
             Message::NewDialog(msg) => match msg {
                 new_dialog::Message::CancelPressed => {
