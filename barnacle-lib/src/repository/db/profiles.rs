@@ -10,7 +10,7 @@ impl Repository {
 
         let game = self.db.read().await.game(game_id)?;
 
-        create_dir_all(self.cfg().await.core().profile_dir(&game, &new_profile))?;
+        create_dir_all(self.cfg().await.profile_dir(&game, &new_profile))?;
 
         Ok(self
             .db

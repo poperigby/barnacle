@@ -11,7 +11,7 @@ impl Repository {
     pub async fn add_game(&mut self, name: &str, game_type: DeployKind) -> Result<GameId> {
         let new_game = Game::new(name, game_type);
 
-        create_dir_all(self.cfg().await.core().game_dir(&new_game))?;
+        create_dir_all(self.cfg().await.game_dir(&new_game))?;
 
         Ok(self.db.write().await.insert_game(&new_game)?)
     }
@@ -20,7 +20,7 @@ impl Repository {
         let game = self.db.read().await.game(id)?;
         self.db.write().await.remove_game(id)?;
 
-        remove_dir_all(self.cfg().await.core().game_dir(&game))?;
+        remove_dir_all(self.cfg().await.game_dir(&game))?;
 
         Ok(())
     }

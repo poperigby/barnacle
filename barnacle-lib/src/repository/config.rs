@@ -6,6 +6,8 @@ use std::{
 use barnacle_db::models::{Game, Mod, Profile};
 use serde::{Deserialize, Serialize};
 
+use crate::fs::config_dir;
+
 const CURRENT_CONFIG_VERSION: u16 = 1;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -15,6 +17,28 @@ pub struct CoreConfig {
 }
 
 impl CoreConfig {
+    pub fn load() -> Self {
+        let path = config_dir().join("core.toml");
+
+        if path.exists() {
+            let contents = fs::read_to_string(path).unwrap();
+            toml::from_str(&contents).unwrap_or_default()
+        } else {
+            let cfg = Self::default();
+            cfg.save();
+            cfg
+        }
+    }
+
+    pub fn save(&self) {
+        let contents = toml::to_string_pretty(self).unwrap();
+
+        // Make sure config_dir exists
+        fs::create_dir_all(config_dir()).unwrap();
+
+        fs::write(config_dir().join("core.toml"), contents).unwrap();
+    }
+
     /// Returns the path to the Barnacle library directory. This is where
     /// Barnacle stores its game, profile, and mod files. If it doesn't
     /// exist when this function is called, it will be created.

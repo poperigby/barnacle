@@ -19,7 +19,7 @@ impl Repository {
         let new_mod = Mod::new(name);
 
         let game = self.db.read().await.game(game_id)?;
-        let dir = self.cfg().await.core().mod_dir(&game, &new_mod);
+        let dir = self.cfg().await.mod_dir(&game, &new_mod);
 
         // TODO: Only attempt to open the archive if the input_path is an archive
         if let Some(path) = input_path {
