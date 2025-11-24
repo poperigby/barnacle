@@ -24,8 +24,11 @@ pub enum Message {
     // Components
     ShowNewDialog,
     HideNewDialog,
+    ShowEditDialog(Game),
+    HideEditDialog,
     DeleteButtonPressed(GameId),
     NewDialog(new_dialog::Message),
+    EditDialog(edit_dialog::Message),
 }
 
 pub enum State {
@@ -38,6 +41,7 @@ pub struct Tab {
     repo: Repository,
     state: State,
     show_new_dialog: bool,
+    show_edit_dialog: bool,
     // Components
     new_dialog: NewDialog,
     edit_dialog: EditDialog,
@@ -55,6 +59,7 @@ impl Component for Tab {
                 repo: repo.clone(),
                 state: State::Loading,
                 show_new_dialog: false,
+                show_edit_dialog: false,
                 new_dialog,
                 edit_dialog,
             },
@@ -77,6 +82,15 @@ impl Component for Tab {
             }
             Message::HideNewDialog => {
                 self.show_new_dialog = false;
+                Task::none()
+            }
+            Message::ShowEditDialog(game) => {
+                self.edit_dialog.load(&game);
+                self.show_edit_dialog = true;
+                Task::none()
+            }
+            Message::HideEditDialog => {
+                self.show_edit_dialog = false;
                 Task::none()
             }
             Message::DeleteButtonPressed(id) => Task::perform(
@@ -104,6 +118,7 @@ impl Component for Tab {
                     self.new_dialog.update(msg).map(Message::NewDialog)
                 }
             },
+            Message::EditDialog(msg) => self.edit_dialog.update(msg).map(Message::EditDialog),
         }
     }
 
@@ -125,6 +140,12 @@ impl Component for Tab {
                         content,
                         self.new_dialog.view().map(Message::NewDialog),
                         Message::HideNewDialog,
+                    )
+                } else if self.show_edit_dialog {
+                    modal(
+                        content,
+                        self.edit_dialog.view().map(Message::EditDialog),
+                        Message::HideEditDialog,
                     )
                 } else {
                     content.into()
@@ -149,7 +170,7 @@ fn game_row(game: &'_ Game) -> Element<'_, Message> {
         row![
             text(game.name()),
             horizontal_space(),
-            button(icon("edit")),
+            button(icon("edit")).on_press(Message::ShowEditDialog(game.clone())),
             button(icon("delete")).on_press(Message::DeleteButtonPressed(game.id().unwrap()))
         ]
         .padding(12),

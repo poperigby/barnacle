@@ -1,5 +1,5 @@
 use barnacle_gui::Component;
-use barnacle_lib::{DeployKind, Repository};
+use barnacle_lib::{DeployKind, Game, Repository};
 use iced::{
     Element, Task,
     widget::{
@@ -22,6 +22,13 @@ pub struct EditDialog {
     name: String,
     deploy_kind: Option<DeployKind>,
     deploy_kind_state: combo_box::State<DeployKind>,
+}
+
+impl EditDialog {
+    pub fn load(&mut self, game: &Game) {
+        self.name = game.name().into();
+        self.deploy_kind = Some(game.deploy_kind());
+    }
 }
 
 impl Component for EditDialog {
