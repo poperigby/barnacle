@@ -48,7 +48,7 @@ impl Component for LibraryManager {
         )
     }
 
-    fn update(&mut self, message: Message) -> Task<Self::Message> {
+    fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::TabSelected(id) => {
                 self.active_tab = id;

@@ -25,6 +25,7 @@ pub struct EditDialog {
 }
 
 impl EditDialog {
+    /// Load a new [`Game`] for editing.
     pub fn load(&mut self, game: &Game) {
         self.name = game.name().into();
         self.deploy_kind = Some(game.deploy_kind());

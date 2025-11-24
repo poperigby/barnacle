@@ -214,6 +214,28 @@ impl Database {
     }
 }
 
+/// An item in a [`Profile`]'s mod list, containing the [`Mod`] data and its profile-specific configuration.
+#[derive(Debug, Clone)]
+pub struct ProfileMod {
+    // id: Modid,
+    entry: ModEntry,
+    data: Mod,
+}
+
+impl ProfileMod {
+    pub fn new(entry: ModEntry, data: Mod) -> Self {
+        Self { entry, data }
+    }
+
+    pub fn entry(&self) -> &ModEntry {
+        &self.entry
+    }
+
+    pub fn data(&self) -> &Mod {
+        &self.data
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -276,7 +298,7 @@ mod tests {
 
         let profile_mods = db.profile_mods(profile_id)?;
         assert_eq!(profile_mods.len(), 1);
-        assert_eq!(profile_mods[0].data().name(), "Some Mod");
+        assert_eq!(profile_mods.first().unwrap().data().name(), "Some Mod");
 
         Ok(())
     }
@@ -304,31 +326,9 @@ mod tests {
         let profile_mods = db.profile_mods(profile_id)?;
         assert_eq!(profile_mods.len(), mod_names.len());
         for (i, pm) in profile_mods.iter().enumerate() {
-            assert_eq!(pm.data().name(), mod_names[i]);
+            assert_eq!(&pm.data().name(), mod_names.get(i).unwrap());
         }
 
         Ok(())
-    }
-}
-
-/// An item in a [`Profile`]'s mod list, containing the [`Mod`] data and its profile-specific configuration.
-#[derive(Debug, Clone)]
-pub struct ProfileMod {
-    // id: Modid,
-    entry: ModEntry,
-    data: Mod,
-}
-
-impl ProfileMod {
-    pub fn new(entry: ModEntry, data: Mod) -> Self {
-        Self { entry, data }
-    }
-
-    pub fn entry(&self) -> &ModEntry {
-        &self.entry
-    }
-
-    pub fn data(&self) -> &Mod {
-        &self.data
     }
 }
