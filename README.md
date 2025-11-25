@@ -1,5 +1,6 @@
 [![CI](https://github.com/poperigby/barnacle/actions/workflows/ci.yml/badge.svg)](https://github.com/poperigby/barnacle/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/github/poperigby/barnacle/graph/badge.svg?token=7HKC2NYATF)](https://codecov.io/github/poperigby/barnacle)
+[![Matrix](https://img.shields.io/badge/Matrix-Join%20Chat-000000?logo=matrix&logoColor=white)](https://matrix.to/#/%23barnacle:matrix.org)
 
 # Barnacle
 
