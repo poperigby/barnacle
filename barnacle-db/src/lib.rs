@@ -36,6 +36,8 @@ pub enum Error {
     Db(#[from] DbError),
     #[error("The insertion returned no elements")]
     EmptyInsertResult,
+    #[error("The element you are trying to update does not exist in the database")]
+    MissingUpdateTarget,
     #[error("The given path is invalid unicode")]
     PathInvalidUnicode,
     #[error("Unique, constraint violated for: {0}")]

@@ -29,13 +29,25 @@ impl Database {
         })
     }
 
+    /// Remove a [`Game`] from the database.
     pub fn remove_game(&mut self, id: GameId) -> Result<()> {
         self.0.exec_mut(QueryBuilder::remove().ids(id.0).query())?;
 
         Ok(())
     }
 
-    /// Retrieve a [`Game`] by ID
+    /// Update a [`Game`] that already exists in the database.
+    pub fn update_game(&mut self, updated_game: &Game) -> Result<()> {
+        // A db_id of None means the element doesn't exist in the database
+        updated_game.id().ok_or(Error::MissingUpdateTarget)?;
+
+        // If you do a re-insert with the same ID, the element will be updated in-place.
+        self.insert_game(updated_game)?;
+
+        Ok(())
+    }
+
+    /// Retrieve a [`Game`] by [`GameId`].
     pub fn game(&self, game_id: GameId) -> Result<Game> {
         Ok(self
             .0
@@ -43,7 +55,7 @@ impl Database {
             .try_into()?)
     }
 
-    /// Retrieve the list of all [`Game`]s
+    /// Retrieve the list of all [`Game`]s.
     pub fn games(&self) -> Result<Vec<Game>> {
         Ok(self
             .0
