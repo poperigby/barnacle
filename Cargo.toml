@@ -14,6 +14,7 @@ homepage = "https://github.com/poperigby/barnacle"
 [workspace.lints.rust]
 arithmetic_overflow = "deny"
 unnecessary_transmutes = "deny"
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
 
 [workspace.lints.clippy]
 arithmetic_side_effects = "deny"
