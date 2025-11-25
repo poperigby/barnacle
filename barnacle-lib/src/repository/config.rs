@@ -4,6 +4,7 @@ use std::{
 };
 
 use barnacle_db::models::{Game, Mod, Profile};
+use heck::ToSnakeCase;
 use serde::{Deserialize, Serialize};
 
 use crate::fs::config_dir;
@@ -51,17 +52,21 @@ impl CoreConfig {
 
     /// Path to a specific [`Game`]'s directory
     pub fn game_dir(&self, game: &Game) -> PathBuf {
-        self.library_dir().join("games").join(game.name())
+        self.library_dir().join(game.name().to_snake_case())
     }
 
     /// Path to a specific [`Profile`]'s directory
     pub fn profile_dir(&self, game: &Game, profile: &Profile) -> PathBuf {
-        self.game_dir(game).join("profiles").join(profile.name())
+        self.game_dir(game)
+            .join("profiles")
+            .join(profile.name().to_snake_case())
     }
 
     /// Path to a specific [`Mod`]'s directory
     pub fn mod_dir(&self, game: &Game, mod_: &Mod) -> PathBuf {
-        self.game_dir(game).join("mods").join(mod_.name())
+        self.game_dir(game)
+            .join("mods")
+            .join(mod_.name().to_snake_case())
     }
 }
 
@@ -71,7 +76,8 @@ impl Default for CoreConfig {
             version: CURRENT_CONFIG_VERSION,
             library_dir: xdg::BaseDirectories::with_prefix("barnacle")
                 .get_data_home()
-                .unwrap(),
+                .unwrap()
+                .join("library"),
         }
     }
 }

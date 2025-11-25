@@ -445,6 +445,7 @@ dependencies = [
  "damascus",
  "derive_more 2.0.1",
  "getset",
+ "heck",
  "human-panic",
  "serde",
  "tempfile",
