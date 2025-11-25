@@ -21,6 +21,7 @@
     # Tools
     bacon
     cargo-info
+    cargo-tarpaulin
 
     # Dependencies
     fuse-overlayfs
