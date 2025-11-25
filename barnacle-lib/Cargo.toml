@@ -8,7 +8,7 @@ workspace = true
 
 [dependencies]
 barnacle-db = { path = "../barnacle-db" }
-clap = { version = "4.5.51", features = ["derive"] }
+clap = { version = "4.5.53", features = ["derive"] }
 compress-tools = "0.15.1"
 damascus = { version = "0.0.10", default-features=false, features = ["overlayfs"] }
 derive_more = { version = "2.0.1", features = ["from", "as_ref", "display"] }
