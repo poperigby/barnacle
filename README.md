@@ -1,3 +1,6 @@
+[![CI](https://github.com/poperigby/barnacle/actions/workflows/ci.yml/badge.svg)](https://github.com/poperigby/barnacle/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/github/poperigby/barnacle/graph/badge.svg?token=7HKC2NYATF)](https://codecov.io/github/poperigby/barnacle)
+
 # Barnacle
 
 *Your mods, firmly encrusted* 🐚🌊
