@@ -4,7 +4,6 @@ use iced::{
     Element, Length, Task,
     widget::{Column, button, column, container, horizontal_space, row, text},
 };
-use iced_aw::Spinner;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -69,7 +68,7 @@ impl Component for ModList {
 
     fn view(&self) -> Element<'_, Message> {
         match &self.state {
-            State::Loading => column![text("Loading mods..."), Spinner::new()],
+            State::Loading => column![text("Loading mods...")],
             State::Error(e) => column![text(e)],
             State::Loaded(mods) => {
                 let rows = mods.iter().map(|m| mod_row(m.data().name()));

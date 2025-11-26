@@ -1,7 +1,9 @@
 use barnacle_gui::Component;
 use barnacle_lib::Repository;
-use iced::{Element, Task, widget::container};
-use iced_aw::{TabLabel, Tabs};
+use iced::{
+    Element, Task,
+    widget::{button, column, container, row},
+};
 
 mod games_tab;
 
@@ -59,15 +61,12 @@ impl Component for LibraryManager {
     }
 
     fn view(&self) -> Element<'_, Message> {
-        container(
-            Tabs::new(Message::TabSelected)
-                .push(
-                    TabId::Games,
-                    TabLabel::Text("Games".into()),
-                    self.games_tab.view().map(Message::GamesTab),
-                )
-                .set_active_tab(&self.active_tab),
-        )
+        container(column![
+            row![button("Games").on_press(Message::TabSelected(TabId::Games))],
+            match self.active_tab {
+                TabId::Games => self.games_tab.view().map(Message::GamesTab),
+            },
+        ])
         .width(1000)
         .height(800)
         .style(container::rounded_box)
