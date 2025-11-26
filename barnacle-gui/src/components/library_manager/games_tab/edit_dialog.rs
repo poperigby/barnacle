@@ -2,10 +2,7 @@ use barnacle_gui::Component;
 use barnacle_lib::{DeployKind, Game, Repository};
 use iced::{
     Element, Task,
-    widget::{
-        button, column, combo_box, container, horizontal_space, row, text, text_input,
-        vertical_space,
-    },
+    widget::{button, column, combo_box, container, row, space, text, text_input},
 };
 use strum::IntoEnumIterator;
 
@@ -92,9 +89,9 @@ impl Component for EditDialog {
                     Message::DeployKindSelected
                 ),
             ],
-            vertical_space(),
+            space::vertical(),
             row![
-                horizontal_space(),
+                space::horizontal(),
                 button("Confirm").on_press(Message::ConfirmPressed),
             ],
         ])

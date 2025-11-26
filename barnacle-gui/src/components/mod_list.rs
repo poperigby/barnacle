@@ -2,7 +2,7 @@ use barnacle_gui::{Component, icons::icon};
 use barnacle_lib::{ModId, ProfileMod, Repository};
 use iced::{
     Element, Length, Task,
-    widget::{Column, button, column, container, horizontal_space, row, text},
+    widget::{Column, button, column, container, row, space, text},
 };
 
 #[derive(Debug, Clone)]
@@ -84,7 +84,7 @@ fn mod_row<'a>(name: &'a str) -> Element<'a, Message> {
     container(
         row![
             text(name),
-            horizontal_space(),
+            space::horizontal(),
             button(icon("edit")),
             button(icon("delete"))
         ]

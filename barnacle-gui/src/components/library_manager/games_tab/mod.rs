@@ -2,7 +2,7 @@ use barnacle_gui::{Component, icons::icon};
 use barnacle_lib::{Game, GameId, Repository};
 use iced::{
     Element, Length, Task,
-    widget::{Column, button, column, container, horizontal_space, row, scrollable, text},
+    widget::{Column, button, column, container, row, scrollable, space, text},
 };
 
 use crate::{
@@ -168,7 +168,7 @@ fn game_row(game: &'_ Game) -> Element<'_, Message> {
     container(
         row![
             text(game.name()),
-            horizontal_space(),
+            space::horizontal(),
             button(icon("edit")).on_press(Message::ShowEditDialog(game.clone())),
             button(icon("delete")).on_press(Message::DeleteButtonPressed(game.id().unwrap()))
         ]

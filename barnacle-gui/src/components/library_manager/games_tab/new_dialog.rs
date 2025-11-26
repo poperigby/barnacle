@@ -2,10 +2,7 @@ use barnacle_gui::Component;
 use barnacle_lib::{DeployKind, GameId, Repository};
 use iced::{
     Element, Task,
-    widget::{
-        button, column, combo_box, container, horizontal_space, row, text, text_input,
-        vertical_space,
-    },
+    widget::{button, column, combo_box, container, row, space, text, text_input},
 };
 use strum::IntoEnumIterator;
 
@@ -86,9 +83,9 @@ impl Component for NewDialog {
                     Message::DeployKindSelected
                 ),
             ],
-            vertical_space(),
+            space::vertical(),
             row![
-                horizontal_space(),
+                space::horizontal(),
                 button("Cancel").on_press(Message::CancelPressed),
                 button("Create").on_press(Message::CreatePressed),
             ],

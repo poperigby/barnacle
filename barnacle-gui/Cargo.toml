@@ -9,7 +9,7 @@ workspace = true
 
 [dependencies]
 barnacle-lib = { path = "../barnacle-lib" }
-iced = { version = "0.13.1", features = ["tokio", "svg", "advanced"] }
+iced = { git = "https://github.com/iced-rs/iced", branch = "master", features = ["tokio", "svg", "advanced"] }
 include_dir = "0.7.4"
 serde = { version = "1.0.228", features = ["derive"] }
 strum = "0.27.2"

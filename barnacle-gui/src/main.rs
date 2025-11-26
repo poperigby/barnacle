@@ -4,7 +4,7 @@ use iced::{
     Element,
     Length::Fill,
     Task, Theme, application,
-    widget::{button, column, horizontal_space, row, text},
+    widget::{button, column, row, space, text},
 };
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -17,9 +17,10 @@ use crate::components::{
 mod components;
 
 fn main() -> iced::Result {
-    application(App::title, App::update, App::view)
+    application(App::new, App::update, App::view)
         .theme(App::theme)
-        .run_with(App::new)
+        .title(App::title)
+        .run()
 }
 
 #[derive(Debug, Clone)]
@@ -95,7 +96,7 @@ impl App {
                 text("Game:"),
                 button(icon("play")),
                 text("Profile:"),
-                horizontal_space(),
+                space::horizontal(),
                 button(icon("library")).on_press(Message::ShowLibraryManager),
                 button(icon("settings")),
                 button(icon("notifications"))
