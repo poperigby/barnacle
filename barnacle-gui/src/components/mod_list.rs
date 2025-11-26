@@ -1,9 +1,15 @@
-use barnacle_gui::{Component, icons::icon};
-use barnacle_lib::{ModId, ProfileMod, Repository};
+use barnacle_gui::Component;
+use barnacle_lib::{ProfileMod, Repository};
 use iced::{
     Element, Length, Task,
-    widget::{Column, button, column, container, row, space, text},
+    widget::{column, scrollable, table, text},
 };
+
+#[derive(Debug, Clone)]
+pub struct ModRow {
+    name: String,
+    notes: String,
+}
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -13,7 +19,7 @@ pub enum Message {
 pub enum State {
     Loading,
     Error(String),
-    Loaded(Vec<ProfileMod>),
+    Loaded(Vec<ModRow>),
 }
 
 pub struct ModList {
@@ -60,7 +66,17 @@ impl Component for ModList {
 
     fn update(&mut self, message: Message) -> Task<Self::Message> {
         match message {
-            Message::Loaded(mods) => self.state = State::Loaded(mods),
+            Message::Loaded(mods) => {
+                let rows = mods
+                    .iter()
+                    .map(|m| ModRow {
+                        name: m.data().name().to_string(),
+                        notes: m.entry().notes().to_string(),
+                    })
+                    .collect();
+
+                self.state = State::Loaded(rows)
+            }
         }
 
         Task::none()
@@ -70,27 +86,15 @@ impl Component for ModList {
         match &self.state {
             State::Loading => column![text("Loading mods...")],
             State::Error(e) => column![text(e)],
-            State::Loaded(mods) => {
-                let rows = mods.iter().map(|m| mod_row(m.data().name()));
+            State::Loaded(rows) => {
+                let columns = [
+                    table::column(text("Name"), |row: ModRow| text(row.name)),
+                    table::column(text("Notes"), |row: ModRow| text(row.notes)),
+                ];
 
-                Column::with_children(rows)
+                column![scrollable(table(columns, rows.clone()).width(Length::Fill))]
             }
         }
         .into()
     }
-}
-
-fn mod_row<'a>(name: &'a str) -> Element<'a, Message> {
-    container(
-        row![
-            text(name),
-            space::horizontal(),
-            button(icon("edit")),
-            button(icon("delete"))
-        ]
-        .padding(12),
-    )
-    .width(Length::Fill)
-    .style(container::bordered_box)
-    .into()
 }
