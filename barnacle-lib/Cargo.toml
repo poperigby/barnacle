@@ -12,7 +12,7 @@ barnacle-db = { path = "../barnacle-db" }
 clap = { version = "4.5.53", features = ["derive"] }
 compress-tools = "0.15.1"
 damascus = { version = "0.0.10", default-features=false, features = ["overlayfs"] }
-derive_more = { version = "2.0.1", features = ["from", "as_ref", "display"] }
+derive_more = { version = "2.0.1", features = ["from", "as_ref", "display", "deref"] }
 getset = "0.1.6"
 heck = "0.5.0"
 human-panic = "2.0.4"
