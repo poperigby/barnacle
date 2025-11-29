@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use agdb::DbAny;
 use barnacle_db::Database;
 use tokio::sync::{RwLock, RwLockReadGuard};
 
@@ -8,6 +7,7 @@ use crate::{Result, fs::data_dir, repository::config::CoreConfig};
 
 pub mod config;
 pub mod db;
+pub mod games;
 mod models;
 
 /// Central access point for all persistent data.

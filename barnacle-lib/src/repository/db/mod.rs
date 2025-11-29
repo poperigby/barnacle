@@ -1,6 +1,6 @@
 use std::{path::Path, sync::Arc};
 
-use agdb::{DbAny, QueryBuilder};
+use agdb::{DbAny, DbError, DbId, DbValue, QueryBuilder};
 use derive_more::Deref;
 use tokio::sync::RwLock;
 
@@ -105,4 +105,21 @@ impl DbHandle {
             db: Arc::new(RwLock::new(db)),
         }
     }
+}
+
+pub(crate) fn get_field<T: TryFrom<DbValue>>(
+    db: &DbAny,
+    field: &str,
+    db_id: DbId,
+) -> Result<T, DbError> {
+    db.exec(QueryBuilder::select().values(field).ids(db_id).query())?
+        .elements
+        .pop()
+        .expect("successful result values cannot be empty")
+        .values
+        .pop()
+        .expect("successful result values cannot be empty")
+        .value
+        .try_into()
+        .map_err(|_e| DbError::from(format!("Failed to convert '{field}'"))) //your error type
 }
