@@ -404,6 +404,7 @@ dependencies = [
 name = "barnacle-lib"
 version = "0.1.0"
 dependencies = [
+ "agdb",
  "barnacle-db",
  "clap",
  "compress-tools",
@@ -413,6 +414,7 @@ dependencies = [
  "heck",
  "human-panic",
  "serde",
+ "strum",
  "tempfile",
  "thiserror 2.0.17",
  "tokio",
