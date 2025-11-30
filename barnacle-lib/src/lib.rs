@@ -4,10 +4,7 @@ use thiserror::Error;
 
 // mod deployers;
 pub mod fs;
-
-mod repository;
-
-pub use repository::Repository;
+pub mod repository;
 
 type Result<T> = std::result::Result<T, Error>;
 

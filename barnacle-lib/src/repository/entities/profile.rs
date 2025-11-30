@@ -2,7 +2,7 @@ use agdb::{CountComparison, DbId, DbType, QueryBuilder};
 
 use crate::repository::{
     db::{DbHandle, get_field},
-    entities::mods::Mod,
+    entities::mod_::Mod,
     models::{ModEntryModel, ModModel},
 };
 

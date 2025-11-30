@@ -4,7 +4,7 @@ use agdb::{DbId, QueryBuilder, QueryId};
 
 use crate::repository::{
     db::{DbHandle, get_field},
-    entities::profiles::Profile,
+    entities::profile::Profile,
     models::{DeployKind, ProfileModel},
 };
 

@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     fs::config_dir,
-    repository::entities::{games::Game, mods::Mod, profiles::Profile},
+    repository::entities::{game::Game, mod_::Mod, profile::Profile},
 };
 
 const CURRENT_CONFIG_VERSION: u16 = 1;
