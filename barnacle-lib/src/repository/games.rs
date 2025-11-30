@@ -18,40 +18,38 @@ pub struct Game {
 }
 
 impl Game {
-    pub async fn name(&self) -> String {
-        let db = self.db.read().await;
+    pub fn name(&self) -> String {
+        let db = self.db.read();
 
         get_field(&db, "name", self.id).unwrap()
     }
 
-    pub async fn targets(&self) -> Vec<PathBuf> {
-        let db = self.db.read().await;
+    pub fn targets(&self) -> Vec<PathBuf> {
+        let db = self.db.read();
 
         get_field(&db, "targets", self.id).unwrap()
     }
 
-    pub async fn deploy_kind(&self) -> DeployKind {
-        let db = self.db.read().await;
+    pub fn deploy_kind(&self) -> DeployKind {
+        let db = self.db.read();
 
         get_field(&db, "deploy_kind", self.id).unwrap()
     }
 
-    pub async fn add_profile(&mut self, name: &str) -> Profile {
+    pub fn add_profile(&mut self, name: &str) -> Profile {
         let new_profile = ProfileModel::new(name);
 
-        // if self
-        //     .profiles()
-        //     .await
-        //     .iter()
-        //     .any(async |p: &Profile| p.name().await == new_profile.name)
-        // {
-        //     // return Err(Error::UniqueViolation(UniqueConstraint::ProfileName));
-        //     panic!("Unique violation")
-        // }
+        if self
+            .profiles()
+            .iter()
+            .any(|p: &Profile| p.name() == new_profile.name)
+        {
+            // return Err(Error::UniqueViolation(UniqueConstraint::ProfileName));
+            panic!("Unique violation")
+        }
 
         self.db
             .write()
-            .await
             .transaction_mut(|t| -> Result<Profile, agdb::DbError> {
                 let profile_id = t
                     .exec_mut(QueryBuilder::insert().element(new_profile).query())?
@@ -74,10 +72,9 @@ impl Game {
             .unwrap()
     }
 
-    pub async fn profiles(&self) -> Vec<Profile> {
+    pub fn profiles(&self) -> Vec<Profile> {
         self.db
             .read()
-            .await
             .exec(
                 QueryBuilder::select()
                     .elements::<ProfileModel>()

@@ -2,7 +2,7 @@ use std::{path::Path, sync::Arc};
 
 use agdb::{DbAny, DbError, DbId, DbValue, QueryBuilder};
 use derive_more::Deref;
-use tokio::sync::RwLock;
+use parking_lot::RwLock;
 
 use crate::repository::models::{CURRENT_MODEL_VERSION, ModelVersion};
 

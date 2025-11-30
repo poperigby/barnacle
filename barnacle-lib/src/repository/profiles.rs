@@ -16,8 +16,8 @@ impl Profile {
         Self { id, db }
     }
 
-    pub async fn name(&self) -> String {
-        let db = self.db.read().await;
+    pub fn name(&self) -> String {
+        let db = self.db.read();
 
         get_field(&db, "name", self.id).unwrap()
     }

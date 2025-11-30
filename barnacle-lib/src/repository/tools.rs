@@ -14,21 +14,21 @@ pub struct Tool {
 }
 
 impl Tool {
-    pub async fn name(&self) -> String {
-        let db = self.db.read().await;
+    pub fn name(&self) -> String {
+        let db = self.db.read();
 
         get_field(&db, "name", self.id).unwrap()
     }
 
-    pub async fn path(&self) -> PathBuf {
-        let db = self.db.read().await;
+    pub fn path(&self) -> PathBuf {
+        let db = self.db.read();
 
         get_field(&db, "path", self.id).unwrap()
     }
 
     // TODO: This can actually be Option<String>
-    pub async fn args(&self) -> String {
-        let db = self.db.read().await;
+    pub fn args(&self) -> String {
+        let db = self.db.read();
 
         get_field(&db, "args", self.id).unwrap()
     }

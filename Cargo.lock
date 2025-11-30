@@ -413,6 +413,7 @@ dependencies = [
  "getset",
  "heck",
  "human-panic",
+ "parking_lot",
  "serde",
  "strum",
  "tempfile",

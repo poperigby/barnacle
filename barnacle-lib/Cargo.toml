@@ -16,6 +16,7 @@ derive_more = { version = "2.0.1", features = ["from", "as_ref", "display", "der
 getset = "0.1.6"
 heck = "0.5.0"
 human-panic = "2.0.4"
+parking_lot = "0.12.5"
 serde = { version = "1.0.228", features = ["derive"] }
 strum = { version = "0.27.2", features = ["derive"] }
 tempfile = "3.23.0"
