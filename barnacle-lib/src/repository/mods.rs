@@ -6,9 +6,9 @@ use crate::repository::db::{DbHandle, get_field};
 ///
 /// Provides methods to inspect and modify this mod's data.
 /// Always reflects the current database state.
-pub struct Mod {
-    id: DbId,
-    db: DbHandle,
+pub(crate) struct Mod {
+    pub(crate) id: DbId,
+    pub(crate) db: DbHandle,
 }
 
 impl Mod {

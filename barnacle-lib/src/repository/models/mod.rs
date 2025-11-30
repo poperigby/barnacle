@@ -10,24 +10,24 @@
 mod v1;
 
 // Re-export current version of models
-pub mod games {
+pub(crate) mod games {
     pub use super::v1::games::*;
 }
-pub mod mods {
-    pub use super::v1::mods::*;
+pub(crate) mod mods {
+    pub(crate) use super::v1::mods::*;
 }
-pub mod profiles {
-    pub use super::v1::profiles::*;
+pub(crate) mod profiles {
+    pub(crate) use super::v1::profiles::*;
 }
-pub mod tools {
-    pub use super::v1::tools::*;
+pub(crate) mod tools {
+    pub(crate) use super::v1::tools::*;
 }
 
 // Also re-export the main types at `models` level for convenience
-pub use games::*;
-pub use mods::*;
-pub use profiles::*;
-pub use tools::*;
+pub(crate) use games::*;
+pub(crate) use mods::*;
+pub(crate) use profiles::*;
+pub(crate) use tools::*;
 
 use agdb::{DbId, DbType};
 

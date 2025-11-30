@@ -1,10 +1,10 @@
 use agdb::{DbId, DbType};
 
 #[derive(Debug, Clone, DbType, PartialEq, PartialOrd)]
-pub struct ModModel {
-    db_id: Option<DbId>,
+pub(crate) struct ModModel {
+    pub(crate) db_id: Option<DbId>,
     /// A human friendly display name
-    name: String,
+    pub(crate) name: String,
 }
 
 impl ModModel {
@@ -17,7 +17,7 @@ impl ModModel {
 }
 
 #[derive(Debug, Clone, DbType, Default, PartialEq, PartialOrd)]
-pub struct ModEntryModel {
+pub(crate) struct ModEntryModel {
     db_id: Option<DbId>,
     enabled: bool,
     notes: String,
