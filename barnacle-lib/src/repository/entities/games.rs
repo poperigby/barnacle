@@ -4,8 +4,8 @@ use agdb::{DbId, QueryBuilder, QueryId};
 
 use crate::repository::{
     db::{DbHandle, get_field},
+    entities::profiles::Profile,
     models::{DeployKind, ProfileModel},
-    profiles::Profile,
 };
 
 /// Represents a game entity in the Barnacle system.

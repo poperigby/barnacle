@@ -1,15 +1,13 @@
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 
 use agdb::{DbAny, DbError, DbId, DbValue, QueryBuilder};
 use derive_more::Deref;
 use parking_lot::RwLock;
 
-use crate::repository::models::{CURRENT_MODEL_VERSION, ModelVersion};
-
-mod games;
-mod mods;
-mod profiles;
-mod tools;
+use crate::{
+    fs::data_dir,
+    repository::models::{CURRENT_MODEL_VERSION, ModelVersion},
+};
 
 #[derive(Debug, Clone, Deref)]
 pub struct DbHandle {
@@ -18,7 +16,8 @@ pub struct DbHandle {
 }
 
 impl DbHandle {
-    pub fn new(path: &Path) -> Self {
+    pub fn new() -> Self {
+        let path = data_dir().join("data.db");
         let path_str = path.to_str().unwrap();
         Self::init(DbAny::new_file(path_str).unwrap())
     }

@@ -2,8 +2,8 @@ use agdb::{CountComparison, DbId, DbType, QueryBuilder};
 
 use crate::repository::{
     db::{DbHandle, get_field},
+    entities::mods::Mod,
     models::{ModEntryModel, ModModel},
-    mods::Mod,
 };
 
 /// Represents a profile entity in the Barnacle system.

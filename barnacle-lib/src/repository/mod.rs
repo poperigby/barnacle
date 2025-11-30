@@ -1,17 +1,16 @@
 use std::sync::Arc;
 
-use barnacle_db::Database;
-use tokio::sync::{RwLock, RwLockReadGuard};
+use parking_lot::{RwLock, RwLockReadGuard};
 
-use crate::{Result, fs::data_dir, repository::config::CoreConfig};
+use crate::{
+    Result,
+    repository::{config::CoreConfig, db::DbHandle},
+};
 
 pub mod config;
-pub mod db;
-pub mod games;
+mod db;
+pub mod entities;
 mod models;
-pub mod mods;
-pub mod profiles;
-pub mod tools;
 
 /// Central access point for all persistent data.
 ///
@@ -20,19 +19,19 @@ pub mod tools;
 /// for reading and writing game data, mods, and profiles.
 #[derive(Clone, Debug)]
 pub struct Repository {
-    db: Arc<RwLock<Database>>,
+    db: DbHandle,
     cfg: Arc<RwLock<CoreConfig>>,
 }
 
 impl Repository {
     pub fn new() -> Result<Self> {
         Ok(Self {
-            db: Arc::new(RwLock::new(Database::new(&data_dir().join("data.db"))?)),
+            db: DbHandle::new(),
             cfg: Arc::new(RwLock::new(CoreConfig::load())),
         })
     }
 
     pub async fn cfg(&'_ self) -> RwLockReadGuard<'_, CoreConfig> {
-        self.cfg.read().await
+        self.cfg.read()
     }
 }
