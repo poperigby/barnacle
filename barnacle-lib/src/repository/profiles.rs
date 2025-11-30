@@ -12,6 +12,10 @@ pub struct Profile {
 }
 
 impl Profile {
+    pub fn new(id: DbId, db: DbHandle) -> Self {
+        Self { id, db }
+    }
+
     pub async fn name(&self) -> String {
         let db = self.db.read().await;
 

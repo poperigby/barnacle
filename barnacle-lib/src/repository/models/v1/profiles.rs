@@ -1,9 +1,9 @@
 use agdb::{DbId, DbType};
 
 #[derive(Debug, Clone, DbType, PartialEq, PartialOrd)]
-pub struct ProfileModel {
-    db_id: Option<DbId>,
-    name: String,
+pub(crate) struct ProfileModel {
+    pub(crate) db_id: Option<DbId>,
+    pub(crate) name: String,
 }
 
 impl ProfileModel {
