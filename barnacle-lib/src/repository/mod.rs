@@ -9,6 +9,9 @@ pub mod config;
 pub mod db;
 pub mod games;
 mod models;
+pub mod mods;
+pub mod profiles;
+pub mod tools;
 
 /// Central access point for all persistent data.
 ///
