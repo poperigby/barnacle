@@ -3,11 +3,13 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use barnacle_db::models::{Game, Mod, Profile};
 use heck::ToSnakeCase;
 use serde::{Deserialize, Serialize};
 
-use crate::fs::config_dir;
+use crate::{
+    fs::config_dir,
+    repository::entities::{games::Game, mods::Mod, profiles::Profile},
+};
 
 const CURRENT_CONFIG_VERSION: u16 = 1;
 const FILE_NAME: &str = "core.toml";
