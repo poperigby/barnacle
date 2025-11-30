@@ -18,6 +18,10 @@ pub struct Game {
 }
 
 impl Game {
+    pub fn new(id: DbId, db: DbHandle) -> Self {
+        Self { id, db }
+    }
+
     pub fn name(&self) -> String {
         let db = self.db.read();
 
