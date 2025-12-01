@@ -14,7 +14,7 @@ use crate::{
 };
 
 pub mod config;
-mod db;
+pub mod db;
 pub mod entities;
 mod models;
 
@@ -72,7 +72,7 @@ impl Repository {
                 )
                 .unwrap();
 
-                Ok(Game::new(game_id, self.db.clone(), self.cfg.clone()))
+                Ok(Game::from_id(game_id, self.db.clone(), self.cfg.clone()))
             })
             .unwrap()
     }
@@ -94,7 +94,7 @@ impl Repository {
             .unwrap()
             .elements
             .iter()
-            .map(|e| Game::new(e.id, self.db.clone(), self.cfg.clone()))
+            .map(|e| Game::from_id(e.id, self.db.clone(), self.cfg.clone()))
             .collect()
     }
 }

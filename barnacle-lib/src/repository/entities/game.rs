@@ -21,7 +21,7 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(id: DbId, db: DbHandle, cfg: CoreConfigHandle) -> Self {
+    pub(crate) fn from_id(id: DbId, db: DbHandle, cfg: CoreConfigHandle) -> Self {
         Self { id, db, cfg }
     }
 
