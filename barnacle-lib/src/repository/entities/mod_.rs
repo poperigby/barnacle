@@ -13,8 +13,6 @@ pub struct Mod {
 
 impl Mod {
     pub fn name(&self) -> String {
-        let db = self.db.read();
-
-        get_field(&db, "name", self.id).unwrap()
+        get_field(&self.db, "name", self.id).unwrap()
     }
 }

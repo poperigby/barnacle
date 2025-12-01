@@ -15,21 +15,15 @@ pub struct Tool {
 
 impl Tool {
     pub fn name(&self) -> String {
-        let db = self.db.read();
-
-        get_field(&db, "name", self.id).unwrap()
+        get_field(&self.db, "name", self.id).unwrap()
     }
 
     pub fn path(&self) -> PathBuf {
-        let db = self.db.read();
-
-        get_field(&db, "path", self.id).unwrap()
+        get_field(&self.db, "path", self.id).unwrap()
     }
 
     // TODO: This can actually be Option<String>
     pub fn args(&self) -> String {
-        let db = self.db.read();
-
-        get_field(&db, "args", self.id).unwrap()
+        get_field(&self.db, "args", self.id).unwrap()
     }
 }

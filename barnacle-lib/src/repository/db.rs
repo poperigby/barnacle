@@ -107,11 +107,12 @@ impl DbHandle {
 }
 
 pub(crate) fn get_field<T: TryFrom<DbValue>>(
-    db: &DbAny,
+    db: &DbHandle,
     field: &str,
     db_id: DbId,
 ) -> Result<T, DbError> {
-    db.exec(QueryBuilder::select().values(field).ids(db_id).query())?
+    db.read()
+        .exec(QueryBuilder::select().values(field).ids(db_id).query())?
         .elements
         .pop()
         .expect("successful result values cannot be empty")

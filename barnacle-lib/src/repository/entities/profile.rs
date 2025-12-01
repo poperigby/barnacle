@@ -21,9 +21,7 @@ impl Profile {
     }
 
     pub fn name(&self) -> String {
-        let db = self.db.read();
-
-        get_field(&db, "name", self.id).unwrap()
+        get_field(&self.db, "name", self.id).unwrap()
     }
 
     /// Add a new [`ModEntry`] to a [`Profile`] that points to the [`Mod`] given by ID.

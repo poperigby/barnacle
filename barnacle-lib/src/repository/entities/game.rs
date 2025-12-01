@@ -26,21 +26,15 @@ impl Game {
     }
 
     pub fn name(&self) -> String {
-        let db = self.db.read();
-
-        get_field(&db, "name", self.id).unwrap()
+        get_field(&self.db, "name", self.id).unwrap()
     }
 
     pub fn targets(&self) -> Vec<PathBuf> {
-        let db = self.db.read();
-
-        get_field(&db, "targets", self.id).unwrap()
+        get_field(&self.db, "targets", self.id).unwrap()
     }
 
     pub fn deploy_kind(&self) -> DeployKind {
-        let db = self.db.read();
-
-        get_field(&db, "deploy_kind", self.id).unwrap()
+        get_field(&self.db, "deploy_kind", self.id).unwrap()
     }
 
     pub fn dir(&self) -> PathBuf {
