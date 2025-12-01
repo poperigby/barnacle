@@ -15,15 +15,15 @@ pub struct Tool {
 
 impl Tool {
     pub fn name(&self) -> String {
-        get_field(&self.db, "name", self.id).unwrap()
+        get_field(&self.db, self.id, "name").unwrap()
     }
 
     pub fn path(&self) -> PathBuf {
-        get_field(&self.db, "path", self.id).unwrap()
+        get_field(&self.db, self.id, "path").unwrap()
     }
 
     // TODO: This can actually be Option<String>
     pub fn args(&self) -> String {
-        get_field(&self.db, "args", self.id).unwrap()
+        get_field(&self.db, self.id, "args").unwrap()
     }
 }

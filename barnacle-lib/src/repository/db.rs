@@ -108,11 +108,11 @@ impl DbHandle {
 
 pub(crate) fn get_field<T: TryFrom<DbValue>>(
     db: &DbHandle,
+    id: DbId,
     field: &str,
-    db_id: DbId,
 ) -> Result<T, DbError> {
     db.read()
-        .exec(QueryBuilder::select().values(field).ids(db_id).query())?
+        .exec(QueryBuilder::select().values(field).ids(id).query())?
         .elements
         .pop()
         .expect("successful result values cannot be empty")
@@ -122,4 +122,19 @@ pub(crate) fn get_field<T: TryFrom<DbValue>>(
         .value
         .try_into()
         .map_err(|_e| DbError::from(format!("Failed to convert '{field}'"))) //your error type
+}
+
+pub(crate) fn set_field<T>(db: &DbHandle, id: DbId, field: &str, value: &T) -> Result<(), DbError>
+where
+    DbValue: for<'a> From<&'a T>,
+    T: Into<DbValue>,
+{
+    db.write().exec_mut(
+        QueryBuilder::insert()
+            .values([[(field, value).into()]])
+            .ids(id)
+            .query(),
+    )?;
+
+    Ok(())
 }

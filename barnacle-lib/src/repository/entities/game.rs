@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use agdb::{DbId, QueryBuilder, QueryId};
-use heck::ToSnakeCase;
 
 use crate::repository::{
     CoreConfigHandle,
@@ -15,6 +14,7 @@ use crate::repository::{
 /// Provides methods to inspect and modify this game's data, including
 /// managing profiles and mods. Always reflects the current database state.
 pub struct Game {
+    // TODO: Have id() fn that returns an Err if the element DNE in the DB anymore
     id: DbId,
     db: DbHandle,
     cfg: CoreConfigHandle,
@@ -26,15 +26,15 @@ impl Game {
     }
 
     pub fn name(&self) -> String {
-        get_field(&self.db, "name", self.id).unwrap()
+        get_field(&self.db, self.id, "name").unwrap()
     }
 
     pub fn targets(&self) -> Vec<PathBuf> {
-        get_field(&self.db, "targets", self.id).unwrap()
+        get_field(&self.db, self.id, "targets").unwrap()
     }
 
     pub fn deploy_kind(&self) -> DeployKind {
-        get_field(&self.db, "deploy_kind", self.id).unwrap()
+        get_field(&self.db, self.id, "deploy_kind").unwrap()
     }
 
     pub fn dir(&self) -> PathBuf {

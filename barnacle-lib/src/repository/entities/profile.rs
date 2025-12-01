@@ -21,7 +21,7 @@ impl Profile {
     }
 
     pub fn name(&self) -> String {
-        get_field(&self.db, "name", self.id).unwrap()
+        get_field(&self.db, self.id, "name").unwrap()
     }
 
     /// Add a new [`ModEntry`] to a [`Profile`] that points to the [`Mod`] given by ID.
