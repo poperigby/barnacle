@@ -17,7 +17,7 @@ pub struct Profile {
 }
 
 impl Profile {
-    pub fn new(id: DbId, db: DbHandle) -> Self {
+    pub(crate) fn from_id(id: DbId, db: DbHandle) -> Self {
         Self { id, db }
     }
 
