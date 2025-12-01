@@ -5,7 +5,7 @@ use agdb::{DbId, QueryBuilder, QueryId};
 use crate::repository::{
     CoreConfigHandle,
     db::DbHandle,
-    entities::{Error, Result, get_field, profile::Profile},
+    entities::{Error, Result, get_field, mod_::Mod, profile::Profile},
     models::{DeployKind, ProfileModel},
 };
 
@@ -97,5 +97,15 @@ impl Game {
             .iter()
             .map(|e| Profile::from_id(e.id, self.db.clone()))
             .collect())
+    }
+
+    pub fn add_mod(&mut self, name: &str) -> Result<Mod> {
+        todo!()
+        // // TODO: Only attempt to open the archive if the input_path is an archive
+        // if let Some(path) = input_path {
+        //     let archive = File::open(path)?;
+        //     uncompress_archive(archive, &dir, Ownership::Preserve)?;
+        //     change_dir_permissions(&dir, Permissions::ReadOnly);
+        // }
     }
 }
