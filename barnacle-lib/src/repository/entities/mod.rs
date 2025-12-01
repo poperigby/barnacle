@@ -20,6 +20,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     #[error("Failed to convert field {0}")]
     Conversion(String),
+    #[error("Empty query elements")]
+    EmptyElements,
     #[error("Internal database error {0}")]
     Internal(#[from] agdb::DbError),
 }

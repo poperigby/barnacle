@@ -5,7 +5,7 @@ use agdb::{DbId, QueryBuilder, QueryId};
 use crate::repository::{
     CoreConfigHandle,
     db::DbHandle,
-    entities::{get_field, profile::Profile},
+    entities::{Error, Result, get_field, profile::Profile},
     models::{DeployKind, ProfileModel},
 };
 
@@ -25,31 +25,31 @@ impl Game {
         Self { id, db, cfg }
     }
 
-    pub fn name(&self) -> String {
-        get_field(&self.db, self.id, "name").unwrap()
+    pub fn name(&self) -> Result<String> {
+        get_field(&self.db, self.id, "name")
     }
 
     // pub fn set_name(&self, new_name: &str) {
     //     set_field(&self.db, self.id, "name", &new_name).unwrap()
     // }
 
-    pub fn targets(&self) -> Vec<PathBuf> {
-        get_field(&self.db, self.id, "targets").unwrap()
+    pub fn targets(&self) -> Result<Vec<PathBuf>> {
+        get_field(&self.db, self.id, "targets")
     }
 
-    pub fn deploy_kind(&self) -> DeployKind {
-        get_field(&self.db, self.id, "deploy_kind").unwrap()
+    pub fn deploy_kind(&self) -> Result<DeployKind> {
+        get_field(&self.db, self.id, "deploy_kind")
     }
 
-    pub fn dir(&self) -> PathBuf {
-        self.cfg.read().game_dir(&self.name())
+    pub fn dir(&self) -> Result<PathBuf> {
+        Ok(self.cfg.read().game_dir(&self.name()?))
     }
 
-    pub fn add_profile(&mut self, name: &str) -> Profile {
+    pub fn add_profile(&mut self, name: &str) -> Result<Profile> {
         let new_profile = ProfileModel::new(name);
 
         if self
-            .profiles()
+            .profiles()?
             .iter()
             .any(|p: &Profile| p.name() == new_profile.name)
         {
@@ -57,32 +57,30 @@ impl Game {
             panic!("Unique violation")
         }
 
-        self.db
-            .write()
-            .transaction_mut(|t| -> Result<Profile, agdb::DbError> {
-                let profile_id = t
-                    .exec_mut(QueryBuilder::insert().element(new_profile).query())?
-                    .elements
-                    .first()
-                    .unwrap()
-                    .id;
+        Ok(self.db.write().transaction_mut(|t| -> Result<Profile> {
+            let profile_id = t
+                .exec_mut(QueryBuilder::insert().element(new_profile).query())?
+                .elements
+                .first()
+                .ok_or(Error::EmptyElements)?
+                .id;
 
-                // Link Profile to the specified Game node and root "profiles" node
-                t.exec_mut(
-                    QueryBuilder::insert()
-                        .edges()
-                        .from([QueryId::from("profiles"), QueryId::from(self.id)])
-                        .to(profile_id)
-                        .query(),
-                )?;
+            // Link Profile to the specified Game node and root "profiles" node
+            t.exec_mut(
+                QueryBuilder::insert()
+                    .edges()
+                    .from([QueryId::from("profiles"), QueryId::from(self.id)])
+                    .to(profile_id)
+                    .query(),
+            )?;
 
-                Ok(Profile::from_id(profile_id, self.db.clone()))
-            })
-            .unwrap()
+            Ok(Profile::from_id(profile_id, self.db.clone()))
+        })?)
     }
 
-    pub fn profiles(&self) -> Vec<Profile> {
-        self.db
+    pub fn profiles(&self) -> Result<Vec<Profile>> {
+        Ok(self
+            .db
             .read()
             .exec(
                 QueryBuilder::select()
@@ -94,11 +92,10 @@ impl Game {
                     .and()
                     .neighbor()
                     .query(),
-            )
-            .unwrap()
+            )?
             .elements
             .iter()
             .map(|e| Profile::from_id(e.id, self.db.clone()))
-            .collect()
+            .collect())
     }
 }
