@@ -11,6 +11,7 @@ use crate::repository::db::DbHandle;
 
 pub mod game;
 pub mod mod_;
+pub mod mod_entry;
 pub mod profile;
 pub mod tool;
 

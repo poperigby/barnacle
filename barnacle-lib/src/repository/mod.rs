@@ -47,7 +47,11 @@ impl Repository {
     pub fn add_game(&mut self, name: &str, deploy_kind: DeployKind) -> Game {
         let new_game_model = GameModel::new(name, deploy_kind);
 
-        if self.games().iter().any(|g| g.name() == new_game_model.name) {
+        if self
+            .games()
+            .iter()
+            .any(|g| g.name().unwrap() == new_game_model.name)
+        {
             // return Err(Error::UniqueViolation(UniqueConstraint::GameName));
             panic!("UniqueViolation");
         }

@@ -16,6 +16,9 @@ pub(crate) mod games {
 pub(crate) mod mods {
     pub(crate) use super::v1::mods::*;
 }
+pub(crate) mod mod_entries {
+    pub(crate) use super::v1::mod_entries::*;
+}
 pub(crate) mod profiles {
     pub(crate) use super::v1::profiles::*;
 }
@@ -25,6 +28,7 @@ pub(crate) mod tools {
 
 // Also re-export the main types at `models` level for convenience
 pub(crate) use games::*;
+pub(crate) use mod_entries::*;
 pub(crate) use mods::*;
 pub(crate) use profiles::*;
 pub(crate) use tools::*;

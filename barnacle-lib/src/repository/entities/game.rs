@@ -51,7 +51,7 @@ impl Game {
         if self
             .profiles()?
             .iter()
-            .any(|p: &Profile| p.name() == new_profile.name)
+            .any(|p: &Profile| p.name().unwrap() == new_profile.name)
         {
             // return Err(Error::UniqueViolation(UniqueConstraint::ProfileName));
             panic!("Unique violation")
