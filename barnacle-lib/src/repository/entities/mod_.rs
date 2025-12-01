@@ -1,6 +1,6 @@
 use agdb::DbId;
 
-use crate::repository::db::{DbHandle, get_field};
+use crate::repository::{db::DbHandle, entities::get_field};
 
 /// Represents a mod entity in the Barnacle system.
 ///

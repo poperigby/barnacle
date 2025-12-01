@@ -4,8 +4,8 @@ use agdb::{DbId, QueryBuilder, QueryId};
 
 use crate::repository::{
     CoreConfigHandle,
-    db::{DbHandle, get_field},
-    entities::profile::Profile,
+    db::DbHandle,
+    entities::{get_field, profile::Profile},
     models::{DeployKind, ProfileModel},
 };
 

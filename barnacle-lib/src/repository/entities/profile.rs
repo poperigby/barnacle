@@ -1,8 +1,8 @@
 use agdb::{CountComparison, DbId, DbType, QueryBuilder};
 
 use crate::repository::{
-    db::{DbHandle, get_field},
-    entities::mod_::Mod,
+    db::DbHandle,
+    entities::{get_field, mod_::Mod},
     models::{ModEntryModel, ModModel},
 };
 

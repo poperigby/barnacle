@@ -1,24 +1,13 @@
 use std::sync::Arc;
 
-use agdb::{DbAny, DbId, DbValue, QueryBuilder};
+use agdb::{DbAny, QueryBuilder};
 use derive_more::Deref;
 use parking_lot::RwLock;
-use thiserror::Error;
 
 use crate::{
     fs::data_dir,
     repository::models::{CURRENT_MODEL_VERSION, ModelVersion},
 };
-
-pub type Result<T> = std::result::Result<T, Error>;
-
-#[derive(Debug, Error)]
-pub enum Error {
-    #[error("Failed to convert field {0}")]
-    Conversion(String),
-    #[error("Internal database error {0}")]
-    Internal(#[from] agdb::DbError),
-}
 
 #[derive(Debug, Clone, Deref)]
 pub struct DbHandle {
@@ -86,7 +75,7 @@ impl DbHandle {
             }
         } else {
             // Insert default ModelVersion if missing
-            db.transaction_mut(|t| -> Result<()> {
+            db.transaction_mut(|t| -> Result<(), agdb::DbError> {
                 let model_version_id = t
                     .exec_mut(
                         QueryBuilder::insert()
@@ -115,23 +104,6 @@ impl DbHandle {
             db: Arc::new(RwLock::new(db)),
         }
     }
-}
-
-pub(crate) fn get_field<T>(db: &DbHandle, id: DbId, field: &str) -> Result<T>
-where
-    T: TryFrom<DbValue>,
-{
-    db.read()
-        .exec(QueryBuilder::select().values(field).ids(id).query())?
-        .elements
-        .pop()
-        .expect("successful result values cannot be empty")
-        .values
-        .pop()
-        .expect("successful result values cannot be empty")
-        .value
-        .try_into()
-        .map_err(|_| Error::Conversion(field.into()))
 }
 
 // pub(crate) fn set_field<T>(db: &DbHandle, id: DbId, field: &str, value: &T) -> Result<(), DbError>

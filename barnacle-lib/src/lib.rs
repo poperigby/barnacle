@@ -2,7 +2,7 @@ use std::io;
 
 use thiserror::Error;
 
-use crate::repository::db;
+use crate::repository::entities;
 
 // mod deployers;
 pub mod fs;
@@ -16,6 +16,6 @@ pub enum Error {
     Archive(#[from] compress_tools::Error),
     #[error("I/O error: {0}")]
     Io(#[from] io::Error),
-    #[error("Database error: {0}")]
-    Db(#[from] db::Error),
+    #[error("Entity error: {0}")]
+    Entity(#[from] entities::Error),
 }
