@@ -2,7 +2,7 @@ use agdb::{CountComparison, DbId, DbType, QueryBuilder};
 
 use crate::repository::{
     db::DbHandle,
-    entities::{Error, Result, get_field, mod_::Mod},
+    entities::{Error, Result, get_field, mod_::Mod, mod_entry::ModEntry},
     models::{ModEntryModel, ModModel},
 };
 
@@ -77,37 +77,8 @@ impl Profile {
         // Ok(())
     }
 
-    pub fn profile_mods(&self) -> Result<Vec<ProfileMod>> {
-        todo!()
-        // // Traverse the linked-list from the given profile, collecting the ModEntry and Mod nodes.
-        // let entries = self.mod_entries();
-        // let mods: Vec<ModModel> = self
-        //     .db
-        //     .read()
-        //     .exec(
-        //         QueryBuilder::select()
-        //             .elements::<ModModel>()
-        //             .search()
-        //             .from(self.id)
-        //             .where_()
-        //             .node()
-        //             .and()
-        //             // Skip the Profile node and the first ModEntry node
-        //             .distance(CountComparison::GreaterThan(2))
-        //             .query(),
-        //     )?
-        //     .try_into()
-        //     .unwrap();
-        //
-        // Ok(entries
-        //     .into_iter()
-        //     .zip(mods)
-        //     .map(|(entry, mod_)| ProfileMod::new(entry, mod_))
-        //     .collect())
-    }
-
-    fn mod_entries(&self) -> Result<Vec<ModEntryModel>> {
-        Ok(self
+    pub fn mod_entries(&self) -> Result<Vec<ModEntry>> {
+        let mod_entry_ids: Vec<DbId> = self
             .db
             .read()
             .exec(
@@ -118,33 +89,38 @@ impl Profile {
                     .where_()
                     .node()
                     .and()
-                    // Skip the Profile node
-                    .distance(CountComparison::GreaterThan(1))
+                    .neighbor()
                     .query(),
             )?
-            .try_into()
-            .unwrap())
-    }
-}
+            .elements
+            .iter()
+            .map(|e| e.id)
+            .collect();
 
-/// An item in a [`Profile`]'s mod list, containing the [`Mod`] data and its profile-specific configuration.
-#[derive(Debug, Clone)]
-pub struct ProfileMod {
-    // id: Modid,
-    entry: ModEntryModel,
-    data: ModModel,
-}
+        let mod_ids: Vec<DbId> = self
+            .db
+            .read()
+            .exec(
+                QueryBuilder::select()
+                    .elements::<ModModel>()
+                    .search()
+                    .from(self.id)
+                    .where_()
+                    .node()
+                    .and()
+                    // Skip the Profile node and the first ModEntry node
+                    .distance(CountComparison::GreaterThan(2))
+                    .query(),
+            )?
+            .elements
+            .iter()
+            .map(|e| e.id)
+            .collect();
 
-impl ProfileMod {
-    pub fn new(entry: ModEntryModel, data: ModModel) -> Self {
-        Self { entry, data }
-    }
-
-    pub fn entry(&self) -> &ModEntryModel {
-        &self.entry
-    }
-
-    pub fn data(&self) -> &ModModel {
-        &self.data
+        Ok(mod_entry_ids
+            .into_iter()
+            .zip(mod_ids)
+            .map(|(entry_id, mod_id)| ModEntry::from_id(entry_id, mod_id, self.db.clone()))
+            .collect())
     }
 }

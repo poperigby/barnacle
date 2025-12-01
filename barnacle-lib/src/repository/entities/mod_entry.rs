@@ -1,6 +1,7 @@
 use agdb::DbId;
 
 use crate::repository::{
+    CoreConfigHandle,
     db::DbHandle,
     entities::{Result, get_field},
 };
@@ -19,6 +20,14 @@ pub struct ModEntry {
 }
 
 impl ModEntry {
+    pub(crate) fn from_id(entry_id: DbId, mod_id: DbId, db: DbHandle) -> Self {
+        Self {
+            entry_id,
+            mod_id,
+            db,
+        }
+    }
+
     pub fn name(&self) -> Result<String> {
         get_field(&self.db, self.mod_id, "name")
     }

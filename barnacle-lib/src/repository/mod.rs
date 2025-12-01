@@ -43,6 +43,7 @@ impl Repository {
         self.cfg.read()
     }
 
+    // TODO: This stuff should be under Game associated fns
     /// Insert a new [`Game`] into the database. The [`Game`] must have a unique name.
     pub fn add_game(&mut self, name: &str, deploy_kind: DeployKind) -> Game {
         let new_game_model = GameModel::new(name, deploy_kind);
