@@ -8,6 +8,7 @@ use crate::repository::db::{DbHandle, get_field};
 ///
 /// Provides methods to inspect and modify this tool's data.
 /// Always reflects the current database state.
+#[derive(Debug, Clone)]
 pub struct Tool {
     id: DbId,
     db: DbHandle,

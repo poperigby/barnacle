@@ -1,13 +1,24 @@
 use std::sync::Arc;
 
-use agdb::{DbAny, DbError, DbId, DbValue, QueryBuilder};
+use agdb::{DbAny, DbId, DbValue, QueryBuilder};
 use derive_more::Deref;
 use parking_lot::RwLock;
+use thiserror::Error;
 
 use crate::{
     fs::data_dir,
     repository::models::{CURRENT_MODEL_VERSION, ModelVersion},
 };
+
+pub type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("Failed to convert field {0}")]
+    Conversion(String),
+    #[error("Internal database error {0}")]
+    Internal(#[from] agdb::DbError),
+}
 
 #[derive(Debug, Clone, Deref)]
 pub struct DbHandle {
@@ -75,7 +86,7 @@ impl DbHandle {
             }
         } else {
             // Insert default ModelVersion if missing
-            db.transaction_mut(|t| -> Result<(), agdb::DbError> {
+            db.transaction_mut(|t| -> Result<()> {
                 let model_version_id = t
                     .exec_mut(
                         QueryBuilder::insert()
@@ -106,11 +117,7 @@ impl DbHandle {
     }
 }
 
-pub(crate) fn get_field<T: TryFrom<DbValue>>(
-    db: &DbHandle,
-    id: DbId,
-    field: &str,
-) -> Result<T, DbError> {
+pub(crate) fn get_field<T: TryFrom<DbValue>>(db: &DbHandle, id: DbId, field: &str) -> Result<T> {
     db.read()
         .exec(QueryBuilder::select().values(field).ids(id).query())?
         .elements
@@ -121,20 +128,19 @@ pub(crate) fn get_field<T: TryFrom<DbValue>>(
         .expect("successful result values cannot be empty")
         .value
         .try_into()
-        .map_err(|_e| DbError::from(format!("Failed to convert '{field}'"))) //your error type
+        .map_err(|_| Error::Conversion(field.into()))?
 }
 
-pub(crate) fn set_field<T>(db: &DbHandle, id: DbId, field: &str, value: &T) -> Result<(), DbError>
-where
-    DbValue: for<'a> From<&'a T>,
-    T: Into<DbValue>,
-{
-    db.write().exec_mut(
-        QueryBuilder::insert()
-            .values([[(field, value).into()]])
-            .ids(id)
-            .query(),
-    )?;
-
-    Ok(())
-}
+// pub(crate) fn set_field<T>(db: &DbHandle, id: DbId, field: &str, value: &T) -> Result<(), DbError>
+// where
+//     T: Into<DbValue>,
+// {
+//     db.write().exec_mut(
+//         QueryBuilder::insert()
+//             .values([[(field, value).into()]])
+//             .ids(id)
+//             .query(),
+//     )?;
+//
+//     Ok(())
+// }

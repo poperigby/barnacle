@@ -13,8 +13,8 @@ use crate::repository::{
 ///
 /// Provides methods to inspect and modify this game's data, including
 /// managing profiles and mods. Always reflects the current database state.
+#[derive(Debug, Clone)]
 pub struct Game {
-    // TODO: Have id() fn that returns an Err if the element DNE in the DB anymore
     id: DbId,
     db: DbHandle,
     cfg: CoreConfigHandle,
@@ -28,6 +28,10 @@ impl Game {
     pub fn name(&self) -> String {
         get_field(&self.db, self.id, "name").unwrap()
     }
+
+    // pub fn set_name(&self, new_name: &str) {
+    //     set_field(&self.db, self.id, "name", &new_name).unwrap()
+    // }
 
     pub fn targets(&self) -> Vec<PathBuf> {
         get_field(&self.db, self.id, "targets").unwrap()

@@ -10,6 +10,7 @@ use crate::repository::{
 ///
 /// Provides methods to inspect and modify this profile's data, including
 /// managing mod entries. Always reflects the current database state.
+#[derive(Debug, Clone)]
 pub struct Profile {
     id: DbId,
     db: DbHandle,
