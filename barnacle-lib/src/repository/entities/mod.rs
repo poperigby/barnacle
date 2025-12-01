@@ -21,8 +21,10 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     #[error("Failed to convert field {0}")]
     Conversion(String),
-    #[error("Empty query elements")]
+    #[error("Successful result elements cannot be empty")]
     EmptyElements,
+    #[error("Successful result values cannot be empty")]
+    EmptyValues,
     #[error("Internal database error {0}")]
     Internal(#[from] agdb::DbError),
 }
@@ -35,10 +37,10 @@ where
         .exec(QueryBuilder::select().values(field).ids(id).query())?
         .elements
         .pop()
-        .expect("successful result values cannot be empty")
+        .ok_or(Error::EmptyElements)?
         .values
         .pop()
-        .expect("successful result values cannot be empty")
+        .ok_or(Error::EmptyValues)?
         .value
         .try_into()
         .map_err(|_| Error::Conversion(field.into()))

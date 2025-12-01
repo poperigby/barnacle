@@ -1,9 +1,12 @@
+use std::path::PathBuf;
+
 use agdb::{CountComparison, DbId, QueryBuilder};
 
 use crate::repository::{
+    CoreConfigHandle,
     db::DbHandle,
     entities::{Error, Result, get_field, mod_::Mod, mod_entry::ModEntry},
-    models::{ModEntryModel, ModModel},
+    models::{GameModel, ModEntryModel, ModModel},
 };
 
 /// Represents a profile entity in the Barnacle system.
@@ -14,15 +17,46 @@ use crate::repository::{
 pub struct Profile {
     id: DbId,
     db: DbHandle,
+    cfg: CoreConfigHandle,
 }
 
 impl Profile {
-    pub(crate) fn from_id(id: DbId, db: DbHandle) -> Self {
-        Self { id, db }
+    pub(crate) fn from_id(id: DbId, db: DbHandle, cfg: CoreConfigHandle) -> Self {
+        Self { id, db, cfg }
     }
 
     pub fn name(&self) -> Result<String> {
         get_field(&self.db, self.id, "name")
+    }
+
+    pub fn dir(&self) -> Result<PathBuf> {
+        let parent_game_name: String = self
+            .db
+            .read()
+            .exec(
+                QueryBuilder::select()
+                    .values([["name"]])
+                    .search()
+                    .from("games")
+                    .to(self.id)
+                    .where_()
+                    .element::<GameModel>()
+                    .query(),
+            )?
+            .elements
+            .pop()
+            .ok_or(Error::EmptyElements)?
+            .values
+            .pop()
+            .ok_or(Error::EmptyValues)?
+            .value
+            .try_into()
+            .map_err(|_| Error::Conversion("name".into()))?;
+
+        Ok(self
+            .cfg
+            .read()
+            .profile_dir(&parent_game_name, &self.name()?))
     }
 
     /// Add a new [`ModEntry`] to a [`Profile`] that points to the [`Mod`] given by ID.

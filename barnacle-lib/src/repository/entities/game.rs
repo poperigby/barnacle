@@ -78,7 +78,11 @@ impl Game {
                     .query(),
             )?;
 
-            Ok(Profile::from_id(profile_id, self.db.clone()))
+            Ok(Profile::from_id(
+                profile_id,
+                self.db.clone(),
+                self.cfg.clone(),
+            ))
         })?)
     }
 
@@ -99,7 +103,7 @@ impl Game {
             )?
             .elements
             .iter()
-            .map(|e| Profile::from_id(e.id, self.db.clone()))
+            .map(|e| Profile::from_id(e.id, self.db.clone(), self.cfg.clone()))
             .collect())
     }
 
