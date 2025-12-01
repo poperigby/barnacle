@@ -18,6 +18,8 @@ mod db;
 pub mod entities;
 mod models;
 
+pub type CoreConfigHandle = Arc<RwLock<CoreConfig>>;
+
 /// Central access point for all persistent data.
 ///
 /// The [`Repository`] handles both on-disk filesystem operations and all
@@ -26,7 +28,7 @@ mod models;
 #[derive(Clone, Debug)]
 pub struct Repository {
     db: DbHandle,
-    cfg: Arc<RwLock<CoreConfig>>,
+    cfg: CoreConfigHandle,
 }
 
 impl Repository {
@@ -70,7 +72,7 @@ impl Repository {
                 )
                 .unwrap();
 
-                Ok(Game::new(game_id, self.db.clone()))
+                Ok(Game::new(game_id, self.db.clone(), self.cfg.clone()))
             })
             .unwrap()
     }
@@ -92,7 +94,7 @@ impl Repository {
             .unwrap()
             .elements
             .iter()
-            .map(|e| Game::new(e.id, self.db.clone()))
+            .map(|e| Game::new(e.id, self.db.clone(), self.cfg.clone()))
             .collect()
     }
 }

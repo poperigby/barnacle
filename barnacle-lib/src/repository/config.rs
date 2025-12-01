@@ -8,7 +8,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     fs::config_dir,
-    repository::entities::{game::Game, mod_::Mod, profile::Profile},
+    repository::{
+        entities::{game::Game, mod_::Mod, profile::Profile},
+        models::{GameModel, ModModel, ProfileModel},
+    },
 };
 
 const CURRENT_CONFIG_VERSION: u16 = 1;
@@ -53,22 +56,22 @@ impl CoreConfig {
     }
 
     /// Path to a specific [`Game`]'s directory
-    pub fn game_dir(&self, game: &Game) -> PathBuf {
-        self.library_dir().join(game.name().to_snake_case())
+    pub(crate) fn game_dir(&self, game_name: &str) -> PathBuf {
+        self.library_dir().join(game_name.to_snake_case())
     }
 
     /// Path to a specific [`Profile`]'s directory
-    pub fn profile_dir(&self, game: &Game, profile: &Profile) -> PathBuf {
-        self.game_dir(game)
+    pub(crate) fn profile_dir(&self, game_name: &str, profile_name: &str) -> PathBuf {
+        self.game_dir(game_name)
             .join("profiles")
-            .join(profile.name().to_snake_case())
+            .join(profile_name.to_snake_case())
     }
 
     /// Path to a specific [`Mod`]'s directory
-    pub fn mod_dir(&self, game: &Game, mod_: &Mod) -> PathBuf {
-        self.game_dir(game)
+    pub(crate) fn mod_dir(&self, game_name: &str, mod_name: &str) -> PathBuf {
+        self.game_dir(game_name)
             .join("mods")
-            .join(mod_.name().to_snake_case())
+            .join(mod_name.to_snake_case())
     }
 }
 

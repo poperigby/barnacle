@@ -1,8 +1,10 @@
 use std::path::PathBuf;
 
 use agdb::{DbId, QueryBuilder, QueryId};
+use heck::ToSnakeCase;
 
 use crate::repository::{
+    CoreConfigHandle,
     db::{DbHandle, get_field},
     entities::profile::Profile,
     models::{DeployKind, ProfileModel},
@@ -15,11 +17,12 @@ use crate::repository::{
 pub struct Game {
     id: DbId,
     db: DbHandle,
+    cfg: CoreConfigHandle,
 }
 
 impl Game {
-    pub fn new(id: DbId, db: DbHandle) -> Self {
-        Self { id, db }
+    pub fn new(id: DbId, db: DbHandle, cfg: CoreConfigHandle) -> Self {
+        Self { id, db, cfg }
     }
 
     pub fn name(&self) -> String {
@@ -38,6 +41,10 @@ impl Game {
         let db = self.db.read();
 
         get_field(&db, "deploy_kind", self.id).unwrap()
+    }
+
+    pub fn dir(&self) -> PathBuf {
+        self.cfg.read().game_dir(&self.name())
     }
 
     pub fn add_profile(&mut self, name: &str) -> Profile {
