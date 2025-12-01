@@ -43,3 +43,17 @@ where
         .try_into()
         .map_err(|_| Error::Conversion(field.into()))
 }
+
+pub(crate) fn set_field<T>(db: &mut DbHandle, id: DbId, field: &str, value: T) -> Result<()>
+where
+    T: Into<DbValue>,
+{
+    db.write().exec_mut(
+        QueryBuilder::insert()
+            .values([[(field, value).into()]])
+            .ids(id)
+            .query(),
+    )?;
+
+    Ok(())
+}

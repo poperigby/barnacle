@@ -5,7 +5,7 @@ use agdb::{DbId, QueryBuilder, QueryId};
 use crate::repository::{
     CoreConfigHandle,
     db::DbHandle,
-    entities::{Error, Result, get_field, mod_::Mod, profile::Profile},
+    entities::{Error, Result, get_field, mod_::Mod, profile::Profile, set_field},
     models::{DeployKind, ProfileModel},
 };
 
@@ -29,9 +29,9 @@ impl Game {
         get_field(&self.db, self.id, "name")
     }
 
-    // pub fn set_name(&self, new_name: &str) {
-    //     set_field(&self.db, self.id, "name", &new_name).unwrap()
-    // }
+    pub fn set_name(&mut self, new_name: &str) -> Result<()> {
+        set_field(&mut self.db, self.id, "name", new_name)
+    }
 
     pub fn targets(&self) -> Result<Vec<PathBuf>> {
         get_field(&self.db, self.id, "targets")
@@ -39,6 +39,10 @@ impl Game {
 
     pub fn deploy_kind(&self) -> Result<DeployKind> {
         get_field(&self.db, self.id, "deploy_kind")
+    }
+
+    pub fn set_deploy_kind(&mut self, new_deploy_kind: DeployKind) -> Result<()> {
+        set_field(&mut self.db, self.id, "deploy_kind", new_deploy_kind)
     }
 
     pub fn dir(&self) -> Result<PathBuf> {
