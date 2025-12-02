@@ -5,19 +5,19 @@ use parking_lot::RwLock;
 use crate::{
     Result,
     repository::{
-        config::CoreConfig,
+        config::{CoreConfig, CoreConfigHandle},
         db::DbHandle,
-        entities::game::Game,
         models::{DeployKind, GameModel},
     },
 };
 
-pub mod config;
-pub mod db;
-pub mod entities;
+mod db;
 mod models;
 
-pub type CoreConfigHandle = Arc<RwLock<CoreConfig>>;
+pub mod config;
+pub mod entities;
+
+pub use entities::{Game, Mod, ModEntry, Profile, Tool};
 
 /// Central access point for all persistent data.
 ///

@@ -10,7 +10,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Deref)]
-pub struct DbHandle {
+pub(crate) struct DbHandle {
     #[deref]
     db: Arc<RwLock<DbAny>>,
 }

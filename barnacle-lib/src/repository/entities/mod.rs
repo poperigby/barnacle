@@ -9,11 +9,17 @@ use thiserror::Error;
 
 use crate::repository::db::DbHandle;
 
-pub mod game;
-pub mod mod_;
-pub mod mod_entry;
-pub mod profile;
-pub mod tool;
+mod game;
+mod mod_;
+mod mod_entry;
+mod profile;
+mod tool;
+
+pub use game::Game;
+pub use mod_::Mod;
+pub use mod_entry::ModEntry;
+pub use profile::Profile;
+pub use tool::Tool;
 
 pub type Result<T> = std::result::Result<T, Error>;
 

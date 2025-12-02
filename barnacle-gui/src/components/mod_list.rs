@@ -1,5 +1,5 @@
 use barnacle_gui::Component;
-use barnacle_lib::{ProfileMod, Repository};
+use barnacle_lib::{Repository, repository::entities::ModEntry};
 use iced::{
     Element, Length, Task,
     widget::{column, scrollable, table, text},
@@ -13,7 +13,7 @@ pub struct ModRow {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    Loaded(Vec<ProfileMod>),
+    Loaded(Vec<ModEntry>),
 }
 
 pub enum State {
@@ -35,7 +35,7 @@ impl Component for ModList {
             {
                 let mut repo = repo.clone();
                 async move {
-                    if repo.games().await.unwrap().is_empty() {
+                    if repo.games().unwrap().is_empty() {
                         let game_id = repo
                             .add_game("Skyrim", barnacle_lib::DeployKind::CreationEngine)
                             .await

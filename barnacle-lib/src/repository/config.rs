@@ -1,14 +1,18 @@
 use std::{
     fs,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
+use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 
 use crate::fs::config_dir;
 
 const CURRENT_CONFIG_VERSION: u16 = 1;
 const FILE_NAME: &str = "core.toml";
+
+pub(crate) type CoreConfigHandle = Arc<RwLock<CoreConfig>>;
 
 /// The backend's core configuration, serialized to TOML.
 #[derive(Debug, Clone, Serialize, Deserialize)]
