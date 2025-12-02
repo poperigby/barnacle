@@ -6,8 +6,8 @@ use iced::{
     Task, Theme, application,
     widget::{button, column, row, space, text},
 };
-use std::sync::Arc;
-use tokio::sync::RwLock;
+use tracing::{Level, info};
+use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 use crate::components::{
     library_manager::{self, LibraryManager},
@@ -33,8 +33,6 @@ enum Message {
 
 struct App {
     title: String,
-    repo: Repository,
-    cfg: Arc<RwLock<GuiConfig>>,
     theme: Theme,
     // Components
     mod_list: ModList,
@@ -44,6 +42,17 @@ struct App {
 
 impl App {
     fn new() -> (Self, Task<Message>) {
+        // Human friendly panicking in release mode
+        human_panic::setup_panic!();
+
+        // Logging
+        let subscriber = FmtSubscriber::builder()
+            .with_max_level(Level::TRACE)
+            .with_env_filter(EnvFilter::from_default_env())
+            .finish();
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("setting default subscriber failed");
+
         let repo = Repository::new().unwrap();
         let cfg = GuiConfig::load();
         let theme = cfg.theme();
@@ -54,8 +63,6 @@ impl App {
         (
             Self {
                 title: "Barnacle".into(),
-                repo: repo.clone(),
-                cfg: Arc::new(RwLock::new(cfg)),
                 theme,
                 mod_list,
                 library_manager,

@@ -6,6 +6,7 @@ use std::{
 use agdb::{DbId, QueryBuilder, QueryId};
 use compress_tools::{Ownership, uncompress_archive};
 use heck::ToSnakeCase;
+use tracing::debug;
 
 use crate::{
     fs::{Permissions, change_dir_permissions},
@@ -97,6 +98,8 @@ impl Game {
             .unwrap();
 
         create_dir_all(game.dir().unwrap()).unwrap();
+
+        debug!("Created new game: {}", game.name()?);
 
         Ok(game)
     }
