@@ -1,5 +1,5 @@
 use barnacle_gui::{Component, icons::icon};
-use barnacle_lib::{Game, GameId, Repository};
+use barnacle_lib::{Repository, repository::Game};
 use iced::{
     Element, Length, Task,
     widget::{Column, button, column, container, row, scrollable, space, text},
@@ -24,7 +24,7 @@ pub enum Message {
     HideNewDialog,
     ShowEditDialog(Game),
     HideEditDialog,
-    DeleteButtonPressed(GameId),
+    DeleteButtonPressed(Game),
     // Child messages
     NewDialog(new_dialog::Message),
     EditDialog(edit_dialog::Message),
@@ -84,7 +84,7 @@ impl Component for Tab {
                 Task::none()
             }
             Message::ShowEditDialog(game) => {
-                self.edit_dialog.load(&game);
+                self.edit_dialog.load(game);
                 self.show_edit_dialog = true;
                 Task::none()
             }
@@ -92,13 +92,10 @@ impl Component for Tab {
                 self.show_edit_dialog = false;
                 Task::none()
             }
-            Message::DeleteButtonPressed(id) => Task::perform(
+            Message::DeleteButtonPressed(game) => Task::perform(
                 {
-                    let mut repo = self.repo.clone();
-                    async move {
-                        repo.delete_game(id).await.unwrap();
-                        id
-                    }
+                    let repo = self.repo.clone();
+                    async move { repo.remove_game(game).unwrap() }
                 },
                 |_| Message::GameDeleted,
             ),
@@ -126,7 +123,7 @@ impl Component for Tab {
             State::Loading => column![text("Loading...")].into(),
             State::Error(e) => column![text("ERROR!")].into(),
             State::Loaded(games) => {
-                let children = games.iter().map(|g| game_row(g));
+                let children = games.iter().map(|g| game_row(g.clone()));
 
                 let content = column![
                     row![button("New").on_press(Message::ShowNewDialog)],
@@ -158,19 +155,19 @@ fn update_games_list(repo: &Repository) -> Task<Message> {
     Task::perform(
         {
             let repo = repo.clone();
-            async move { repo.games().await.unwrap() }
+            async move { repo.games().unwrap() }
         },
         Message::Loaded,
     )
 }
 
-fn game_row(game: &'_ Game) -> Element<'_, Message> {
+fn game_row(game: Game) -> Element<'static, Message> {
     container(
         row![
-            text(game.name()),
+            text(game.name().unwrap()),
             space::horizontal(),
             button(icon("edit")).on_press(Message::ShowEditDialog(game.clone())),
-            button(icon("delete")).on_press(Message::DeleteButtonPressed(game.id().unwrap()))
+            button(icon("delete")).on_press(Message::DeleteButtonPressed(game.clone()))
         ]
         .padding(12),
     )

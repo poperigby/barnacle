@@ -1,5 +1,5 @@
 use barnacle_gui::Component;
-use barnacle_lib::{DeployKind, GameId, Repository};
+use barnacle_lib::{Repository, repository::DeployKind};
 use iced::{
     Element, Task,
     widget::{button, column, combo_box, container, row, space, text, text_input},
@@ -49,7 +49,7 @@ impl Component for NewDialog {
             }
             Message::CancelPressed => Task::none(),
             Message::CreatePressed => {
-                let mut repo = self.repo.clone();
+                let repo = self.repo.clone();
                 let name = self.name.clone();
                 let deploy_kind = self.deploy_kind.unwrap();
 
@@ -59,7 +59,7 @@ impl Component for NewDialog {
 
                 Task::perform(
                     async move {
-                        repo.add_game(&name, deploy_kind).await.unwrap();
+                        repo.add_game(&name, deploy_kind).unwrap();
                     },
                     |_| Message::GameCreated,
                 )

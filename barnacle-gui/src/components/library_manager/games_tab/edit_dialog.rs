@@ -1,5 +1,8 @@
 use barnacle_gui::Component;
-use barnacle_lib::{DeployKind, Game, Repository};
+use barnacle_lib::{
+    Repository,
+    repository::{DeployKind, Game},
+};
 use iced::{
     Element, Task,
     widget::{button, column, combo_box, container, row, space, text, text_input},
@@ -23,9 +26,9 @@ pub struct EditDialog {
 
 impl EditDialog {
     /// Load a new [`Game`] for editing.
-    pub fn load(&mut self, game: &Game) {
-        self.name = game.name().into();
-        self.deploy_kind = Some(game.deploy_kind());
+    pub fn load(&mut self, game: Game) {
+        self.name = game.name().unwrap().into();
+        self.deploy_kind = Some(game.deploy_kind().unwrap());
     }
 }
 
@@ -55,7 +58,7 @@ impl Component for EditDialog {
                 Task::none()
             }
             Message::ConfirmPressed => {
-                let mut repo = self.repo.clone();
+                let repo = self.repo.clone();
                 let name = self.name.clone();
                 let deploy_kind = self.deploy_kind.unwrap();
 
@@ -65,7 +68,7 @@ impl Component for EditDialog {
 
                 Task::perform(
                     async move {
-                        repo.add_game(&name, deploy_kind).await.unwrap();
+                        repo.add_game(&name, deploy_kind).unwrap();
                     },
                     |_| Message::GameEdited,
                 )
