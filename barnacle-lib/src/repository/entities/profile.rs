@@ -76,7 +76,7 @@ impl Profile {
             )?
             .elements
             .first()
-            .ok_or(Error::EmptyElements)?
+            .ok_or(Error::EmptyQueryElements)?
             .id;
 
         Ok(Profile::from_id(id, db.clone(), cfg.clone()))
@@ -97,7 +97,7 @@ impl Profile {
             )?
             .elements
             .pop()
-            .ok_or(Error::EmptyElements)?
+            .ok_or(Error::EmptyQueryElements)?
             .id;
 
         Ok(Game::from_id(
@@ -119,7 +119,7 @@ impl Profile {
                 .exec_mut(QueryBuilder::insert().element(&mod_entry).query())?
                 .elements
                 .first()
-                .ok_or(Error::EmptyElements)?
+                .ok_or(Error::EmptyQueryElements)?
                 .id;
 
             match maybe_last_entry_id {

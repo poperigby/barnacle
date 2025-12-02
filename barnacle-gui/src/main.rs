@@ -6,7 +6,7 @@ use iced::{
     Task, Theme, application,
     widget::{button, column, row, space, text},
 };
-use tracing::{Level, info};
+use tracing::Level;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 use crate::components::{

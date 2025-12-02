@@ -161,7 +161,7 @@ fn update_games_list(repo: &Repository) -> Task<Message> {
     )
 }
 
-fn game_row(game: Game) -> Element<'static, Message> {
+fn game_row<'a>(game: Game) -> Element<'a, Message> {
     container(
         row![
             text(game.name().unwrap()),

@@ -49,7 +49,7 @@ impl Mod {
             )?
             .elements
             .pop()
-            .ok_or(Error::EmptyElements)?
+            .ok_or(Error::EmptyQueryElements)?
             .id;
 
         Ok(Game::from_id(

@@ -28,9 +28,9 @@ pub enum Error {
     #[error("Failed to convert {0}")]
     Conversion(String),
     #[error("Successful result elements cannot be empty")]
-    EmptyElements,
+    EmptyQueryElements,
     #[error("Successful result values cannot be empty")]
-    EmptyValues,
+    EmptyQueryValues,
     #[error("Internal database error {0}")]
     Internal(#[from] agdb::DbError),
 }
@@ -43,10 +43,10 @@ where
         .exec(QueryBuilder::select().values(field).ids(id).query())?
         .elements
         .pop()
-        .ok_or(Error::EmptyElements)?
+        .ok_or(Error::EmptyQueryElements)?
         .values
         .pop()
-        .ok_or(Error::EmptyValues)?
+        .ok_or(Error::EmptyQueryValues)?
         .value
         .try_into()
         .map_err(|_| Error::Conversion(field.into()))

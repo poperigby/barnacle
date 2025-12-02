@@ -35,7 +35,9 @@ impl Component for ModList {
             {
                 let repo = repo.clone();
                 async move {
+                    println!("BEFORE");
                     if repo.games().unwrap().is_empty() {
+                        println!("DOOING");
                         let mut game = repo
                             .add_game(
                                 "Skyrim",
@@ -43,12 +45,16 @@ impl Component for ModList {
                             )
                             .unwrap();
                         let mut profile = game.add_profile("Test").unwrap();
+                        dbg!(&profile);
+
+                        dbg!(repo.games().unwrap());
 
                         repo.set_current_profile(&profile).unwrap();
 
                         let mod_ = game.add_mod("Test", None).unwrap();
                         profile.add_mod_entry(mod_).unwrap();
                     }
+                    println!("AFTER");
 
                     let current_profile = repo.clone().current_profile().unwrap();
                     current_profile.mod_entries().unwrap()

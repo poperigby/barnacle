@@ -104,7 +104,7 @@ impl Game {
         Ok(game)
     }
 
-    pub(crate) fn remove(&self) -> Result<()> {
+    pub(crate) fn remove(self) -> Result<()> {
         let name = self.name()?;
         let dir = self.dir()?;
 
@@ -156,7 +156,7 @@ impl Game {
                 .exec_mut(QueryBuilder::insert().element(model).query())?
                 .elements
                 .first()
-                .ok_or(Error::EmptyElements)?
+                .ok_or(Error::EmptyQueryElements)?
                 .id;
 
             // Link Profile to the specified Game node and root "profiles" node
@@ -216,7 +216,7 @@ impl Game {
                 .exec_mut(QueryBuilder::insert().element(new_mod).query())?
                 .elements
                 .first()
-                .ok_or(Error::EmptyElements)?
+                .ok_or(Error::EmptyQueryElements)?
                 .id;
 
             // Link Profile to the specified Game node and root "profiles" node
