@@ -33,6 +33,8 @@ pub(crate) use mods::*;
 pub(crate) use profiles::*;
 pub(crate) use tools::*;
 
+pub use games::DeployKind;
+
 use agdb::{DbId, DbType};
 
 /// Represents the current version of the database models used by Barnacle.
