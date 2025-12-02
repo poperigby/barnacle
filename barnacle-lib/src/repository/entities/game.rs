@@ -1,5 +1,5 @@
 use std::{
-    fs::File,
+    fs::{File, create_dir_all, remove_dir_all},
     path::{Path, PathBuf},
 };
 
@@ -13,7 +13,7 @@ use crate::{
         CoreConfigHandle,
         db::DbHandle,
         entities::{Error, Result, get_field, mod_::Mod, profile::Profile, set_field},
-        models::{DeployKind, ModModel, ProfileModel},
+        models::{DeployKind, GameModel, ModModel, ProfileModel},
     },
 };
 
@@ -33,6 +33,83 @@ impl Game {
         Self { id, db, cfg }
     }
 
+    /// Insert a new [`Game`] into the database. The [`Game`] must have a unique name.
+    pub(crate) fn add(
+        db: DbHandle,
+        cfg: CoreConfigHandle,
+        name: &str,
+        deploy_kind: DeployKind,
+    ) -> Result<Self> {
+        let model = GameModel::new(name, deploy_kind);
+
+        if Game::list(db.clone(), cfg.clone())?
+            .iter()
+            .any(|g| g.name().unwrap() == model.name)
+        {
+            // return Err(Error::UniqueViolation(UniqueConstraint::GameName));
+            panic!("UniqueViolation");
+        }
+
+        let game = db
+            .write()
+            .transaction_mut(|t| -> std::result::Result<Game, agdb::DbError> {
+                let game_id = t
+                    .exec_mut(QueryBuilder::insert().element(model).query())
+                    .unwrap()
+                    .elements
+                    .first()
+                    .unwrap()
+                    .id;
+
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .edges()
+                        .from("games")
+                        .to(game_id)
+                        .query(),
+                )
+                .unwrap();
+
+                Ok(Game::from_id(game_id, db.clone(), cfg.clone()))
+            })
+            .unwrap();
+
+        create_dir_all(game.dir().unwrap()).unwrap();
+
+        Ok(game)
+    }
+
+    pub(crate) fn remove(&self) -> Result<()> {
+        self.db
+            .write()
+            .exec_mut(QueryBuilder::remove().ids(self.id).query())?;
+
+        remove_dir_all(self.dir()?).unwrap();
+
+        Ok(())
+    }
+
+    pub(crate) fn list(db: DbHandle, cfg: CoreConfigHandle) -> Result<Vec<Game>> {
+        Ok(db
+            .read()
+            .exec(
+                QueryBuilder::select()
+                    .elements::<GameModel>()
+                    .search()
+                    .from("games")
+                    .where_()
+                    .node()
+                    .and()
+                    .neighbor()
+                    .query(),
+            )?
+            .elements
+            .iter()
+            .map(|e| Game::from_id(e.id, db.clone(), cfg.clone()))
+            .collect())
+    }
+
+    // TODO: Perform unique violation checking
     pub fn name(&self) -> Result<String> {
         get_field(&self.db, self.id, "name")
     }
@@ -62,20 +139,20 @@ impl Game {
     }
 
     pub fn add_profile(&mut self, name: &str) -> Result<Profile> {
-        let new_profile = ProfileModel::new(name);
+        let model = ProfileModel::new(name);
 
         if self
             .profiles()?
             .iter()
-            .any(|p: &Profile| p.name().unwrap() == new_profile.name)
+            .any(|p: &Profile| p.name().unwrap() == model.name)
         {
             // return Err(Error::UniqueViolation(UniqueConstraint::ProfileName));
             panic!("Unique violation")
         }
 
-        self.db.write().transaction_mut(|t| -> Result<Profile> {
+        let profile = self.db.write().transaction_mut(|t| -> Result<Profile> {
             let profile_id = t
-                .exec_mut(QueryBuilder::insert().element(new_profile).query())?
+                .exec_mut(QueryBuilder::insert().element(model).query())?
                 .elements
                 .first()
                 .ok_or(Error::EmptyElements)?
@@ -95,7 +172,11 @@ impl Game {
                 self.db.clone(),
                 self.cfg.clone(),
             ))
-        })
+        })?;
+
+        create_dir_all(profile.dir()?).unwrap();
+
+        Ok(profile)
     }
 
     pub fn profiles(&self) -> Result<Vec<Profile>> {
