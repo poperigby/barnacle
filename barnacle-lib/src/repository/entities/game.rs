@@ -105,11 +105,16 @@ impl Game {
     }
 
     pub(crate) fn remove(&self) -> Result<()> {
+        let name = self.name()?;
+        let dir = self.dir()?;
+
         self.db
             .write()
             .exec_mut(QueryBuilder::remove().ids(self.id).query())?;
 
-        remove_dir_all(self.dir()?).unwrap();
+        remove_dir_all(dir).unwrap();
+
+        debug!("Removed game: {name}");
 
         Ok(())
     }
@@ -240,6 +245,7 @@ mod test {
 
     #[test]
     fn test_add_game() {
+        // TODO: Make test repo
         let db = DbHandle::new_memory();
         let cfg = Arc::new(RwLock::new(CoreConfig::default()));
 
@@ -264,5 +270,20 @@ mod test {
             games.last().unwrap().deploy_kind().unwrap(),
             DeployKind::CreationEngine
         );
+    }
+
+    #[test]
+    fn test_add_profile() {
+        let db = DbHandle::new_memory();
+        let cfg = Arc::new(RwLock::new(CoreConfig::default()));
+
+        let mut game = Game::add(
+            db.clone(),
+            cfg.clone(),
+            GameModel::new("Morrowind", DeployKind::OpenMW),
+        )
+        .unwrap();
+
+        game.add_profile("Test").unwrap();
     }
 }

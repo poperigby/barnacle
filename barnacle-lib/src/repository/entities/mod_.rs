@@ -45,8 +45,6 @@ impl Mod {
                     .search()
                     .from("games")
                     .to(self.id)
-                    .where_()
-                    .neighbor()
                     .query(),
             )?
             .elements
