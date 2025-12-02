@@ -115,6 +115,10 @@ impl Component for Tab {
                 _ => self.new_dialog.update(msg).map(Message::NewDialog),
             },
             Message::EditDialog(msg) => match msg {
+                edit_dialog::Message::CancelPressed => {
+                    self.show_edit_dialog = false;
+                    Task::none()
+                }
                 edit_dialog::Message::GameEdited => {
                     self.show_edit_dialog = false;
                     Task::none()

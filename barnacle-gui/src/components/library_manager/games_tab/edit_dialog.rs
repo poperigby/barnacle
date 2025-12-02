@@ -9,6 +9,7 @@ use strum::IntoEnumIterator;
 pub enum Message {
     NameInput(String),
     DeployKindSelected(DeployKind),
+    CancelPressed,
     ConfirmPressed,
     GameEdited,
 }
@@ -53,6 +54,7 @@ impl EditDialog {
                 self.deploy_kind = Some(kind);
                 Task::none()
             }
+            Message::CancelPressed => Task::none(),
             Message::ConfirmPressed => {
                 let mut game = self.game.clone();
 
@@ -96,6 +98,7 @@ impl EditDialog {
             space::vertical(),
             row![
                 space::horizontal(),
+                button("Cancel").on_press(Message::CancelPressed),
                 button("Confirm").on_press(Message::ConfirmPressed),
             ],
         ])
