@@ -63,14 +63,7 @@ impl Game {
     }
 
     /// Insert a new [`Game`] into the database. The [`Game`] must have a unique name.
-    pub(crate) fn add(
-        db: DbHandle,
-        cfg: CoreConfigHandle,
-        name: &str,
-        deploy_kind: DeployKind,
-    ) -> Result<Self> {
-        let model = GameModel::new(name, deploy_kind);
-
+    pub(crate) fn add(db: DbHandle, cfg: CoreConfigHandle, model: GameModel) -> Result<Self> {
         if Game::list(db.clone(), cfg.clone())?
             .iter()
             .any(|g| g.name().unwrap() == model.name)
@@ -243,21 +236,30 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_add() {
+    fn test_add_game() {
         let db = DbHandle::new_memory();
         let cfg = Arc::new(RwLock::new(CoreConfig::default()));
 
         Game::add(
             db.clone(),
             cfg.clone(),
-            "Skyrim",
-            DeployKind::CreationEngine,
+            GameModel::new("Skyrim", DeployKind::CreationEngine),
         )
         .unwrap();
-        Game::add(db.clone(), cfg.clone(), "Morrowind", DeployKind::OpenMW).unwrap();
+        Game::add(
+            db.clone(),
+            cfg.clone(),
+            GameModel::new("Morrowind", DeployKind::OpenMW),
+        )
+        .unwrap();
 
         let games = Game::list(db, cfg).unwrap();
 
         assert_eq!(games.len(), 2);
+        assert_eq!(games.first().unwrap().name().unwrap(), "Morrowind");
+        assert_eq!(
+            games.last().unwrap().deploy_kind().unwrap(),
+            DeployKind::CreationEngine
+        );
     }
 }

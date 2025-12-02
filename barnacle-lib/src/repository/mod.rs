@@ -4,7 +4,12 @@ use parking_lot::RwLock;
 
 use crate::{
     Result,
-    repository::{config::CoreConfig, db::DbHandle, entities::game::Game, models::DeployKind},
+    repository::{
+        config::CoreConfig,
+        db::DbHandle,
+        entities::game::Game,
+        models::{DeployKind, GameModel},
+    },
 };
 
 pub mod config;
@@ -34,12 +39,8 @@ impl Repository {
     }
 
     pub fn add_game(&self, name: &str, deploy_kind: DeployKind) -> Result<Game> {
-        Ok(Game::add(
-            self.db.clone(),
-            self.cfg.clone(),
-            name,
-            deploy_kind,
-        )?)
+        let model = GameModel::new(name, deploy_kind);
+        Ok(Game::add(self.db.clone(), self.cfg.clone(), model)?)
     }
 
     pub fn remove_game(&self, target: Game) -> Result<()> {
