@@ -8,7 +8,7 @@ use crate::{
     repository::{
         config::CoreConfig,
         db::DbHandle,
-        entities::{game::Game, profile::Profile},
+        entities::game::Game,
         models::{DeployKind, GameModel},
     },
 };

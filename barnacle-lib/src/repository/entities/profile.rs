@@ -1,11 +1,12 @@
 use std::path::PathBuf;
 
 use agdb::{CountComparison, DbId, QueryBuilder};
+use heck::ToSnakeCase;
 
 use crate::repository::{
     CoreConfigHandle,
     db::DbHandle,
-    entities::{Error, Result, get_field, mod_::Mod, mod_entry::ModEntry},
+    entities::{Error, Result, game::Game, get_field, mod_::Mod, mod_entry::ModEntry},
     models::{GameModel, ModEntryModel, ModModel},
 };
 
@@ -25,39 +26,46 @@ impl Profile {
         Self { id, db, cfg }
     }
 
+    // Fields
+
     pub fn name(&self) -> Result<String> {
         get_field(&self.db, self.id, "name")
     }
 
+    // Utility
+
     pub fn dir(&self) -> Result<PathBuf> {
-        let parent_game_name: String = self
+        Ok(self.parent()?.dir()?.join(self.name()?.to_snake_case()))
+    }
+
+    /// Returns the parent [`Game`] of this [`Profile`]
+    pub fn parent(&self) -> Result<Game> {
+        let parent_game_id = self
             .db
             .read()
             .exec(
                 QueryBuilder::select()
-                    .values([["name"]])
+                    .elements::<GameModel>()
                     .search()
                     .from("games")
                     .to(self.id)
                     .where_()
-                    .element::<GameModel>()
+                    .neighbor()
                     .query(),
             )?
             .elements
             .pop()
             .ok_or(Error::EmptyElements)?
-            .values
-            .pop()
-            .ok_or(Error::EmptyValues)?
-            .value
-            .try_into()
-            .map_err(|_| Error::Conversion("name".into()))?;
+            .id;
 
-        Ok(self
-            .cfg
-            .read()
-            .profile_dir(&parent_game_name, &self.name()?))
+        Ok(Game::from_id(
+            parent_game_id,
+            self.db.clone(),
+            self.cfg.clone(),
+        ))
     }
+
+    // Operations
 
     /// Add a new [`ModEntry`] to a [`Profile`] that points to the [`Mod`] given by ID.
     pub fn add_mod_entry(&mut self, mod_: Mod) -> Result<()> {

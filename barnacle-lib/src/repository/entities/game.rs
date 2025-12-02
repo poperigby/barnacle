@@ -1,12 +1,20 @@
-use std::path::PathBuf;
+use std::{
+    fs::File,
+    path::{Path, PathBuf},
+};
 
 use agdb::{DbId, QueryBuilder, QueryId};
+use compress_tools::{Ownership, uncompress_archive};
+use heck::ToSnakeCase;
 
-use crate::repository::{
-    CoreConfigHandle,
-    db::DbHandle,
-    entities::{Error, Result, get_field, mod_::Mod, profile::Profile, set_field},
-    models::{DeployKind, ProfileModel},
+use crate::{
+    fs::{Permissions, change_dir_permissions},
+    repository::{
+        CoreConfigHandle,
+        db::DbHandle,
+        entities::{Error, Result, get_field, mod_::Mod, profile::Profile, set_field},
+        models::{DeployKind, ModModel, ProfileModel},
+    },
 };
 
 /// Represents a game entity in the Barnacle system.
@@ -46,7 +54,11 @@ impl Game {
     }
 
     pub fn dir(&self) -> Result<PathBuf> {
-        Ok(self.cfg.read().game_dir(&self.name()?))
+        Ok(self
+            .cfg
+            .read()
+            .library_dir()
+            .join(self.name()?.to_snake_case()))
     }
 
     pub fn add_profile(&mut self, name: &str) -> Result<Profile> {
@@ -61,7 +73,7 @@ impl Game {
             panic!("Unique violation")
         }
 
-        Ok(self.db.write().transaction_mut(|t| -> Result<Profile> {
+        self.db.write().transaction_mut(|t| -> Result<Profile> {
             let profile_id = t
                 .exec_mut(QueryBuilder::insert().element(new_profile).query())?
                 .elements
@@ -83,7 +95,7 @@ impl Game {
                 self.db.clone(),
                 self.cfg.clone(),
             ))
-        })?)
+        })
     }
 
     pub fn profiles(&self) -> Result<Vec<Profile>> {
@@ -96,8 +108,8 @@ impl Game {
                     .search()
                     .from(self.id)
                     .where_()
-                    .node()
-                    .and()
+                    // .node()
+                    // .and()
                     .neighbor()
                     .query(),
             )?
@@ -107,13 +119,34 @@ impl Game {
             .collect())
     }
 
-    pub fn add_mod(&mut self, name: &str) -> Result<Mod> {
-        todo!()
-        // // TODO: Only attempt to open the archive if the input_path is an archive
-        // if let Some(path) = input_path {
-        //     let archive = File::open(path)?;
-        //     uncompress_archive(archive, &dir, Ownership::Preserve)?;
-        //     change_dir_permissions(&dir, Permissions::ReadOnly);
-        // }
+    pub fn add_mod(&mut self, name: &str, path: Option<&Path>) -> Result<Mod> {
+        let new_mod = ModModel::new(name);
+
+        // TODO: Only attempt to open the archive if the input_path is an archive
+        if let Some(path) = path {
+            let archive = File::open(path).unwrap();
+            uncompress_archive(archive, &self.dir()?, Ownership::Preserve).unwrap();
+            change_dir_permissions(&self.dir()?, Permissions::ReadOnly);
+        }
+
+        self.db.write().transaction_mut(|t| -> Result<Mod> {
+            let mod_id = t
+                .exec_mut(QueryBuilder::insert().element(new_mod).query())?
+                .elements
+                .first()
+                .ok_or(Error::EmptyElements)?
+                .id;
+
+            // Link Profile to the specified Game node and root "profiles" node
+            t.exec_mut(
+                QueryBuilder::insert()
+                    .edges()
+                    .from([QueryId::from("profiles"), QueryId::from(self.id)])
+                    .to(mod_id)
+                    .query(),
+            )?;
+
+            Ok(Mod::from_id(mod_id, self.db.clone(), self.cfg.clone()))
+        })
     }
 }

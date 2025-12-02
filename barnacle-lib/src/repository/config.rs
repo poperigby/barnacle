@@ -3,16 +3,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use heck::ToSnakeCase;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    fs::config_dir,
-    repository::{
-        entities::{game::Game, mod_::Mod, profile::Profile},
-        models::{GameModel, ModModel, ProfileModel},
-    },
-};
+use crate::fs::config_dir;
 
 const CURRENT_CONFIG_VERSION: u16 = 1;
 const FILE_NAME: &str = "core.toml";
@@ -53,25 +46,6 @@ impl CoreConfig {
     pub fn library_dir(&self) -> &Path {
         fs::create_dir_all(&self.library_dir).unwrap();
         &self.library_dir
-    }
-
-    /// Path to a specific [`Game`]'s directory
-    pub(crate) fn game_dir(&self, game_name: &str) -> PathBuf {
-        self.library_dir().join(game_name.to_snake_case())
-    }
-
-    /// Path to a specific [`Profile`]'s directory
-    pub(crate) fn profile_dir(&self, game_name: &str, profile_name: &str) -> PathBuf {
-        self.game_dir(game_name)
-            .join("profiles")
-            .join(profile_name.to_snake_case())
-    }
-
-    /// Path to a specific [`Mod`]'s directory
-    pub(crate) fn mod_dir(&self, game_name: &str, mod_name: &str) -> PathBuf {
-        self.game_dir(game_name)
-            .join("mods")
-            .join(mod_name.to_snake_case())
     }
 }
 
