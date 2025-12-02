@@ -53,4 +53,12 @@ impl Repository {
     pub fn games(&self) -> Result<Vec<Game>> {
         Ok(Game::list(self.db.clone(), self.cfg.clone())?)
     }
+
+    pub fn set_current_profile(&self, profile: &Profile) -> Result<()> {
+        Ok(Profile::set_current(self.db.clone(), profile)?)
+    }
+
+    pub fn current_profile(&self) -> Result<Profile> {
+        Ok(Profile::current(self.db.clone(), self.cfg.clone())?)
+    }
 }

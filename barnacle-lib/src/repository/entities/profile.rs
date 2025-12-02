@@ -7,7 +7,7 @@ use crate::repository::{
     CoreConfigHandle,
     db::DbHandle,
     entities::{Error, Result, game::Game, get_field, mod_::Mod, mod_entry::ModEntry},
-    models::{GameModel, ModEntryModel, ModModel},
+    models::{GameModel, ModEntryModel, ModModel, ProfileModel},
 };
 
 /// Represents a profile entity in the Barnacle system.
@@ -36,6 +36,50 @@ impl Profile {
 
     pub fn dir(&self) -> Result<PathBuf> {
         Ok(self.parent()?.dir()?.join(self.name()?.to_snake_case()))
+    }
+
+    pub(crate) fn set_current(db: DbHandle, profile: &Profile) -> Result<()> {
+        db.write().transaction_mut(|t| {
+            // Delete existing current_profile, if it exists
+            t.exec_mut(
+                QueryBuilder::remove()
+                    .search()
+                    .from("current_profile")
+                    .where_()
+                    .edge()
+                    .query(),
+            )?;
+            // Insert a new edge from current_profile to new profile_id
+            t.exec_mut(
+                QueryBuilder::insert()
+                    .edges()
+                    .from("current_profile")
+                    .to(profile.id)
+                    .query(),
+            )?;
+
+            Ok(())
+        })
+    }
+
+    pub(crate) fn current(db: DbHandle, cfg: CoreConfigHandle) -> Result<Profile> {
+        let id = db
+            .read()
+            .exec(
+                QueryBuilder::select()
+                    .elements::<ProfileModel>()
+                    .search()
+                    .from("current_profile")
+                    .where_()
+                    .neighbor()
+                    .query(),
+            )?
+            .elements
+            .first()
+            .ok_or(Error::EmptyElements)?
+            .id;
+
+        Ok(Profile::from_id(id, db.clone(), cfg.clone()))
     }
 
     /// Returns the parent [`Game`] of this [`Profile`]
