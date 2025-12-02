@@ -24,7 +24,7 @@ impl DbHandle {
 
     /// Create a memory backed database for use in tests
     #[allow(dead_code)]
-    fn new_memory() -> Self {
+    pub(crate) fn new_memory() -> Self {
         Self::init(DbAny::new_memory("data.db").unwrap())
     }
 

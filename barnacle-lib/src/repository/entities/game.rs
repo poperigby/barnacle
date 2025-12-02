@@ -33,6 +33,35 @@ impl Game {
         Self { id, db, cfg }
     }
 
+    // TODO: Perform unique violation checking
+    pub fn name(&self) -> Result<String> {
+        get_field(&self.db, self.id, "name")
+    }
+
+    pub fn set_name(&mut self, new_name: &str) -> Result<()> {
+        set_field(&mut self.db, self.id, "name", new_name)
+    }
+
+    pub fn targets(&self) -> Result<Vec<PathBuf>> {
+        get_field(&self.db, self.id, "targets")
+    }
+
+    pub fn deploy_kind(&self) -> Result<DeployKind> {
+        get_field(&self.db, self.id, "deploy_kind")
+    }
+
+    pub fn set_deploy_kind(&mut self, new_deploy_kind: DeployKind) -> Result<()> {
+        set_field(&mut self.db, self.id, "deploy_kind", new_deploy_kind)
+    }
+
+    pub fn dir(&self) -> Result<PathBuf> {
+        Ok(self
+            .cfg
+            .read()
+            .library_dir()
+            .join(self.name()?.to_snake_case()))
+    }
+
     /// Insert a new [`Game`] into the database. The [`Game`] must have a unique name.
     pub(crate) fn add(
         db: DbHandle,
@@ -107,35 +136,6 @@ impl Game {
             .iter()
             .map(|e| Game::from_id(e.id, db.clone(), cfg.clone()))
             .collect())
-    }
-
-    // TODO: Perform unique violation checking
-    pub fn name(&self) -> Result<String> {
-        get_field(&self.db, self.id, "name")
-    }
-
-    pub fn set_name(&mut self, new_name: &str) -> Result<()> {
-        set_field(&mut self.db, self.id, "name", new_name)
-    }
-
-    pub fn targets(&self) -> Result<Vec<PathBuf>> {
-        get_field(&self.db, self.id, "targets")
-    }
-
-    pub fn deploy_kind(&self) -> Result<DeployKind> {
-        get_field(&self.db, self.id, "deploy_kind")
-    }
-
-    pub fn set_deploy_kind(&mut self, new_deploy_kind: DeployKind) -> Result<()> {
-        set_field(&mut self.db, self.id, "deploy_kind", new_deploy_kind)
-    }
-
-    pub fn dir(&self) -> Result<PathBuf> {
-        Ok(self
-            .cfg
-            .read()
-            .library_dir()
-            .join(self.name()?.to_snake_case()))
     }
 
     pub fn add_profile(&mut self, name: &str) -> Result<Profile> {
@@ -229,5 +229,35 @@ impl Game {
 
             Ok(Mod::from_id(mod_id, self.db.clone(), self.cfg.clone()))
         })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::sync::Arc;
+
+    use parking_lot::RwLock;
+
+    use crate::repository::config::CoreConfig;
+
+    use super::*;
+
+    #[test]
+    fn test_add() {
+        let db = DbHandle::new_memory();
+        let cfg = Arc::new(RwLock::new(CoreConfig::default()));
+
+        Game::add(
+            db.clone(),
+            cfg.clone(),
+            "Skyrim",
+            DeployKind::CreationEngine,
+        )
+        .unwrap();
+        Game::add(db.clone(), cfg.clone(), "Morrowind", DeployKind::OpenMW).unwrap();
+
+        let games = Game::list(db, cfg).unwrap();
+
+        assert_eq!(games.len(), 2);
     }
 }

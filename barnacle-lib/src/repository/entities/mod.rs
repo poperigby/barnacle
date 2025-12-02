@@ -19,7 +19,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("Failed to convert field {0}")]
+    #[error("Failed to convert {0}")]
     Conversion(String),
     #[error("Successful result elements cannot be empty")]
     EmptyElements,
