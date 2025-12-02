@@ -40,6 +40,10 @@ impl Game {
     }
 
     pub fn set_name(&mut self, new_name: &str) -> Result<()> {
+        if new_name == self.name()? {
+            return Ok(());
+        }
+
         let old_dir = self.dir()?;
 
         set_field(&mut self.db, self.id, "name", new_name)?;
@@ -59,6 +63,10 @@ impl Game {
     }
 
     pub fn set_deploy_kind(&mut self, new_deploy_kind: DeployKind) -> Result<()> {
+        if new_deploy_kind == self.deploy_kind()? {
+            return Ok(());
+        }
+
         set_field(&mut self.db, self.id, "deploy_kind", new_deploy_kind)
     }
 

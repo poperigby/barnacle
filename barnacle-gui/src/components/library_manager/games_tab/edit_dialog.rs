@@ -1,8 +1,4 @@
-use barnacle_gui::Component;
-use barnacle_lib::{
-    Repository,
-    repository::{DeployKind, Game},
-};
+use barnacle_lib::repository::{DeployKind, Game};
 use iced::{
     Element, Task,
     widget::{button, column, combo_box, container, row, space, text, text_input},
@@ -18,7 +14,7 @@ pub enum Message {
 }
 
 pub struct EditDialog {
-    repo: Repository,
+    game: Option<Game>,
     name: String,
     deploy_kind: Option<DeployKind>,
     deploy_kind_state: combo_box::State<DeployKind>,
@@ -27,18 +23,18 @@ pub struct EditDialog {
 impl EditDialog {
     /// Load a new [`Game`] for editing.
     pub fn load(&mut self, game: Game) {
-        self.name = game.name().unwrap().into();
+        self.game = Some(game.clone());
+
+        self.name = game.name().unwrap();
         self.deploy_kind = Some(game.deploy_kind().unwrap());
     }
 }
 
-impl Component for EditDialog {
-    type Message = Message;
-
-    fn new(repo: Repository) -> (Self, Task<Self::Message>) {
+impl EditDialog {
+    pub fn new() -> (Self, Task<Message>) {
         (
             Self {
-                repo,
+                game: None,
                 name: "".into(),
                 deploy_kind: None,
                 deploy_kind_state: combo_box::State::new(DeployKind::iter().collect()),
@@ -47,7 +43,7 @@ impl Component for EditDialog {
         )
     }
 
-    fn update(&mut self, message: Self::Message) -> Task<Self::Message> {
+    pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::NameInput(content) => {
                 self.name = content;
@@ -58,9 +54,10 @@ impl Component for EditDialog {
                 Task::none()
             }
             Message::ConfirmPressed => {
-                let repo = self.repo.clone();
-                let name = self.name.clone();
-                let deploy_kind = self.deploy_kind.unwrap();
+                let mut game = self.game.clone();
+
+                let new_name = self.name.clone();
+                let new_deploy_kind = self.deploy_kind.unwrap();
 
                 // Reset dialog state
                 self.name.clear();
@@ -68,7 +65,11 @@ impl Component for EditDialog {
 
                 Task::perform(
                     async move {
-                        repo.add_game(&name, deploy_kind).unwrap();
+                        game.as_mut().unwrap().set_name(&new_name).unwrap();
+                        game.as_mut()
+                            .unwrap()
+                            .set_deploy_kind(new_deploy_kind)
+                            .unwrap();
                     },
                     |_| Message::GameEdited,
                 )
@@ -77,7 +78,7 @@ impl Component for EditDialog {
         }
     }
 
-    fn view(&self) -> Element<'_, Self::Message> {
+    pub fn view(&self) -> Element<'_, Message> {
         container(column![
             row![
                 text("Name: "),

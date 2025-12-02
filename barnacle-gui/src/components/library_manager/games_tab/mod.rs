@@ -51,7 +51,7 @@ impl Component for Tab {
 
     fn new(repo: Repository) -> (Self, Task<Message>) {
         let (new_dialog, _) = NewDialog::new(repo.clone());
-        let (edit_dialog, _) = EditDialog::new(repo.clone());
+        let (edit_dialog, _) = EditDialog::new();
 
         (
             Self {
@@ -94,7 +94,9 @@ impl Component for Tab {
             }
             Message::DeleteButtonPressed(game) => Task::perform(
                 {
+                    // So we don't try to query deleted games
                     self.state = State::Loading;
+
                     let repo = self.repo.clone();
                     async move { repo.remove_game(game).unwrap() }
                 },
@@ -110,20 +112,22 @@ impl Component for Tab {
                     self.show_new_dialog = false;
                     update_games_list(&self.repo)
                 }
-                new_dialog::Message::NameInput(_)
-                | new_dialog::Message::DeployKindSelected(_)
-                | new_dialog::Message::CreatePressed => {
-                    self.new_dialog.update(msg).map(Message::NewDialog)
-                }
+                _ => self.new_dialog.update(msg).map(Message::NewDialog),
             },
-            Message::EditDialog(msg) => self.edit_dialog.update(msg).map(Message::EditDialog),
+            Message::EditDialog(msg) => match msg {
+                edit_dialog::Message::GameEdited => {
+                    self.show_edit_dialog = false;
+                    Task::none()
+                }
+                _ => self.edit_dialog.update(msg).map(Message::EditDialog),
+            },
         }
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
         match &self.state {
             State::Loading => column![text("Loading...")].into(),
-            State::Error(e) => column![text("ERROR!")].into(),
+            State::Error(_e) => column![text("ERROR!")].into(),
             State::Loaded(games) => {
                 let children = games.iter().map(game_row);
 
