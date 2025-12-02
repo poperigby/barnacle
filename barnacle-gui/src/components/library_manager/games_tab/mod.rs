@@ -94,6 +94,7 @@ impl Component for Tab {
             }
             Message::DeleteButtonPressed(game) => Task::perform(
                 {
+                    self.state = State::Loading;
                     let repo = self.repo.clone();
                     async move { repo.remove_game(game).unwrap() }
                 },
@@ -105,6 +106,7 @@ impl Component for Tab {
                     Task::none()
                 }
                 new_dialog::Message::GameCreated => {
+                    self.state = State::Loading;
                     self.show_new_dialog = false;
                     update_games_list(&self.repo)
                 }
@@ -123,7 +125,7 @@ impl Component for Tab {
             State::Loading => column![text("Loading...")].into(),
             State::Error(e) => column![text("ERROR!")].into(),
             State::Loaded(games) => {
-                let children = games.iter().map(|g| game_row(g.clone()));
+                let children = games.iter().map(game_row);
 
                 let content = column![
                     row![button("New").on_press(Message::ShowNewDialog)],
@@ -161,7 +163,7 @@ fn update_games_list(repo: &Repository) -> Task<Message> {
     )
 }
 
-fn game_row<'a>(game: Game) -> Element<'a, Message> {
+fn game_row<'a>(game: &Game) -> Element<'a, Message> {
     container(
         row![
             text(game.name().unwrap()),
