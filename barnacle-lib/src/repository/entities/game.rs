@@ -1,5 +1,5 @@
 use std::{
-    fs::{File, create_dir_all, remove_dir_all},
+    fs::{self, File},
     path::{Path, PathBuf},
 };
 
@@ -40,7 +40,14 @@ impl Game {
     }
 
     pub fn set_name(&mut self, new_name: &str) -> Result<()> {
-        set_field(&mut self.db, self.id, "name", new_name)
+        let old_dir = self.dir()?;
+
+        set_field(&mut self.db, self.id, "name", new_name)?;
+
+        let new_dir = self.dir()?;
+        fs::rename(old_dir, new_dir).unwrap();
+
+        Ok(())
     }
 
     pub fn targets(&self) -> Result<Vec<PathBuf>> {
@@ -97,7 +104,7 @@ impl Game {
             })
             .unwrap();
 
-        create_dir_all(game.dir().unwrap()).unwrap();
+        fs::create_dir_all(game.dir().unwrap()).unwrap();
 
         debug!("Created new game: {}", game.name()?);
 
@@ -112,7 +119,7 @@ impl Game {
             .write()
             .exec_mut(QueryBuilder::remove().ids(self.id).query())?;
 
-        remove_dir_all(dir).unwrap();
+        fs::remove_dir_all(dir).unwrap();
 
         debug!("Removed game: {name}");
 
@@ -175,7 +182,7 @@ impl Game {
             ))
         })?;
 
-        create_dir_all(profile.dir()?).unwrap();
+        fs::create_dir_all(profile.dir()?).unwrap();
 
         Ok(profile)
     }
