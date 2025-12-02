@@ -33,23 +33,25 @@ impl Component for ModList {
     fn new(repo: Repository) -> (Self, Task<Message>) {
         let task = Task::perform(
             {
-                let mut repo = repo.clone();
+                let repo = repo.clone();
                 async move {
                     if repo.games().unwrap().is_empty() {
-                        let game_id = repo
-                            .add_game("Skyrim", barnacle_lib::DeployKind::CreationEngine)
-                            .await
+                        let mut game = repo
+                            .add_game(
+                                "Skyrim",
+                                barnacle_lib::repository::DeployKind::CreationEngine,
+                            )
                             .unwrap();
-                        let profile_id = repo.add_profile(game_id, "Test").await.unwrap();
+                        let mut profile = game.add_profile("Test").unwrap();
 
-                        repo.set_current_profile(profile_id).await.unwrap();
+                        repo.set_current_profile(&profile).unwrap();
 
-                        let mod_id = repo.add_mod(game_id, None, "Test").await.unwrap();
-                        repo.add_mod_entry(mod_id, profile_id).await.unwrap();
+                        let mod_ = game.add_mod("Test", None).unwrap();
+                        profile.add_mod_entry(mod_).unwrap();
                     }
 
-                    let current_profile = repo.clone().current_profile().await.unwrap().unwrap();
-                    repo.profile_mods(current_profile).await.unwrap()
+                    let current_profile = repo.clone().current_profile().unwrap();
+                    current_profile.mod_entries().unwrap()
                 }
             },
             Message::Loaded,
@@ -70,8 +72,8 @@ impl Component for ModList {
                 let rows = mods
                     .iter()
                     .map(|m| ModRow {
-                        name: m.data().name().to_string(),
-                        notes: m.entry().notes().to_string(),
+                        name: m.name().unwrap().to_string(),
+                        notes: m.notes().unwrap().to_string(),
                     })
                     .collect();
 
