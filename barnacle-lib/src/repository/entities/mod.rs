@@ -29,6 +29,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     #[error("Internal database error {0}")]
     Internal(#[from] agdb::DbError),
+    #[error("This entity refers to a model that has been deleted")]
+    StaleEntity,
 }
 
 pub(crate) fn get_field<T>(db: &DbHandle, id: DbId, field: &str) -> Result<T>
