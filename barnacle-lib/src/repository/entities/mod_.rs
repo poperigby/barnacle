@@ -6,7 +6,7 @@ use heck::ToSnakeCase;
 use crate::repository::{
     CoreConfigHandle,
     db::DbHandle,
-    entities::{Error, Result, game::Game, get_field},
+    entities::{Result, game::Game, get_field},
     models::GameModel,
 };
 
@@ -49,7 +49,7 @@ impl Mod {
             )?
             .elements
             .pop()
-            .ok_or(Error::EmptyQueryElements)?
+            .expect("A successful query should not be empty")
             .id;
 
         Ok(Game::from_id(

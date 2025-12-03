@@ -171,7 +171,7 @@ impl Game {
                 .exec_mut(QueryBuilder::insert().element(model).query())?
                 .elements
                 .first()
-                .ok_or(Error::EmptyQueryElements)?
+                .expect("A successful query should not be empty")
                 .id;
 
             // Link Profile to the specified Game node and root "profiles" node
@@ -231,7 +231,7 @@ impl Game {
                 .exec_mut(QueryBuilder::insert().element(new_mod).query())?
                 .elements
                 .first()
-                .ok_or(Error::EmptyQueryElements)?
+                .expect("A successful query should not be empty")
                 .id;
 
             // Link Profile to the specified Game node and root "profiles" node

@@ -4,6 +4,8 @@
 //! the system. They provide a unified interface for inspecting and mutating
 //! these elements, handling all necessary operations behind the scenes.
 
+use std::fmt::Debug;
+
 use agdb::{DbId, DbValue, QueryBuilder};
 use thiserror::Error;
 
@@ -25,12 +27,6 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("Failed to convert {0}")]
-    Conversion(String),
-    #[error("Successful result elements cannot be empty")]
-    EmptyQueryElements,
-    #[error("Successful result values cannot be empty")]
-    EmptyQueryValues,
     #[error("Internal database error {0}")]
     Internal(#[from] agdb::DbError),
 }
@@ -38,18 +34,21 @@ pub enum Error {
 pub(crate) fn get_field<T>(db: &DbHandle, id: DbId, field: &str) -> Result<T>
 where
     T: TryFrom<DbValue>,
+    T::Error: Debug,
 {
-    db.read()
+    let value = db
+        .read()
         .exec(QueryBuilder::select().values(field).ids(id).query())?
         .elements
         .pop()
-        .ok_or(Error::EmptyQueryElements)?
+        .expect("A successful query should not be empty")
         .values
         .pop()
-        .ok_or(Error::EmptyQueryValues)?
-        .value
-        .try_into()
-        .map_err(|_| Error::Conversion(field.into()))
+        .expect("A successful query should not be empty")
+        .value;
+
+    Ok(T::try_from(value)
+        .expect("Conversion from a `DbValue` must succeed. Perhaps the wrong type was expected from this field."))
 }
 
 pub(crate) fn set_field<T>(db: &mut DbHandle, id: DbId, field: &str, value: T) -> Result<()>
