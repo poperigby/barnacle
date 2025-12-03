@@ -255,23 +255,13 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_add_game() {
+    fn test_add() {
         let repo = Repository::mock();
 
-        Game::add(
-            repo.db.clone(),
-            repo.cfg.clone(),
-            GameModel::new("Skyrim", DeployKind::CreationEngine),
-        )
-        .unwrap();
-        Game::add(
-            repo.db.clone(),
-            repo.cfg.clone(),
-            GameModel::new("Morrowind", DeployKind::OpenMW),
-        )
-        .unwrap();
+        repo.add_game("Skyrim", DeployKind::CreationEngine).unwrap();
+        repo.add_game("Morrowind", DeployKind::OpenMW).unwrap();
 
-        let games = Game::list(repo.db, repo.cfg).unwrap();
+        let games = repo.games().unwrap();
 
         assert_eq!(games.len(), 2);
         assert_eq!(games.first().unwrap().name().unwrap(), "Morrowind");
@@ -282,16 +272,45 @@ mod test {
     }
 
     #[test]
-    fn test_add_profile() {
+    fn test_remove() {
         let repo = Repository::mock();
 
-        let mut game = Game::add(
-            repo.db.clone(),
-            repo.cfg.clone(),
-            GameModel::new("Morrowind", DeployKind::OpenMW),
-        )
-        .unwrap();
+        let game = repo.add_game("Skyrim", DeployKind::CreationEngine).unwrap();
 
-        game.add_profile("Test").unwrap();
+        assert_eq!(repo.games().unwrap().len(), 1);
+
+        repo.remove_game(game).unwrap();
+
+        assert_eq!(repo.games().unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_set_name() {
+        let repo = Repository::mock();
+
+        let mut game = repo.add_game("Skyrim", DeployKind::CreationEngine).unwrap();
+
+        assert_eq!(game.name().unwrap(), "Skyrim");
+
+        game.set_name("Skyrim 2: Electric Boogaloo").unwrap();
+
+        assert_eq!(game.name().unwrap(), "Skyrim 2: Electric Boogaloo");
+    }
+
+    #[test]
+    fn test_dir() {
+        let repo = Repository::mock();
+
+        let game = repo
+            .add_game("Fallout: New Vegas", DeployKind::Gamebryo)
+            .unwrap();
+
+        let expected_dir = repo
+            .cfg
+            .read()
+            .library_dir()
+            .join(game.name().unwrap().to_snake_case());
+
+        assert_eq!(game.dir().unwrap(), expected_dir);
     }
 }
