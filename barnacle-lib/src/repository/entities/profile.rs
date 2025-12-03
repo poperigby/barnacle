@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 
 use agdb::{CountComparison, DbId, QueryBuilder};
 use heck::ToSnakeCase;
@@ -6,7 +6,7 @@ use heck::ToSnakeCase;
 use crate::repository::{
     CoreConfigHandle,
     db::DbHandle,
-    entities::{Result, game::Game, get_field, mod_::Mod, mod_entry::ModEntry},
+    entities::{Result, game::Game, get_field, mod_::Mod, mod_entry::ModEntry, set_field},
     models::{GameModel, ModEntryModel, ModModel, ProfileModel},
 };
 
@@ -30,6 +30,21 @@ impl Profile {
 
     pub fn name(&self) -> Result<String> {
         get_field(&self.db, self.id, "name")
+    }
+
+    pub fn set_name(&mut self, new_name: &str) -> Result<()> {
+        if new_name == self.name()? {
+            return Ok(());
+        }
+
+        let old_dir = self.dir()?;
+
+        set_field(&mut self.db, self.id, "name", new_name)?;
+
+        let new_dir = self.dir()?;
+        fs::rename(old_dir, new_dir).unwrap();
+
+        Ok(())
     }
 
     // Utility
