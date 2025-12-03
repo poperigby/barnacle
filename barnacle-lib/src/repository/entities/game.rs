@@ -195,6 +195,22 @@ impl Game {
         Ok(profile)
     }
 
+    // TODO: Make this just a helper that calls Profile::remove()
+    pub fn remove_profile(&mut self, profile: Profile) -> Result<()> {
+        let name = profile.name()?;
+        let dir = profile.dir()?;
+
+        self.db
+            .write()
+            .exec_mut(QueryBuilder::remove().ids(profile.id).query())?;
+
+        fs::remove_dir_all(dir).unwrap();
+
+        debug!("Removed game: {name}");
+
+        Ok(())
+    }
+
     pub fn profiles(&self) -> Result<Vec<Profile>> {
         Ok(self
             .db

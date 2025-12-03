@@ -6,7 +6,7 @@ use heck::ToSnakeCase;
 use crate::repository::{
     CoreConfigHandle,
     db::DbHandle,
-    entities::{Error, Result, game::Game, get_field, mod_::Mod, mod_entry::ModEntry},
+    entities::{Result, game::Game, get_field, mod_::Mod, mod_entry::ModEntry},
     models::{GameModel, ModEntryModel, ModModel, ProfileModel},
 };
 
@@ -16,9 +16,9 @@ use crate::repository::{
 /// managing mod entries. Always reflects the current database state.
 #[derive(Debug, Clone)]
 pub struct Profile {
-    id: DbId,
-    db: DbHandle,
-    cfg: CoreConfigHandle,
+    pub(crate) id: DbId,
+    pub(crate) db: DbHandle,
+    pub(crate) cfg: CoreConfigHandle,
 }
 
 impl Profile {
