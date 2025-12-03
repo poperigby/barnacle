@@ -1,5 +1,8 @@
 use barnacle_gui::icons::icon;
-use barnacle_lib::{Repository, repository::Game};
+use barnacle_lib::{
+    Repository,
+    repository::{Game, Profile},
+};
 use iced::{
     Element, Length, Task,
     widget::{Column, button, column, container, row, scrollable, space, text},
@@ -8,7 +11,7 @@ use iced::{
 use crate::{
     components::library_manager::{
         TAB_PADDING,
-        games_tab::{edit_dialog::EditDialog, new_dialog::NewDialog},
+        profiles_tab::{edit_dialog::EditDialog, new_dialog::NewDialog},
     },
     modal,
 };
@@ -18,11 +21,11 @@ mod new_dialog;
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    Loaded(Vec<Game>),
-    GameDeleted,
+    Loaded(Vec<Profile>),
+    ProfileDeleted,
     ShowNewDialog,
-    ShowEditDialog(Game),
-    DeleteButtonPressed(Game),
+    ShowEditDialog(Profile),
+    DeleteButtonPressed(Profile),
     // Child messages
     NewDialog(new_dialog::Message),
     EditDialog(edit_dialog::Message),
@@ -31,11 +34,11 @@ pub enum Message {
 pub enum State {
     Loading,
     Error(String),
-    Loaded(Vec<Game>),
+    Loaded(Vec<Profile>),
 }
 
 pub struct Tab {
-    repo: Repository,
+    selected_game: Game,
     state: State,
     show_new_dialog: bool,
     show_edit_dialog: bool,
@@ -46,49 +49,51 @@ pub struct Tab {
 
 impl Tab {
     pub fn new(repo: Repository) -> (Self, Task<Message>) {
-        let (new_dialog, _) = NewDialog::new(repo.clone());
+        let selected_game = repo.games().unwrap().pop().unwrap();
+
+        let (new_dialog, _) = NewDialog::new(selected_game.clone());
         let (edit_dialog, _) = EditDialog::new();
 
         (
             Self {
-                repo: repo.clone(),
+                selected_game: selected_game.clone(),
                 state: State::Loading,
                 show_new_dialog: false,
                 show_edit_dialog: false,
                 new_dialog,
                 edit_dialog,
             },
-            update_games_list(&repo),
+            update_profiles_list(&selected_game.clone()),
         )
     }
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             // State
-            Message::Loaded(games) => {
-                self.state = State::Loaded(games);
+            Message::Loaded(profiles) => {
+                self.state = State::Loaded(profiles);
                 Task::none()
             }
-            Message::GameDeleted => update_games_list(&self.repo),
+            Message::ProfileDeleted => update_profiles_list(&self.selected_game),
             // Components
             Message::ShowNewDialog => {
                 self.show_new_dialog = true;
                 Task::none()
             }
-            Message::ShowEditDialog(game) => {
-                self.edit_dialog.load(game);
+            Message::ShowEditDialog(profile) => {
+                self.edit_dialog.load(profile);
                 self.show_edit_dialog = true;
                 Task::none()
             }
-            Message::DeleteButtonPressed(game) => Task::perform(
+            Message::DeleteButtonPressed(profile) => Task::perform(
                 {
-                    // So we don't try to query deleted games
+                    // So we don't try to query deleted profiles
                     self.state = State::Loading;
 
-                    let repo = self.repo.clone();
-                    async move { repo.remove_game(game).unwrap() }
+                    let mut game = self.selected_game.clone();
+                    async move { game.remove_profile(profile).unwrap() }
                 },
-                |_| Message::GameDeleted,
+                |_| Message::ProfileDeleted,
             ),
             Message::NewDialog(msg) => match msg {
                 new_dialog::Message::CancelPressed => {
@@ -96,10 +101,10 @@ impl Tab {
                     self.new_dialog.clear();
                     Task::none()
                 }
-                new_dialog::Message::GameCreated => {
+                new_dialog::Message::ProfileCreated => {
                     self.state = State::Loading;
                     self.show_new_dialog = false;
-                    update_games_list(&self.repo)
+                    update_profiles_list(&self.selected_game)
                 }
                 _ => self.new_dialog.update(msg).map(Message::NewDialog),
             },
@@ -108,7 +113,7 @@ impl Tab {
                     self.show_edit_dialog = false;
                     Task::none()
                 }
-                edit_dialog::Message::GameEdited => {
+                edit_dialog::Message::ProfileEdited => {
                     self.show_edit_dialog = false;
                     Task::none()
                 }
@@ -121,8 +126,8 @@ impl Tab {
         match &self.state {
             State::Loading => column![text("Loading...")].into(),
             State::Error(_e) => column![text("ERROR!")].into(),
-            State::Loaded(games) => {
-                let children = games.iter().map(game_row);
+            State::Loaded(profiles) => {
+                let children = profiles.iter().map(profile_row);
 
                 let content = column![
                     row![button("New").on_press(Message::ShowNewDialog)],
@@ -150,23 +155,23 @@ impl Tab {
     }
 }
 
-fn update_games_list(repo: &Repository) -> Task<Message> {
+fn update_profiles_list(selected_game: &Game) -> Task<Message> {
     Task::perform(
         {
-            let repo = repo.clone();
-            async move { repo.games().unwrap() }
+            let game = selected_game.clone();
+            async move { game.profiles().unwrap() }
         },
         Message::Loaded,
     )
 }
 
-fn game_row<'a>(game: &Game) -> Element<'a, Message> {
+fn profile_row<'a>(profile: &Profile) -> Element<'a, Message> {
     container(
         row![
-            text(game.name().unwrap()),
+            text(profile.name().unwrap()),
             space::horizontal(),
-            button(icon("edit")).on_press(Message::ShowEditDialog(game.clone())),
-            button(icon("delete")).on_press(Message::DeleteButtonPressed(game.clone()))
+            button(icon("edit")).on_press(Message::ShowEditDialog(profile.clone())),
+            button(icon("delete")).on_press(Message::DeleteButtonPressed(profile.clone()))
         ]
         .padding(12),
     )
