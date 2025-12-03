@@ -20,7 +20,7 @@ static HANDLES: LazyLock<HashMap<&'static str, Handle>> = LazyLock::new(|| {
 });
 
 pub fn icon(name: &str) -> Svg<'_> {
-    let handle = HANDLES.get(name).expect("Failed to find icon");
+    let handle = HANDLES.get(name).expect("Icon must exist");
 
     Svg::new(handle.clone())
         .width(24)

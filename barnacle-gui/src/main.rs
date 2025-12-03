@@ -80,10 +80,16 @@ impl App {
         match message {
             // Redirect messages to relevant child components
             Message::ModList(msg) => self.mod_list.update(msg).map(Message::ModList),
-            Message::LibraryManager(msg) => self
-                .library_manager
-                .update(msg)
-                .map(Message::LibraryManager),
+            Message::LibraryManager(msg) => match msg {
+                library_manager::Message::CloseButtonSelected => {
+                    self.show_library_manager = false;
+                    Task::none()
+                }
+                _ => self
+                    .library_manager
+                    .update(msg)
+                    .map(Message::LibraryManager),
+            },
             Message::ShowLibraryManager => {
                 self.show_library_manager = true;
                 Task::none()
@@ -119,7 +125,6 @@ impl App {
             modal(
                 content,
                 self.library_manager.view().map(Message::LibraryManager),
-                Message::HideLibraryManager,
                 None,
             )
         } else {

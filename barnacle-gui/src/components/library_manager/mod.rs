@@ -1,8 +1,8 @@
-use barnacle_gui::Component;
+use barnacle_gui::{Component, icons::icon};
 use barnacle_lib::Repository;
 use iced::{
     Element, Task,
-    widget::{button, column, container, row},
+    widget::{button, column, container, row, space},
 };
 
 mod games_tab;
@@ -12,6 +12,7 @@ const TAB_PADDING: u16 = 16;
 #[derive(Debug, Clone)]
 pub enum Message {
     TabSelected(TabId),
+    CloseButtonSelected,
     // Components
     GamesTab(games_tab::Message),
 }
@@ -56,13 +57,18 @@ impl Component for LibraryManager {
                 self.active_tab = id;
                 Task::none()
             }
+            Message::CloseButtonSelected => Task::none(),
             Message::GamesTab(msg) => self.games_tab.update(msg).map(Message::GamesTab),
         }
     }
 
     fn view(&self) -> Element<'_, Message> {
         container(column![
-            row![button("Games").on_press(Message::TabSelected(TabId::Games))],
+            row![
+                button("Games").on_press(Message::TabSelected(TabId::Games)),
+                space::horizontal(),
+                button(icon("close")).on_press(Message::CloseButtonSelected)
+            ],
             match self.active_tab {
                 TabId::Games => self.games_tab.view().map(Message::GamesTab),
             },
