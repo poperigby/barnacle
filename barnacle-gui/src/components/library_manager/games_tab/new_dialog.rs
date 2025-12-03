@@ -1,4 +1,3 @@
-use barnacle_gui::Component;
 use barnacle_lib::{Repository, repository::DeployKind};
 use iced::{
     Element, Task,
@@ -22,10 +21,8 @@ pub struct NewDialog {
     deploy_kind_state: combo_box::State<DeployKind>,
 }
 
-impl Component for NewDialog {
-    type Message = Message;
-
-    fn new(repo: Repository) -> (Self, Task<Self::Message>) {
+impl NewDialog {
+    pub fn new(repo: Repository) -> (Self, Task<Message>) {
         (
             Self {
                 repo,
@@ -37,7 +34,13 @@ impl Component for NewDialog {
         )
     }
 
-    fn update(&mut self, message: Self::Message) -> Task<Self::Message> {
+    /// Reset the dialog state
+    pub fn clear(&mut self) {
+        self.name.clear();
+        self.deploy_kind = None;
+    }
+
+    pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::NameInput(content) => {
                 self.name = content;
@@ -53,9 +56,7 @@ impl Component for NewDialog {
                 let name = self.name.clone();
                 let deploy_kind = self.deploy_kind.unwrap();
 
-                // Reset dialog state
-                self.name.clear();
-                self.deploy_kind = None;
+                self.clear();
 
                 Task::perform(
                     async move {
@@ -68,7 +69,7 @@ impl Component for NewDialog {
         }
     }
 
-    fn view(&self) -> Element<'_, Self::Message> {
+    pub fn view(&self) -> Element<'_, Message> {
         container(column![
             row![
                 text("Name: "),

@@ -105,6 +105,7 @@ impl Component for Tab {
             Message::NewDialog(msg) => match msg {
                 new_dialog::Message::CancelPressed => {
                     self.show_new_dialog = false;
+                    self.new_dialog.clear();
                     Task::none()
                 }
                 new_dialog::Message::GameCreated => {

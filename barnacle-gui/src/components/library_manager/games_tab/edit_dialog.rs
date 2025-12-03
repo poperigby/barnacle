@@ -22,16 +22,6 @@ pub struct EditDialog {
 }
 
 impl EditDialog {
-    /// Load a new [`Game`] for editing.
-    pub fn load(&mut self, game: Game) {
-        self.game = Some(game.clone());
-
-        self.name = game.name().unwrap();
-        self.deploy_kind = Some(game.deploy_kind().unwrap());
-    }
-}
-
-impl EditDialog {
     pub fn new() -> (Self, Task<Message>) {
         (
             Self {
@@ -42,6 +32,20 @@ impl EditDialog {
             },
             Task::none(),
         )
+    }
+
+    /// Load a new [`Game`] for editing.
+    pub fn load(&mut self, game: Game) {
+        self.game = Some(game.clone());
+
+        self.name = game.name().unwrap();
+        self.deploy_kind = Some(game.deploy_kind().unwrap());
+    }
+
+    /// Reset the dialog state
+    pub fn clear(&mut self) {
+        self.name.clear();
+        self.deploy_kind = None;
     }
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
@@ -61,9 +65,7 @@ impl EditDialog {
                 let new_name = self.name.clone();
                 let new_deploy_kind = self.deploy_kind.unwrap();
 
-                // Reset dialog state
-                self.name.clear();
-                self.deploy_kind = None;
+                self.clear();
 
                 Task::perform(
                     async move {
