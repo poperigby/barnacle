@@ -51,6 +51,20 @@ impl CoreConfig {
         fs::create_dir_all(&self.library_dir).unwrap();
         &self.library_dir
     }
+
+    /// Create a new mock [`CoreConfig`] instance for testing
+    #[cfg(test)]
+    pub(crate) fn mock() -> Self {
+        use tempfile::tempdir;
+
+        Self {
+            version: CURRENT_CONFIG_VERSION,
+            library_dir: tempdir()
+                .expect("Temporary directory should exist")
+                .path()
+                .to_path_buf(),
+        }
+    }
 }
 
 impl Default for CoreConfig {

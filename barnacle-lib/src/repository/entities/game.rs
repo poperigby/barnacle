@@ -13,7 +13,7 @@ use crate::{
     repository::{
         CoreConfigHandle,
         db::DbHandle,
-        entities::{Error, Result, get_field, mod_::Mod, profile::Profile, set_field},
+        entities::{Result, get_field, mod_::Mod, profile::Profile, set_field},
         models::{DeployKind, GameModel, ModModel, ProfileModel},
     },
 };
@@ -250,34 +250,28 @@ impl Game {
 
 #[cfg(test)]
 mod test {
-    use std::sync::Arc;
-
-    use parking_lot::RwLock;
-
-    use crate::repository::config::CoreConfig;
+    use crate::Repository;
 
     use super::*;
 
     #[test]
     fn test_add_game() {
-        // TODO: Make test repo
-        let db = DbHandle::new_memory();
-        let cfg = Arc::new(RwLock::new(CoreConfig::default()));
+        let repo = Repository::mock();
 
         Game::add(
-            db.clone(),
-            cfg.clone(),
+            repo.db.clone(),
+            repo.cfg.clone(),
             GameModel::new("Skyrim", DeployKind::CreationEngine),
         )
         .unwrap();
         Game::add(
-            db.clone(),
-            cfg.clone(),
+            repo.db.clone(),
+            repo.cfg.clone(),
             GameModel::new("Morrowind", DeployKind::OpenMW),
         )
         .unwrap();
 
-        let games = Game::list(db, cfg).unwrap();
+        let games = Game::list(repo.db, repo.cfg).unwrap();
 
         assert_eq!(games.len(), 2);
         assert_eq!(games.first().unwrap().name().unwrap(), "Morrowind");
@@ -289,12 +283,11 @@ mod test {
 
     #[test]
     fn test_add_profile() {
-        let db = DbHandle::new_memory();
-        let cfg = Arc::new(RwLock::new(CoreConfig::default()));
+        let repo = Repository::mock();
 
         let mut game = Game::add(
-            db.clone(),
-            cfg.clone(),
+            repo.db.clone(),
+            repo.cfg.clone(),
             GameModel::new("Morrowind", DeployKind::OpenMW),
         )
         .unwrap();

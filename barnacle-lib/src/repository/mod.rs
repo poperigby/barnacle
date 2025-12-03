@@ -32,11 +32,11 @@ pub struct Repository {
 }
 
 impl Repository {
-    pub fn new() -> Result<Self> {
-        Ok(Self {
+    pub fn new() -> Self {
+        Self {
             db: DbHandle::new(),
             cfg: Arc::new(RwLock::new(CoreConfig::load())),
-        })
+        }
     }
 
     pub fn add_game(&self, name: &str, deploy_kind: DeployKind) -> Result<Game> {
@@ -60,5 +60,21 @@ impl Repository {
 
     pub fn current_profile(&self) -> Result<Profile> {
         Ok(Profile::current(self.db.clone(), self.cfg.clone())?)
+    }
+
+    #[cfg(test)]
+    /// Return are mock version of a [`Repository`] with an in-memory database and configuration
+    /// file.
+    pub(crate) fn mock() -> Self {
+        Self {
+            db: DbHandle::in_memory(),
+            cfg: Arc::new(RwLock::new(CoreConfig::mock())),
+        }
+    }
+}
+
+impl Default for Repository {
+    fn default() -> Self {
+        Self::new()
     }
 }

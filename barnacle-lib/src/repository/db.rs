@@ -22,12 +22,6 @@ impl DbHandle {
         Self::init(DbAny::new_file(path_str).unwrap())
     }
 
-    /// Create a memory backed database for use in tests
-    #[allow(dead_code)]
-    pub(crate) fn new_memory() -> Self {
-        Self::init(DbAny::new_memory("data.db").unwrap())
-    }
-
     fn init(mut db: DbAny) -> Self {
         // Insert aliases if they don't exist
         if db
@@ -104,18 +98,10 @@ impl DbHandle {
             db: Arc::new(RwLock::new(db)),
         }
     }
-}
 
-// pub(crate) fn set_field<T>(db: &DbHandle, id: DbId, field: &str, value: &T) -> Result<(), DbError>
-// where
-//     T: Into<DbValue>,
-// {
-//     db.write().exec_mut(
-//         QueryBuilder::insert()
-//             .values([[(field, value).into()]])
-//             .ids(id)
-//             .query(),
-//     )?;
-//
-//     Ok(())
-// }
+    /// Create a memory backed database for use in tests
+    #[cfg(test)]
+    pub(crate) fn in_memory() -> Self {
+        Self::init(DbAny::new_memory("data.db").unwrap())
+    }
+}
