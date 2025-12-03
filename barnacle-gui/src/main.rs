@@ -1,4 +1,4 @@
-use barnacle_gui::{Component, config::GuiConfig, icons::icon, modal};
+use barnacle_gui::{config::GuiConfig, icons::icon, modal};
 use barnacle_lib::Repository;
 use iced::{
     Element,
@@ -41,7 +41,7 @@ struct App {
 }
 
 impl App {
-    fn new() -> (Self, Task<Message>) {
+    pub fn new() -> (Self, Task<Message>) {
         // Human friendly panicking in release mode
         human_panic::setup_panic!();
 
@@ -76,7 +76,7 @@ impl App {
     }
 
     // Update application state based on messages passed by view()
-    fn update(&mut self, message: Message) -> Task<Message> {
+    pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             // Redirect messages to relevant child components
             Message::ModList(msg) => self.mod_list.update(msg).map(Message::ModList),
@@ -102,7 +102,7 @@ impl App {
     }
 
     // Render the application and pass along messages from components to update()
-    fn view(&self) -> Element<'_, Message> {
+    pub fn view(&self) -> Element<'_, Message> {
         let content = column![
             // Top bar
             row![
@@ -132,11 +132,11 @@ impl App {
         }
     }
 
-    fn title(&self) -> String {
+    pub fn title(&self) -> String {
         self.title.clone()
     }
 
-    fn theme(&self) -> Theme {
+    pub fn theme(&self) -> Theme {
         self.theme.clone()
     }
 }

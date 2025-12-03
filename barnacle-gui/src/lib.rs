@@ -1,22 +1,10 @@
-use barnacle_lib::Repository;
 use iced::{
-    Color, Element, Length, Task,
+    Color, Element, Length,
     widget::{center, container, mouse_area, opaque, stack},
 };
 
 pub mod config;
 pub mod icons;
-
-pub trait Component
-where
-    Self: Sized,
-{
-    type Message;
-
-    fn new(repo: Repository) -> (Self, Task<Self::Message>);
-    fn update(&mut self, message: Self::Message) -> Task<Self::Message>;
-    fn view(&self) -> Element<'_, Self::Message>;
-}
 
 /// Make an element modal, capturing mouse input and darkening the background.
 pub fn modal<'a, Message>(

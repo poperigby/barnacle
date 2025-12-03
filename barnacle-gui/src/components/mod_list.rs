@@ -1,4 +1,3 @@
-use barnacle_gui::Component;
 use barnacle_lib::{Repository, repository::entities::ModEntry};
 use iced::{
     Element, Length, Task,
@@ -27,10 +26,8 @@ pub struct ModList {
     state: State,
 }
 
-impl Component for ModList {
-    type Message = Message;
-
-    fn new(repo: Repository) -> (Self, Task<Message>) {
+impl ModList {
+    pub fn new(repo: Repository) -> (Self, Task<Message>) {
         let task = Task::perform(
             {
                 let repo = repo.clone();
@@ -66,7 +63,7 @@ impl Component for ModList {
         )
     }
 
-    fn update(&mut self, message: Message) -> Task<Self::Message> {
+    pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Loaded(mods) => {
                 let rows = mods
@@ -84,7 +81,7 @@ impl Component for ModList {
         Task::none()
     }
 
-    fn view(&self) -> Element<'_, Message> {
+    pub fn view(&self) -> Element<'_, Message> {
         match &self.state {
             State::Loading => column![text("Loading mods...")],
             State::Error(e) => column![text(e)],

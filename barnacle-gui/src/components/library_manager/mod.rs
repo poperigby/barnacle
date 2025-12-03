@@ -1,4 +1,4 @@
-use barnacle_gui::{Component, icons::icon};
+use barnacle_gui::icons::icon;
 use barnacle_lib::Repository;
 use iced::{
     Element, Task,
@@ -30,10 +30,8 @@ pub struct LibraryManager {
     games_tab: games_tab::Tab,
 }
 
-impl Component for LibraryManager {
-    type Message = Message;
-
-    fn new(repo: Repository) -> (Self, Task<Message>) {
+impl LibraryManager {
+    pub fn new(repo: Repository) -> (Self, Task<Message>) {
         let (games_tab, games_task) = games_tab::Tab::new(repo.clone());
         // let (profiles_tab, profiles_task) = ProfilesTab::new(repo.clone());
         // let (mods_tab, mods_task) = ModsTab::new(repo.clone());
@@ -51,7 +49,7 @@ impl Component for LibraryManager {
         )
     }
 
-    fn update(&mut self, message: Message) -> Task<Message> {
+    pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::TabSelected(id) => {
                 self.active_tab = id;
@@ -62,7 +60,7 @@ impl Component for LibraryManager {
         }
     }
 
-    fn view(&self) -> Element<'_, Message> {
+    pub fn view(&self) -> Element<'_, Message> {
         container(column![
             row![
                 button("Games").on_press(Message::TabSelected(TabId::Games)),

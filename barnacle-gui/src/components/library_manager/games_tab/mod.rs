@@ -1,4 +1,4 @@
-use barnacle_gui::{Component, icons::icon};
+use barnacle_gui::icons::icon;
 use barnacle_lib::{Repository, repository::Game};
 use iced::{
     Element, Length, Task,
@@ -46,10 +46,8 @@ pub struct Tab {
     edit_dialog: EditDialog,
 }
 
-impl Component for Tab {
-    type Message = Message;
-
-    fn new(repo: Repository) -> (Self, Task<Message>) {
+impl Tab {
+    pub fn new(repo: Repository) -> (Self, Task<Message>) {
         let (new_dialog, _) = NewDialog::new(repo.clone());
         let (edit_dialog, _) = EditDialog::new();
 
@@ -66,7 +64,7 @@ impl Component for Tab {
         )
     }
 
-    fn update(&mut self, message: Message) -> Task<Message> {
+    pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             // State
             Message::Loaded(games) => {
@@ -129,7 +127,7 @@ impl Component for Tab {
         }
     }
 
-    fn view(&self) -> Element<'_, Self::Message> {
+    pub fn view(&self) -> Element<'_, Message> {
         match &self.state {
             State::Loading => column![text("Loading...")].into(),
             State::Error(_e) => column![text("ERROR!")].into(),
