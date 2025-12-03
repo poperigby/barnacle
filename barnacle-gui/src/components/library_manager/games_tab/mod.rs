@@ -145,13 +145,13 @@ impl Component for Tab {
                     modal(
                         content,
                         self.new_dialog.view().map(Message::NewDialog),
-                        Message::HideNewDialog,
+                        None,
                     )
                 } else if self.show_edit_dialog {
                     modal(
                         content,
                         self.edit_dialog.view().map(Message::EditDialog),
-                        Message::HideEditDialog,
+                        None,
                     )
                 } else {
                     content.into()

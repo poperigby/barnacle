@@ -120,6 +120,7 @@ impl App {
                 content,
                 self.library_manager.view().map(Message::LibraryManager),
                 Message::HideLibraryManager,
+                None,
             )
         } else {
             content.into()
