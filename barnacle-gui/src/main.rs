@@ -53,7 +53,7 @@ impl App {
         tracing::subscriber::set_global_default(subscriber)
             .expect("setting default subscriber failed");
 
-        let repo = Repository::new().unwrap();
+        let repo = Repository::new();
         let cfg = GuiConfig::load();
         let theme = cfg.theme();
 
