@@ -122,7 +122,7 @@ impl ModList {
                         |entry: ModEntry| text("Category"),
                     ),
                     table::column(text("Status"), |entry: ModEntry| {
-                        checkbox(entry.enabled().unwrap())
+                        checkbox(entry.enabled().unwrap_or_default())
                             .on_toggle(move |state| Message::ToggleModEntry(entry.clone(), state))
                     }),
                 ];
