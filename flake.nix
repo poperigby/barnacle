@@ -1,7 +1,9 @@
 {
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+  inputs.naersk.url = "github:nix-community/naersk";
+  inputs.naersk.inputs.nixpkgs.follows = "nixpkgs";
   outputs =
-    { self, nixpkgs }:
+    { self, nixpkgs, naersk }:
     let
       inherit (nixpkgs) lib;
       systems = lib.platforms.linux; # Only support linux
@@ -10,7 +12,7 @@
     {
       packages = forEachSystem (
         system: pkgs: rec {
-          barnacle = pkgs.callPackage ./nix/package.nix { };
+          barnacle = pkgs.callPackage ./nix/package.nix { naersk = pkgs.callPackage naersk {}; };
           default = barnacle;
         }
       );

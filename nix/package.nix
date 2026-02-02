@@ -16,8 +16,10 @@
   fontconfig,
   libGL,
   dbus,
+
+  naersk,
 }:
-rustPlatform.buildRustPackage (finalAttrs: {
+naersk.buildPackage {
   pname = "barnacle";
   version = "0";
 
@@ -59,4 +61,4 @@ rustPlatform.buildRustPackage (finalAttrs: {
       maintainers.poperigby
     ];
   };
-})
+}
