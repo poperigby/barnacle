@@ -1,6 +1,7 @@
 use crate::{
     components::mod_list::state::{ContextMenuState, SortColumn, SortState},
     config::Cfg,
+    widgets::table::{self, table},
 };
 use barnacle_lib::{
     Repository,
@@ -8,10 +9,9 @@ use barnacle_lib::{
 };
 use iced::{
     Element, Length, Point, Task,
-    widget::{button, checkbox, column, row, scrollable, table, text},
+    widget::{button, checkbox, column, row, scrollable, text},
 };
 use iced_aw::Spinner;
-use sweeten::widget::mouse_area;
 use tokio::task::spawn_blocking;
 
 pub mod state;
@@ -111,11 +111,7 @@ impl ModList {
                 let columns = [
                     table::column(
                         column_header("Name", &self.sort, SortColumn::Name),
-                        |entry: ModEntry| {
-                            mouse_area(text(entry.name().unwrap())).on_right_press(move |point| {
-                                Message::ModEntryRightClicked(entry.clone(), point)
-                            })
-                        },
+                        |entry: ModEntry| text(entry.name().unwrap()),
                     ),
                     table::column(
                         column_header("Cateogry", &self.sort, SortColumn::Category),

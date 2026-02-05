@@ -14,6 +14,7 @@ use crate::components::App;
 pub mod components;
 pub mod config;
 pub mod icons;
+pub mod widgets;
 
 i18n!("locales", fallback = "en-US");
 

@@ -410,7 +410,6 @@ dependencies = [
  "rfd",
  "serde",
  "strum",
- "sweeten",
  "tokio",
  "toml 1.0.1+spec-1.1.0",
  "tracing",
@@ -4093,17 +4092,6 @@ dependencies = [
  "skrifa",
  "yazi",
  "zeno",
-]
-
-[[package]]
-name = "sweeten"
-version = "0.14.0-dev"
-source = "git+https://github.com/airstrike/sweeten#1b0633b6d7ed7d8ca94a5e8b4dae8465fa65ddf5"
-dependencies = [
- "iced_core",
- "iced_runtime",
- "iced_widget",
- "unicode-segmentation",
 ]
 
 [[package]]
