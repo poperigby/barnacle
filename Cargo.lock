@@ -1089,14 +1089,14 @@ checksum = "f27ae1dd37df86211c42e150270f82743308803d90a6f6e6651cd730d5e1732f"
 
 [[package]]
 name = "damascus"
-version = "0.0.10"
+version = "0.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "597c4ce8bcd5e3bee6433a52a7ca0db8e59a79d0675d19ae9d4e50ce3c53ebe6"
+checksum = "3e594f4b8c6c7eb69146158ff7e7d280a90b36d0b6de7b0e502cdc8704fbfde4"
 dependencies = [
  "nix",
  "tracing",
- "widestring",
- "windows 0.61.3",
+ "windows 0.62.2",
+ "windows-strings 0.5.1",
 ]
 
 [[package]]
@@ -5025,12 +5025,6 @@ dependencies = [
  "thiserror 2.0.18",
  "web-sys",
 ]
-
-[[package]]
-name = "widestring"
-version = "1.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72069c3113ab32ab29e5584db3c6ec55d416895e60715417b5b883a357c3e471"
 
 [[package]]
 name = "winapi"
