@@ -6,7 +6,7 @@ homepage.workspace = true
 
 [dependencies]
 barnacle-lib = { path = "../barnacle-lib" }
-clap = { version = "4.5.56", features = ["derive"] }
+clap = { version = "4.5.58", features = ["derive"] }
 cliux = "0.5.1"
 colored = "3.1.1"
 human-panic = "2.0.6"
