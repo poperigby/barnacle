@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use agdb::{DbElement, DbId, DbSerialize, DbValue};
+use sea_orm::entity::prelude::*;
 use strum::{Display, EnumIter};
 
 use crate::repository::entities::Uid;
@@ -45,3 +46,23 @@ impl GameModel {
         }
     }
 }
+
+#[sea_orm::model]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
+#[sea_orm(table_name = "game")]
+pub struct Model {
+    #[sea_orm(primary_key)]
+    pub id: i32,
+
+    #[sea_orm(has_many)]
+    pub profiles: HasMany<super::profiles::Entity>,
+    #[sea_orm(has_many)]
+    pub mods: HasMany<super::mods::Entity>,
+
+    #[sea_orm(unique)]
+    pub name: String,
+    pub targets: String,
+    pub deploy_kind: String,
+}
+
+impl ActiveModelBehavior for ActiveModel {}

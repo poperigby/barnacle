@@ -1,4 +1,5 @@
 use agdb::{DbElement, DbId};
+use sea_orm::entity::prelude::*;
 
 use crate::repository::entities::Uid;
 
@@ -20,3 +21,20 @@ impl ModEntryModel {
         }
     }
 }
+
+#[sea_orm::model]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
+#[sea_orm(table_name = "mod_entries")]
+pub struct Model {
+    #[sea_orm(primary_key)]
+    pub mod_id: i32,
+    #[sea_orm(primary_key)]
+    pub profile_id: i32,
+
+    #[sea_orm(unique)]
+    pub position: i32,
+    pub enabled: bool,
+    pub notes: String,
+}
+
+impl ActiveModelBehavior for ActiveModel {}
