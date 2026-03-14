@@ -1,55 +1,48 @@
-use std::{fmt::Debug, path::PathBuf};
+use std::path::PathBuf;
 
-use agdb::DbValue;
+use sea_orm::EntityTrait;
 
 use crate::repository::{
     config::Cfg,
-    db::Db,
-    entities::{EntityId, Result, get_field, set_field},
+    db::{Db, models::tools},
+    entities::{Error, Result},
 };
 
-/// Represents a tool entity in the Barnacle system.
-///
-/// Provides methods to inspect and modify this tool's data.
-/// Always reflects the current database state.
 #[derive(Debug, Clone)]
 pub struct Tool {
-    id: EntityId,
+    id: i64,
     db: Db,
     cfg: Cfg,
 }
 
 impl Tool {
-    pub(crate) fn load(id: EntityId, db: Db, cfg: Cfg) -> Result<Self> {
-        Ok(Self { id, db, cfg })
+    pub(crate) fn load(row_id: i64, db: Db, cfg: Cfg) -> Result<Self> {
+        let model = db.run(tools::Entity::find_by_id(row_id).one(db.conn()))?;
+        let Some(model) = model else {
+            return Err(Error::RemovedEntity);
+        };
+        Ok(Self {
+            id: model.id,
+            db,
+            cfg,
+        })
+    }
+
+    fn model(&self) -> Result<tools::Model> {
+        let model = self.db.run(tools::Entity::find_by_id(self.id).one(self.db.conn()))?;
+        model.ok_or(Error::RemovedEntity)
     }
 
     pub fn name(&self) -> Result<String> {
-        self.get_field("name")
+        Ok(self.model()?.name)
     }
 
     pub fn path(&self) -> Result<PathBuf> {
-        self.get_field("path")
+        Ok(PathBuf::from(self.model()?.path))
     }
 
-    // TODO: This can actually be Option<String>
     pub fn args(&self) -> Result<String> {
-        self.get_field("args")
-    }
-
-    fn get_field<T>(&self, field: &str) -> Result<T>
-    where
-        T: TryFrom<DbValue>,
-        T::Error: Debug,
-    {
-        get_field(&self.db, self.id, field)
-    }
-
-    pub(crate) fn set_field<T>(&self, field: &str, value: T) -> Result<()>
-    where
-        T: Into<DbValue>,
-    {
-        set_field(&self.db, self.id, field, value)
+        Ok(self.model()?.args.unwrap_or_default())
     }
 }
 

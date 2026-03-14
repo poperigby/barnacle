@@ -1,67 +1,81 @@
 use std::{
-    fmt::Debug,
     fs,
     path::{Path, PathBuf},
 };
 
-use super::Error;
-use agdb::{CountComparison, DbId, DbValue, QueryBuilder};
 use heck::ToSnakeCase;
+use sea_orm::{
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, IntoActiveModel, ModelTrait,
+    QueryFilter, QueryOrder,
+};
 use tracing::info;
 
 use crate::repository::{
     Cfg,
     db::{
         Db,
-        models::{DeployKind, GameModel, ModModel},
+        models::{DeployKind, games, mods},
     },
-    entities::{EntityId, Result, Uid, get_field, mod_::Mod, profile::Profile, set_field},
+    entities::{Error, Mod, Profile, Result, map_duplicate_name},
 };
 
-/// Represents a game entity in the Barnacle system.
-///
-/// Provides methods to inspect and modify this game's data, including
-/// managing profiles and mods. Always reflects the current database state.
 #[derive(Debug, Clone)]
 pub struct Game {
-    pub(crate) id: EntityId,
+    pub(crate) id: i64,
     pub(crate) db: Db,
     pub(crate) cfg: Cfg,
 }
 
 impl Game {
-    /// Load some existing [`Game`] from the database
-    pub(crate) fn load(db_id: DbId, db: Db, cfg: Cfg) -> Result<Self> {
-        let id = EntityId::load(&db, db_id)?;
-        Ok(Self { id, db, cfg })
+    pub(crate) fn load(row_id: i64, db: Db, cfg: Cfg) -> Result<Self> {
+        let model = db.run(games::Entity::find_by_id(row_id).one(db.conn()))?;
+        let Some(model) = model else {
+            return Err(Error::RemovedEntity);
+        };
+        Ok(Self {
+            id: model.id,
+            db,
+            cfg,
+        })
+    }
+
+    fn model(&self) -> Result<games::Model> {
+        let model = self.db.run(games::Entity::find_by_id(self.id).one(self.db.conn()))?;
+        model.ok_or(Error::RemovedEntity)
     }
 
     pub fn name(&self) -> Result<String> {
-        self.get_field("name")
+        Ok(self.model()?.name)
     }
 
-    // TODO: Perform unique violation checking
     pub fn set_name(&self, new_name: &str) -> Result<()> {
         if new_name == self.name()? {
             return Ok(());
         }
 
         let old_dir = self.dir()?;
-
-        self.set_field("name", new_name)?;
-
+        let mut active = self.model()?.into_active_model();
+        active.name = Set(new_name.to_string());
+        self.db
+            .run(active.update(self.db.conn()))
+            .map_err(map_duplicate_name)?;
         let new_dir = self.dir()?;
         fs::rename(old_dir, new_dir).unwrap();
-
         Ok(())
     }
 
     pub fn targets(&self) -> Result<Vec<PathBuf>> {
-        self.get_field("targets")
+        let model = self.model()?;
+        serde_json::from_str(&model.targets_json)
+            .map_err(|err| Error::Serialization(err.to_string()))
     }
 
     pub fn deploy_kind(&self) -> Result<DeployKind> {
-        self.get_field("deploy_kind")
+        let model = self.model()?;
+        model
+            .deploy_kind
+            .parse()
+            .map_err(|err| Error::Serialization(format!("invalid deploy kind: {err}")))
     }
 
     pub fn set_deploy_kind(&self, new_deploy_kind: DeployKind) -> Result<()> {
@@ -69,7 +83,10 @@ impl Game {
             return Ok(());
         }
 
-        self.set_field("deploy_kind", new_deploy_kind)
+        let mut active = self.model()?.into_active_model();
+        active.deploy_kind = Set(new_deploy_kind.to_string());
+        self.db.run(active.update(self.db.conn()))?;
+        Ok(())
     }
 
     pub fn dir(&self) -> Result<PathBuf> {
@@ -81,52 +98,50 @@ impl Game {
     }
 
     pub fn remove(self) -> Result<()> {
-        for p in self.profiles()? {
-            let profile_name = p.name().unwrap();
-            p.remove()
+        for profile in self.profiles()? {
+            let profile_name = profile.name().unwrap();
+            profile
+                .remove()
                 .or_else(|err| match err {
-                    Error::RemovedEntity => Ok(()), // if id is stale assume already removed
+                    Error::RemovedEntity => Ok(()),
                     other => Err(other),
                 })
                 .unwrap_or_else(|_| {
-                    panic!(
-                        "Failed to remove profile: {} during game cleanup",
-                        profile_name
-                    )
-                })
+                    panic!("Failed to remove profile: {profile_name} during game cleanup")
+                });
         }
 
-        for m in self.mods()? {
-            let mod_name = m.name().unwrap();
-            m.remove()
+        for mod_ in self.mods()? {
+            let mod_name = mod_.name().unwrap();
+            mod_
+                .remove()
                 .or_else(|err| match err {
-                    Error::RemovedEntity => Ok(()), // ditto
+                    Error::RemovedEntity => Ok(()),
                     other => Err(other),
                 })
-                .unwrap_or_else(|_| {
-                    panic!("Failed to remove mod: {} during game cleanup", mod_name)
-                })
+                .unwrap_or_else(|_| panic!("Failed to remove mod: {mod_name} during game cleanup"));
         }
 
-        // We have to store these so we can still access them once the game is deleted
         let name = self.name()?;
         let dir = self.dir()?;
-        let id = self.id.db_id(&self.db)?;
-        self.db
-            .write()
-            .exec_mut(QueryBuilder::remove().ids(id).query())?;
+        let was_active = self.is_active()?;
+        self.db.run(async {
+            let Some(model) = games::Entity::find_by_id(self.id).one(self.db.conn()).await? else {
+                return Err(sea_orm::DbErr::Custom("missing game during delete".into()));
+            };
+            model.delete(self.db.conn()).await?;
+            Ok(())
+        })?;
 
-        fs::remove_dir_all(dir).unwrap();
+        if dir.exists() {
+            fs::remove_dir_all(dir).unwrap();
+        }
 
-        // Bootstrap active game if there isn't one set
-        if Game::active(self.db.clone(), self.cfg.clone())?.is_none()
-            && let Some(first_game) = Game::list(self.db.clone(), self.cfg.clone())?.first()
-        {
+        if was_active && let Some(first_game) = Game::list(self.db.clone(), self.cfg.clone())?.first() {
             first_game.activate()?;
         }
 
         info!("Removed game: {name}");
-
         Ok(())
     }
 
@@ -139,65 +154,39 @@ impl Game {
     }
 
     pub fn mods(&self) -> Result<Vec<Mod>> {
-        let db_id = self.id.db_id(&self.db)?;
-        Ok(self
-            .db
-            .read()
-            .exec(
-                QueryBuilder::select()
-                    .elements::<ModModel>()
-                    .search()
-                    .from(db_id)
-                    .where_()
-                    .neighbor()
-                    .query(),
-            )?
-            .elements
-            .iter()
-            .map(|e| Mod::load(e.id, self.db.clone(), self.cfg.clone()).unwrap())
-            .collect())
+        let models = self.db.run(
+            mods::Entity::find()
+                .filter(mods::Column::GameId.eq(self.id))
+                .order_by_asc(mods::Column::Id)
+                .all(self.db.conn()),
+        )?;
+
+        models
+            .into_iter()
+            .map(|model| Mod::load(model.id, self.db.clone(), self.cfg.clone()))
+            .collect()
     }
 
     pub fn add_mod(&self, name: &str, path: Option<&Path>) -> Result<Mod> {
         Mod::add(self.db.clone(), self.cfg.clone(), self, name, path)
     }
 
-    /// Insert a new [`Game`] into the database. The [`Game`] must have a unique name.
     pub(crate) fn add(db: &Db, cfg: Cfg, name: &str, deploy_kind: DeployKind) -> Result<Self> {
-        if Game::list(db.clone(), cfg.clone())?
-            .iter()
-            .any(|g| g.name().unwrap() == name)
-        {
-            return Err(Error::DuplicateName);
-        }
+        let inserted = db.run(async {
+            let model = games::ActiveModel {
+                id: sea_orm::ActiveValue::NotSet,
+                name: Set(name.to_string()),
+                targets_json: Set("[]".to_string()),
+                deploy_kind: Set(deploy_kind.to_string()),
+                is_active: Set(false),
+            };
+            model.insert(db.conn()).await
+        })
+        .map_err(map_duplicate_name)?;
 
-        let model = GameModel::new(Uid::new(db)?, name, deploy_kind);
-        let db_id = db.write().transaction_mut(|t| -> Result<DbId> {
-            let game_id = t
-                .exec_mut(QueryBuilder::insert().element(model).query())
-                .unwrap()
-                .elements
-                .first()
-                .unwrap()
-                .id;
-
-            t.exec_mut(
-                QueryBuilder::insert()
-                    .edges()
-                    .from("games")
-                    .to(game_id)
-                    .query(),
-            )
-            .unwrap();
-
-            Ok(game_id)
-        })?;
-
-        let game = Game::load(db_id, db.clone(), cfg.clone())?;
-
+        let game = Game::load(inserted.id, db.clone(), cfg.clone())?;
         fs::create_dir_all(game.dir().unwrap()).unwrap();
 
-        // Bootstrap active game if there isn't one set
         if Game::active(db.clone(), cfg.clone())?.is_none()
             && let Some(first_game) = Game::list(db.clone(), cfg.clone())?.first()
         {
@@ -205,71 +194,47 @@ impl Game {
         }
 
         info!("Created new game: {}", game.name()?);
-
         Ok(game)
     }
 
     pub(crate) fn list(db: Db, cfg: Cfg) -> Result<Vec<Game>> {
-        Ok(db
-            .read()
-            .exec(
-                QueryBuilder::select()
-                    .elements::<GameModel>()
-                    .search()
-                    .from("games")
-                    .query(),
-            )?
-            .elements
-            .iter()
-            .map(|e| Game::load(e.id, db.clone(), cfg.clone()).unwrap())
-            .collect())
+        let models = db.run(
+            games::Entity::find()
+                .order_by_asc(games::Column::Name)
+                .all(db.conn()),
+        )?;
+
+        models
+            .into_iter()
+            .map(|model| Game::load(model.id, db.clone(), cfg.clone()))
+            .collect()
     }
 
-    /// Search for a game by name
     pub(crate) fn search(db: Db, cfg: Cfg, name: &str) -> Result<Option<Game>> {
-        db.read()
-            .exec(
-                QueryBuilder::select()
-                    .element::<GameModel>()
-                    .search()
-                    .from("games")
-                    .where_()
-                    .key("name")
-                    .value(name)
-                    .query(),
-            )?
-            .elements
-            .first()
-            .map(|g| Game::load(g.id, db.clone(), cfg.clone()))
+        let model = db.run(
+            games::Entity::find()
+                .filter(games::Column::Name.eq(name))
+                .one(db.conn()),
+        )?;
+
+        model
+            .map(|model| Game::load(model.id, db.clone(), cfg.clone()))
             .transpose()
     }
 
-    /// Make this game the active one
     pub fn activate(&self) -> Result<()> {
-        let db_id = self.id.db_id(&self.db)?;
-        self.db.write().transaction_mut(|t| -> Result<()> {
-            // Delete existing active_game, if it exists
-            t.exec_mut(
-                QueryBuilder::remove()
-                    .search()
-                    .from("active_game")
-                    .where_()
-                    .edge()
-                    .and()
-                    // Only delete the first edge. We don't want to accidentally wipe out all edges
-                    // coming from active_game
-                    .distance(CountComparison::Equal(1))
-                    .query(),
-            )?;
-            // Insert a new edge from active_game to new game_id
-            t.exec_mut(
-                QueryBuilder::insert()
-                    .edges()
-                    .from("active_game")
-                    .to(db_id)
-                    .query(),
-            )?;
+        self.db.run(async {
+            games::Entity::update_many()
+                .col_expr(games::Column::IsActive, sea_orm::sea_query::Expr::value(false))
+                .exec(self.db.conn())
+                .await?;
 
+            let Some(model) = games::Entity::find_by_id(self.id).one(self.db.conn()).await? else {
+                return Err(sea_orm::DbErr::Custom("missing game during activation".into()));
+            };
+            let mut active = model.into_active_model();
+            active.is_active = Set(true);
+            active.update(self.db.conn()).await?;
             Ok(())
         })?;
 
@@ -281,19 +246,15 @@ impl Game {
     }
 
     pub(crate) fn active(db: Db, cfg: Cfg) -> Result<Option<Game>> {
-        db.read()
-            .exec(
-                QueryBuilder::select()
-                    .elements::<GameModel>()
-                    .search()
-                    .from("active_game")
-                    .where_()
-                    .neighbor()
-                    .query(),
-            )?
-            .elements
-            .first()
-            .map(|g| Game::load(g.id, db.clone(), cfg.clone()))
+        let model = db.run(
+            games::Entity::find()
+                .filter(games::Column::IsActive.eq(true))
+                .order_by_asc(games::Column::Id)
+                .one(db.conn()),
+        )?;
+
+        model
+            .map(|model| Game::load(model.id, db.clone(), cfg.clone()))
             .transpose()
     }
 
@@ -301,24 +262,8 @@ impl Game {
         Profile::active(self.db.clone(), self.cfg.clone(), self.clone())
     }
 
-    /// Search for the given profile by name
     pub fn search_profile(&self, name: &str) -> Result<Option<Profile>> {
         Profile::search(self.db.clone(), self.cfg.clone(), self, name)
-    }
-
-    fn get_field<T>(&self, field: &str) -> Result<T>
-    where
-        T: TryFrom<DbValue>,
-        T::Error: Debug,
-    {
-        get_field(&self.db, self.id, field)
-    }
-
-    pub(crate) fn set_field<T>(&self, field: &str, value: T) -> Result<()>
-    where
-        T: Into<DbValue>,
-    {
-        set_field(&self.db, self.id, field, value)
     }
 }
 
@@ -330,9 +275,8 @@ impl PartialEq for Game {
 
 #[cfg(test)]
 mod test {
-    use crate::Repository;
-
     use super::*;
+    use crate::Repository;
 
     #[test]
     fn test_add() {
@@ -356,7 +300,7 @@ mod test {
     fn test_add_duplicate() {
         let repo = Repository::mock();
 
-        let game = repo.add_game("Morrowind", DeployKind::OpenMW).unwrap();
+        let _game = repo.add_game("Morrowind", DeployKind::OpenMW).unwrap();
 
         assert!(matches!(
             repo.add_game("Morrowind", DeployKind::OpenMW),
@@ -370,7 +314,7 @@ mod test {
 
         let game = repo.add_game("Skyrim", DeployKind::CreationEngine).unwrap();
         let profile = game.add_profile("test_profile_1").unwrap();
-        let _mod = game.add_mod("test_mod", None).unwrap();
+        let mod_ = game.add_mod("test_mod", None).unwrap();
 
         assert_eq!(repo.games().unwrap().len(), 1);
 
@@ -378,9 +322,8 @@ mod test {
 
         game.remove().unwrap();
 
-        // Attempt to remove already removed profile and mod entries
         assert!(matches!(profile.remove(), Err(Error::RemovedEntity)));
-        assert!(matches!(_mod.remove(), Err(Error::RemovedEntity)));
+        assert!(matches!(mod_.remove(), Err(Error::RemovedEntity)));
 
         assert!(!dir.exists());
         assert_eq!(repo.games().unwrap().len(), 0);
@@ -404,9 +347,7 @@ mod test {
         let repo = Repository::mock();
 
         assert_eq!(repo.games().unwrap().len(), 0);
-
         repo.add_game("Skyrim", DeployKind::CreationEngine).unwrap();
-
         assert_eq!(repo.games().unwrap().len(), 1);
     }
 
@@ -424,7 +365,6 @@ mod test {
     #[test]
     fn test_set_name() {
         let repo = Repository::mock();
-
         let game = repo.add_game("Skyrim", DeployKind::CreationEngine).unwrap();
 
         assert_eq!(game.name().unwrap(), "Skyrim");
@@ -467,7 +407,6 @@ mod test {
         let repo = Repository::mock();
 
         let game = repo.add_game("Morrowind", DeployKind::OpenMW).unwrap();
-
         game.activate().unwrap();
 
         assert!(game.is_active().unwrap());

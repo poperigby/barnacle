@@ -1,48 +1,32 @@
-use std::path::PathBuf;
-
-use agdb::{DbElement, DbId};
 use sea_orm::entity::prelude::*;
 
-use crate::repository::entities::Uid;
-
-#[derive(Debug, Clone, DbElement, PartialEq, PartialOrd)]
-pub struct ToolModel {
-    db_id: Option<DbId>,
-    uid: u64,
-    /// A human friendly display name
-    name: String,
-    /// The path to the tool's executable
-    path: PathBuf,
-    /// Additional command-line arguments
-    args: Option<String>,
-}
-
-impl ToolModel {
-    pub fn new(uid: Uid, name: &str, path: PathBuf, args: Option<&str>) -> Self {
-        Self {
-            db_id: None,
-            uid: uid.0,
-            name: name.to_string(),
-            path,
-            args: args.map(str::to_string),
-        }
-    }
-}
-
-#[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "tool")]
+#[sea_orm(table_name = "tools")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub id: i32,
-
-    pub game_id: Option<i32>,
-    #[sea_orm(belongs_to, from = "game_id", to = "id")]
-    pub game: HasOne<super::games::Entity>,
-
+    pub id: i64,
+    pub game_id: i64,
     pub name: String,
     pub path: String,
     pub args: Option<String>,
+}
+
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+pub enum Relation {
+    #[sea_orm(
+        belongs_to = "super::games::Entity",
+        from = "Column::GameId",
+        to = "super::games::Column::Id",
+        on_update = "Cascade",
+        on_delete = "Cascade"
+    )]
+    Game,
+}
+
+impl Related<super::games::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Game.def()
+    }
 }
 
 impl ActiveModelBehavior for ActiveModel {}

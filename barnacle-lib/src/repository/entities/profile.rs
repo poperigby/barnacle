@@ -1,42 +1,48 @@
-use std::{fmt::Debug, fs, path::PathBuf};
+use std::{fs, path::PathBuf};
 
-use super::Error;
-use agdb::{DbId, DbValue, QueryBuilder, QueryId};
 use heck::ToSnakeCase;
+use sea_orm::{
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, IntoActiveModel, ModelTrait,
+    QueryFilter, QueryOrder,
+};
 use tracing::info;
 
 use crate::repository::{
     Cfg,
     db::{
         Db,
-        models::{GameModel, ProfileModel},
+        models::profiles,
     },
-    entities::{
-        EntityId, Result, Uid, game::Game, get_field, mod_::Mod, mod_entry::ModEntry, set_field,
-    },
+    entities::{Error, Game, Mod, ModEntry, Result, map_duplicate_name},
 };
 
-/// Represents a profile entity in the Barnacle system.
-///
-/// Provides methods to inspect and modify this profile's data, including
-/// managing mod entries. Always reflects the current database state.
 #[derive(Debug, Clone)]
 pub struct Profile {
-    pub(crate) id: EntityId,
+    pub(crate) id: i64,
     pub(crate) db: Db,
     pub(crate) cfg: Cfg,
 }
 
 impl Profile {
-    pub(crate) fn load(db_id: DbId, db: Db, cfg: Cfg) -> Result<Self> {
-        let id = EntityId::load(&db, db_id)?;
-        Ok(Self { id, db, cfg })
+    pub(crate) fn load(row_id: i64, db: Db, cfg: Cfg) -> Result<Self> {
+        let model = db.run(profiles::Entity::find_by_id(row_id).one(db.conn()))?;
+        let Some(model) = model else {
+            return Err(Error::RemovedEntity);
+        };
+        Ok(Self {
+            id: model.id,
+            db,
+            cfg,
+        })
     }
 
-    // Fields
+    fn model(&self) -> Result<profiles::Model> {
+        let model = self.db.run(profiles::Entity::find_by_id(self.id).one(self.db.conn()))?;
+        model.ok_or(Error::RemovedEntity)
+    }
 
     pub fn name(&self) -> Result<String> {
-        self.get_field("name")
+        Ok(self.model()?.name)
     }
 
     pub fn set_name(&self, new_name: &str) -> Result<()> {
@@ -45,12 +51,13 @@ impl Profile {
         }
 
         let old_dir = self.dir()?;
-
-        self.set_field("name", new_name)?;
-
+        let mut active = self.model()?.into_active_model();
+        active.name = Set(new_name.to_string());
+        self.db
+            .run(active.update(self.db.conn()))
+            .map_err(map_duplicate_name)?;
         let new_dir = self.dir()?;
         fs::rename(old_dir, new_dir).unwrap();
-
         Ok(())
     }
 
@@ -62,105 +69,54 @@ impl Profile {
             .join(self.name()?.to_snake_case()))
     }
 
-    /// Make this profile the active one
     pub fn activate(&self) -> Result<()> {
-        let parent_db_id = self.parent()?.id.db_id(&self.db)?;
-        let db_id = self.id.db_id(&self.db)?;
-        self.db.write().transaction_mut(|t| {
-            // Remove `active` field from edge pointing to existing active profile, if present
-            // BUG: Is this responsible for wiping out the active profile?
-            t.exec_mut(
-                QueryBuilder::remove()
-                    .values("active")
-                    .search()
-                    .from(parent_db_id)
-                    .where_()
-                    .edge()
-                    // .and()
-                    // Only delete the `active` field on edges terminating at profiles.
-                    // .distance(CountComparison::Equal(1))
-                    .query(),
-            )?;
-            // Add `active` field to edge pointing to this profile
-            t.exec_mut(
-                QueryBuilder::insert()
-                    .values([[("active", true).into()]])
-                    .search()
-                    .from(parent_db_id)
-                    .to(db_id)
-                    .where_()
-                    .edge()
-                    .query(),
-            )?;
+        let game_id = self.parent()?.id;
 
+        self.db.run(async {
+            profiles::Entity::update_many()
+                .filter(profiles::Column::GameId.eq(game_id))
+                .col_expr(
+                    profiles::Column::IsActive,
+                    sea_orm::sea_query::Expr::value(false),
+                )
+                .exec(self.db.conn())
+                .await?;
+
+            let Some(model) = profiles::Entity::find_by_id(self.id).one(self.db.conn()).await? else {
+                return Err(sea_orm::DbErr::Custom("missing profile during activation".into()));
+            };
+            let mut active = model.into_active_model();
+            active.is_active = Set(true);
+            active.update(self.db.conn()).await?;
             Ok(())
-        })
+        })?;
+
+        Ok(())
     }
 
     pub fn is_active(&self) -> Result<bool> {
-        Ok(
-            Profile::active(self.db.clone(), self.cfg.clone(), self.parent()?)?
-                == Some(self.clone()),
-        )
+        Ok(Profile::active(self.db.clone(), self.cfg.clone(), self.parent()?)? == Some(self.clone()))
     }
 
     pub(crate) fn active(db: Db, cfg: Cfg, game: Game) -> Result<Option<Profile>> {
-        let game_id = game.id.db_id(&db)?;
-        let elements = db
-            .read()
-            .exec(
-                QueryBuilder::select()
-                    .elements::<ProfileModel>()
-                    .search()
-                    .from(game_id)
-                    .limit(1) // Stop after finding 1 matching element
-                    .where_()
-                    .element::<ProfileModel>()
-                    .and()
-                    .beyond()
-                    .where_()
-                    // This is to search past the origin element which is a node
-                    .node()
-                    .or()
-                    .keys("active")
-                    .query(),
-            )?
-            .elements;
+        let model = db.run(
+            profiles::Entity::find()
+                .filter(profiles::Column::GameId.eq(game.id))
+                .filter(profiles::Column::IsActive.eq(true))
+                .order_by_asc(profiles::Column::Id)
+                .one(db.conn()),
+        )?;
 
-        // If we have an active profile, load it
-        if let Some(active) = elements.first() {
-            return Ok(Some(Profile::load(active.id, db, cfg)?));
-        }
-
-        // No active profile and no profiles at all
-        Ok(None)
+        model
+            .map(|model| Profile::load(model.id, db.clone(), cfg.clone()))
+            .transpose()
     }
 
-    /// Returns the parent [`Game`] of this [`Profile`]
     pub fn parent(&self) -> Result<Game> {
-        let parent_game_id = self
-            .db
-            .read()
-            .exec(
-                QueryBuilder::select()
-                    .elements::<GameModel>()
-                    .search()
-                    // Reverse search to parent game from profile
-                    .to(self.id.db_id(&self.db)?)
-                    .limit(1)
-                    .query(),
-            )?
-            .elements
-            .pop()
-            .expect("a Profile should have a parent Game")
-            .id;
-
-        Game::load(parent_game_id, self.db.clone(), self.cfg.clone())
+        let game_id = self.model()?.game_id;
+        Game::load(game_id, self.db.clone(), self.cfg.clone())
     }
 
-    // Operations
-
-    /// Add a new [`ModEntry`] to a [`Profile`] that points to the [`Mod`] given by ID.
     pub fn add_mod_entry(&self, mod_: Mod) -> Result<ModEntry> {
         ModEntry::add(&self.db, &self.cfg, self, mod_)
     }
@@ -175,81 +131,57 @@ impl Profile {
             entry
                 .remove()
                 .or_else(|err| match err {
-                    Error::RemovedEntity => Ok(()), // if id is stale assume already removed
+                    Error::RemovedEntity => Ok(()),
                     other => Err(other),
                 })
                 .unwrap_or_else(|err| {
-                    panic!(
-                        "Failed to remove mod entry: {:?}: {} during profile cleanup",
-                        entry_id, err
-                    )
-                })
+                    panic!("Failed to remove mod entry: {entry_id:?}: {err} during profile cleanup")
+                });
         }
 
-        // We have to store these so we can still access them once the profile is deleted
         let parent_game = self.parent()?;
         let name = self.name()?;
         let dir = self.dir()?;
+        let was_active = self.is_active()?;
+        self.db.run(async {
+            let Some(model) = profiles::Entity::find_by_id(self.id).one(self.db.conn()).await? else {
+                return Err(sea_orm::DbErr::Custom("missing profile during delete".into()));
+            };
+            model.delete(self.db.conn()).await?;
+            Ok(())
+        })?;
 
-        let db_id = self.id.db_id(&self.db)?;
-        self.db
-            .write()
-            .exec_mut(QueryBuilder::remove().ids(db_id).query())?;
+        if dir.exists() {
+            fs::remove_dir_all(dir).unwrap();
+        }
 
-        fs::remove_dir_all(dir).unwrap();
-
-        // Bootstrap active profile if there isn't one set
-        if Profile::active(self.db.clone(), self.cfg.clone(), parent_game.clone())?.is_none()
-            && let Some(first_profile) =
-                Profile::list(&self.db.clone(), &self.cfg.clone(), &parent_game.clone())?.first()
+        if was_active
+            && let Some(first_profile) = Profile::list(&self.db, &self.cfg, &parent_game)?.first()
         {
             first_profile.activate()?;
         }
 
         info!("Removed profile: {name}");
-
         Ok(())
     }
 
     pub(crate) fn add(db: &Db, cfg: &Cfg, game: &Game, name: &str) -> Result<Self> {
-        let model = ProfileModel::new(Uid::new(db)?, name);
-        if game
-            .profiles()?
-            .iter()
-            .any(|p: &Profile| p.name().unwrap() == model.name())
-        {
-            return Err(Error::DuplicateName);
-        }
+        let inserted = db.run(async {
+            let model = profiles::ActiveModel {
+                id: sea_orm::ActiveValue::NotSet,
+                game_id: Set(game.id),
+                name: Set(name.to_string()),
+                is_active: Set(false),
+            };
+            model.insert(db.conn()).await
+        })
+        .map_err(map_duplicate_name)?;
 
-        let game_id = game.id.db_id(db)?;
-        let profile_id = db.write().transaction_mut(|t| -> Result<DbId> {
-            let profile_id = t
-                .exec_mut(QueryBuilder::insert().element(model).query())?
-                .elements
-                .first()
-                .expect("ProfileModel insertion should return the ID as the first element")
-                .id;
-
-            // Link Profile to the specified Game node and root "profiles" node
-            t.exec_mut(
-                QueryBuilder::insert()
-                    .edges()
-                    .from([QueryId::from("profiles"), QueryId::from(game_id)])
-                    .to(profile_id)
-                    .query(),
-            )?;
-
-            Ok(profile_id)
-        })?;
-
-        let profile = Profile::load(profile_id, db.clone(), cfg.clone())?;
-
+        let profile = Profile::load(inserted.id, db.clone(), cfg.clone())?;
         fs::create_dir_all(profile.dir()?).unwrap();
 
-        // Bootstrap active profile if there isn't one set
         if Profile::active(db.clone(), cfg.clone(), game.clone())?.is_none()
-            && let Some(first_profile) =
-                Profile::list(&db.clone(), &cfg.clone(), &game.clone())?.first()
+            && let Some(first_profile) = Profile::list(db, cfg, game)?.first()
         {
             first_profile.activate()?;
             return Ok(first_profile.clone());
@@ -259,55 +191,30 @@ impl Profile {
     }
 
     pub(crate) fn list(db: &Db, cfg: &Cfg, game: &Game) -> Result<Vec<Self>> {
-        let db_id = game.id.db_id(db)?;
-        Ok(db
-            .read()
-            .exec(
-                QueryBuilder::select()
-                    .elements::<ProfileModel>()
-                    .search()
-                    .from(db_id)
-                    .query(),
-            )?
-            .elements
-            .iter()
-            .map(|e| Profile::load(e.id, db.clone(), cfg.clone()).unwrap())
-            .collect())
+        let models = db.run(
+            profiles::Entity::find()
+                .filter(profiles::Column::GameId.eq(game.id))
+                .order_by_asc(profiles::Column::Id)
+                .all(db.conn()),
+        )?;
+
+        models
+            .into_iter()
+            .map(|model| Profile::load(model.id, db.clone(), cfg.clone()))
+            .collect()
     }
 
-    /// Search for a profile under the given game by name
     pub(crate) fn search(db: Db, cfg: Cfg, game: &Game, name: &str) -> Result<Option<Profile>> {
-        let game_id = game.id.db_id(&db)?;
-        db.read()
-            .exec(
-                QueryBuilder::select()
-                    .element::<ProfileModel>()
-                    .search()
-                    .from(game_id)
-                    .where_()
-                    .key("name")
-                    .value(name)
-                    .query(),
-            )?
-            .elements
-            .first()
-            .map(|p| Profile::load(p.id, db.clone(), cfg.clone()))
+        let model = db.run(
+            profiles::Entity::find()
+                .filter(profiles::Column::GameId.eq(game.id))
+                .filter(profiles::Column::Name.eq(name))
+                .one(db.conn()),
+        )?;
+
+        model
+            .map(|model| Profile::load(model.id, db.clone(), cfg.clone()))
             .transpose()
-    }
-
-    fn get_field<T>(&self, field: &str) -> Result<T>
-    where
-        T: TryFrom<DbValue>,
-        T::Error: Debug,
-    {
-        get_field(&self.db, self.id, field)
-    }
-
-    pub(crate) fn set_field<T>(&self, field: &str, value: T) -> Result<()>
-    where
-        T: Into<DbValue>,
-    {
-        set_field(&self.db, self.id, field, value)
     }
 }
 
@@ -327,34 +234,28 @@ mod test {
     #[test]
     fn test_add() {
         let repo = Repository::mock();
-
         let game = repo.add_game("Morrowind", DeployKind::OpenMW).unwrap();
         let profile = game.add_profile("Test").unwrap();
-
         assert!(profile.dir().unwrap().exists());
     }
 
     #[test]
     fn test_add_duplicate() {
         let repo = Repository::mock();
-
         let game = repo.add_game("Morrowind", DeployKind::OpenMW).unwrap();
         game.add_profile("Test").unwrap();
 
-        assert!(matches!(
-            game.add_profile("Test"),
-            Err(Error::DuplicateName)
-        ));
+        assert!(matches!(game.add_profile("Test"), Err(Error::DuplicateName)));
     }
 
     #[test]
     fn test_remove() {
         let repo = Repository::mock();
         let game = repo.add_game("Skyrim", DeployKind::CreationEngine).unwrap();
-        let _mod = game.add_mod("test_mod", None).unwrap();
+        let mod_ = game.add_mod("test_mod", None).unwrap();
 
         let profile = game.add_profile("Test").unwrap();
-        let mod_entry = profile.add_mod_entry(_mod).unwrap();
+        let mod_entry = profile.add_mod_entry(mod_).unwrap();
 
         assert_eq!(game.profiles().unwrap().len(), 1);
 
@@ -373,32 +274,26 @@ mod test {
         let game = repo.add_game("Skyrim", DeployKind::CreationEngine).unwrap();
 
         assert_eq!(game.profiles().unwrap().len(), 0);
-
         game.add_profile("Cool Profile").unwrap();
-
         assert_eq!(repo.games().unwrap().len(), 1);
     }
 
     #[test]
     fn test_parent() {
         let repo = Repository::mock();
-
         let game = repo.add_game("Skyrim", DeployKind::CreationEngine).unwrap();
         let profile = game.add_profile("Test").unwrap();
-
         assert_eq!(profile.parent().unwrap(), game);
     }
 
     #[test]
     fn test_activate() {
         let repo = Repository::mock();
-
         let game = repo.add_game("Morrowind", DeployKind::OpenMW).unwrap();
 
         let profile1 = game.add_profile("Test1").unwrap();
         let profile2 = game.add_profile("Test2").unwrap();
 
-        // First profile should have been automatically set as active
         assert!(profile1.is_active().unwrap());
 
         profile2.activate().unwrap();

@@ -1,288 +1,147 @@
-use std::fmt::Debug;
-
-use agdb::{DbId, DbValue, QueryBuilder, QueryId};
-
-use crate::repository::{
-    Mod, Profile,
-    config::Cfg,
-    db::{
-        Db,
-        models::{ModEntryModel, ModModel, ProfileModel},
-    },
-    entities::{EntityId, Result, Uid, get_field, set_field},
+use sea_orm::{
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, IntoActiveModel, ModelTrait,
+    QueryFilter, QueryOrder,
 };
 
-/// Represents a mod entry in the Barnacle system.
-///
-/// Provides methods to inspect and modify this mod entry's data.
-/// Always reflects the current database state.
+use crate::repository::{
+    Cfg, Mod, Profile,
+    db::{
+        Db,
+        models::{mod_entries, mods},
+    },
+    entities::{Error, Result},
+};
+
 #[derive(Debug, Clone)]
 pub struct ModEntry {
-    /// The ID of the ModEntryModel
-    pub(crate) entry_id: EntityId,
-    /// The ID of the ModModel the entry points to
-    pub(crate) mod_id: EntityId,
+    pub(crate) entry_id: i64,
+    pub(crate) mod_id: i64,
     pub(crate) db: Db,
     pub(crate) cfg: Cfg,
 }
 
 impl ModEntry {
-    pub(crate) fn load(entry_db_id: DbId, mod_db_id: DbId, db: Db, cfg: Cfg) -> Result<Self> {
+    pub(crate) fn load(entry_row_id: i64, mod_row_id: i64, db: Db, cfg: Cfg) -> Result<Self> {
+        let entry_model = db.run(mod_entries::Entity::find_by_id(entry_row_id).one(db.conn()))?;
+        let mod_model = db.run(mods::Entity::find_by_id(mod_row_id).one(db.conn()))?;
+
+        let Some(entry_model) = entry_model else {
+            return Err(Error::RemovedEntity);
+        };
+        let Some(mod_model) = mod_model else {
+            return Err(Error::RemovedEntity);
+        };
+
         Ok(Self {
-            entry_id: EntityId::load(&db, entry_db_id)?,
-            mod_id: EntityId::load(&db, mod_db_id)?,
+            entry_id: entry_model.id,
+            mod_id: mod_model.id,
             db,
             cfg,
         })
     }
 
+    fn entry_model(&self) -> Result<mod_entries::Model> {
+        let model = self
+            .db
+            .run(mod_entries::Entity::find_by_id(self.entry_id).one(self.db.conn()))?;
+        model.ok_or(Error::RemovedEntity)
+    }
+
+    fn mod_model(&self) -> Result<mods::Model> {
+        let model = self
+            .db
+            .run(mods::Entity::find_by_id(self.mod_id).one(self.db.conn()))?;
+        model.ok_or(Error::RemovedEntity)
+    }
+
     pub fn name(&self) -> Result<String> {
-        self.get_mod_field("name")
+        Ok(self.mod_model()?.name)
     }
 
     pub fn enabled(&self) -> Result<bool> {
-        self.get_entry_field("enabled")
+        Ok(self.entry_model()?.enabled)
     }
 
     pub fn set_enabled(&self, value: bool) -> Result<()> {
-        self.set_entry_field("enabled", value)
+        let mut active = self.entry_model()?.into_active_model();
+        active.enabled = Set(value);
+        self.db.run(active.update(self.db.conn()))?;
+        Ok(())
     }
 
     pub fn notes(&self) -> Result<String> {
-        self.get_entry_field("notes")
+        Ok(self.entry_model()?.notes)
     }
 
-    /// Returns the parent [`Profile`] of this [`ModEntry`]
     pub fn parent(&self) -> Result<Profile> {
-        let parent_profile_id = self
-            .db
-            .read()
-            .exec(
-                QueryBuilder::select()
-                    .elements::<ProfileModel>()
-                    .search()
-                    // Reverse search to parent profile from mod entry
-                    .to(self.entry_id.db_id(&self.db)?)
-                    .limit(1)
-                    .query(),
-            )?
-            .elements
-            .pop()
-            .expect("a ModEntry should have a parent Profile")
-            .id;
-
-        Profile::load(parent_profile_id, self.db.clone(), self.cfg.clone())
+        let profile_id = self.entry_model()?.profile_id;
+        Profile::load(profile_id, self.db.clone(), self.cfg.clone())
     }
 
     pub(crate) fn add(db: &Db, cfg: &Cfg, profile: &Profile, mod_: Mod) -> Result<Self> {
-        let model = ModEntryModel::new(Uid::new(db)?);
+        let profile_id = profile.id;
+        let mod_id = mod_.id;
+        let next_position = profile.mod_entries()?.len() as i64;
 
-        let profile_id = profile.id.db_id(db)?;
-        let mod_id = mod_.id.db_id(db)?;
-
-        let maybe_last_entry_id = profile
-            .mod_entries()?
-            .last()
-            .map(|e| e.entry_id.db_id(db).unwrap());
-
-        let entry_id = db.write().transaction_mut(|t| -> Result<DbId> {
-            let entry_id = t
-                .exec_mut(QueryBuilder::insert().element(&model).query())?
-                .elements
-                .first()
-                .expect("ModEntryModel insertion should return the ID as the first element")
-                .id;
-
-            match maybe_last_entry_id {
-                Some(last_entry_id) => {
-                    // Connect last entry in list to new entry
-                    t.exec_mut(
-                        QueryBuilder::insert()
-                            .edges()
-                            .from([QueryId::from("mod_entries"), QueryId::from(last_entry_id)])
-                            .to(entry_id)
-                            .query(),
-                    )?;
-                }
-                // First entry
-                None => {
-                    // Connect profile node to new entry
-                    t.exec_mut(
-                        QueryBuilder::insert()
-                            .edges()
-                            .from([QueryId::from("mod_entries"), QueryId::from(profile_id)])
-                            .to(entry_id)
-                            .query(),
-                    )?;
-                }
-            }
-
-            // Connect new entry to target mod
-            t.exec_mut(
-                QueryBuilder::insert()
-                    .edges()
-                    .from(entry_id)
-                    .to(mod_id)
-                    .query(),
-            )?;
-
-            Ok(entry_id)
+        let inserted = db.run(async {
+            let model = mod_entries::ActiveModel {
+                id: sea_orm::ActiveValue::NotSet,
+                profile_id: Set(profile_id),
+                mod_id: Set(mod_id),
+                position: Set(next_position),
+                enabled: Set(true),
+                notes: Set(String::new()),
+            };
+            model.insert(db.conn()).await
         })?;
 
-        ModEntry::load(entry_id, mod_id, db.clone(), cfg.clone())
+        ModEntry::load(inserted.id, mod_id, db.clone(), cfg.clone())
     }
 
-    /// Remove the given [`ModEntry`] from the list
     pub fn remove(self) -> Result<()> {
-        let id = self.entry_id.db_id(&self.db)?;
-        let profile_id = self.parent()?.id.db_id(&self.db)?;
-        let entry_ids: Vec<DbId> = self
-            .db
-            .read()
-            .exec(
-                QueryBuilder::select()
-                    .elements::<ModEntryModel>()
-                    .search()
-                    .from(profile_id)
-                    .query(),
-            )?
-            .elements
-            .iter()
-            .map(|e| e.id)
-            .collect();
+        let entry_model = self.entry_model()?;
+        let removed_position = entry_model.position;
+        let profile_id = entry_model.profile_id;
+        let row_id = entry_model.id;
 
-        let mut iter = entry_ids.into_iter().peekable();
-        let mut prev = None;
-        while let Some(curr) = iter.next() {
-            if curr == id {
-                let next = iter.peek().copied();
+        self.db.run(async {
+            let Some(model) = mod_entries::Entity::find_by_id(row_id).one(self.db.conn()).await? else {
+                return Err(sea_orm::DbErr::Custom("missing mod entry during delete".into()));
+            };
+            model.delete(self.db.conn()).await?;
 
-                match (prev, next) {
-                    // First element
-                    (None, Some(next)) => self.db.write().transaction_mut(|t| -> Result<()> {
-                        t.exec_mut(QueryBuilder::remove().ids(curr).query())?;
+            let trailing = mod_entries::Entity::find()
+                .filter(mod_entries::Column::ProfileId.eq(profile_id))
+                .filter(mod_entries::Column::Position.gt(removed_position))
+                .order_by_asc(mod_entries::Column::Position)
+                .all(self.db.conn())
+                .await?;
 
-                        // Connect profile to new first element
-                        t.exec_mut(
-                            QueryBuilder::insert()
-                                .edges()
-                                .from(profile_id)
-                                .to(next)
-                                .query(),
-                        )?;
-
-                        Ok(())
-                    })?,
-                    // Middle element
-                    (Some(prev), Some(next)) => {
-                        self.db.write().transaction_mut(|t| -> Result<()> {
-                            t.exec_mut(QueryBuilder::remove().ids(curr).query())?;
-
-                            // Connect previous element to next element
-                            t.exec_mut(QueryBuilder::insert().edges().from(prev).to(next).query())?;
-
-                            Ok(())
-                        })?
-                    }
-                    // Last or only element
-                    (Some(_), None) | (None, None) => {
-                        self.db
-                            .write()
-                            .exec_mut(QueryBuilder::remove().ids(curr).query())?;
-                    }
-                }
-
-                break;
+            for model in trailing {
+                let mut active = model.into_active_model();
+                active.position = Set(active.position.unwrap() - 1);
+                active.update(self.db.conn()).await?;
             }
 
-            prev = Some(curr);
-        }
+            Ok(())
+        })?;
 
         Ok(())
     }
 
     pub(crate) fn list(db: &Db, cfg: &Cfg, profile: &Profile) -> Result<Vec<Self>> {
-        let db_id = profile.id.db_id(db)?;
-        let mod_entry_ids: Vec<DbId> = db
-            .read()
-            .exec(
-                QueryBuilder::select()
-                    .elements::<ModEntryModel>()
-                    .search()
-                    .from(db_id)
-                    .query(),
-            )?
-            .elements
-            .iter()
-            .map(|e| e.id)
-            .collect();
+        let models = db.run(
+            mod_entries::Entity::find()
+                .filter(mod_entries::Column::ProfileId.eq(profile.id))
+                .order_by_asc(mod_entries::Column::Position)
+                .order_by_asc(mod_entries::Column::Id)
+                .all(db.conn()),
+        )?;
 
-        let mod_ids: Vec<DbId> = db
-            .read()
-            .exec(
-                QueryBuilder::select()
-                    .elements::<ModModel>()
-                    .search()
-                    .from(db_id)
-                    .query(),
-            )?
-            .elements
-            .iter()
-            .map(|e| e.id)
-            .collect();
-
-        Ok(mod_entry_ids
+        models
             .into_iter()
-            .zip(mod_ids)
-            .map(|(entry_db_id, mod_db_id)| {
-                ModEntry::load(entry_db_id, mod_db_id, db.clone(), cfg.clone()).unwrap()
-            })
-            .collect())
-    }
-
-    fn get_entry_field<T>(&self, field: &str) -> Result<T>
-    where
-        T: TryFrom<DbValue>,
-        T::Error: Debug,
-    {
-        self.get_field(self.entry_id, field)
-    }
-
-    fn get_mod_field<T>(&self, field: &str) -> Result<T>
-    where
-        T: TryFrom<DbValue>,
-        T::Error: Debug,
-    {
-        self.get_field(self.mod_id, field)
-    }
-
-    fn set_entry_field<T>(&self, field: &str, value: T) -> Result<()>
-    where
-        T: Into<DbValue>,
-    {
-        self.set_field(self.entry_id, field, value)
-    }
-
-    fn set_mod_field<T>(&self, field: &str, value: T) -> Result<()>
-    where
-        T: Into<DbValue>,
-    {
-        self.set_field(self.mod_id, field, value)
-    }
-
-    fn get_field<T>(&self, id: EntityId, field: &str) -> Result<T>
-    where
-        T: TryFrom<DbValue>,
-        T::Error: Debug,
-    {
-        get_field(&self.db, id, field)
-    }
-
-    pub(crate) fn set_field<T>(&self, id: EntityId, field: &str, value: T) -> Result<()>
-    where
-        T: Into<DbValue>,
-    {
-        set_field(&self.db, id, field, value)
+            .map(|model| ModEntry::load(model.id, model.mod_id, db.clone(), cfg.clone()))
+            .collect()
     }
 }
 
@@ -322,8 +181,8 @@ mod test {
 
         let mod_entries: Vec<_> = (1..=6)
             .map(|i| {
-                let m = game.add_mod(&format!("Mod{i}"), None).unwrap();
-                profile.add_mod_entry(m).unwrap()
+                let mod_ = game.add_mod(&format!("Mod{i}"), None).unwrap();
+                profile.add_mod_entry(mod_).unwrap()
             })
             .collect();
 
@@ -335,19 +194,16 @@ mod test {
             assert!(!entries.contains(entry));
         };
 
-        remove_and_check(mod_entries.first().unwrap()); // first
-        remove_and_check(mod_entries.get(3).unwrap()); // middle
-        remove_and_check(mod_entries.get(5).unwrap()); // last
+        remove_and_check(mod_entries.first().unwrap());
+        remove_and_check(mod_entries.get(3).unwrap());
+        remove_and_check(mod_entries.get(5).unwrap());
 
-        // Check remaining entries are exactly the ones we expect
         let remaining: Vec<&ModEntry> = mod_entries
             .iter()
             .enumerate()
-            .filter_map(|(i, e)| match i {
-                // Filter out the entries we removed
+            .filter_map(|(i, entry)| match i {
                 0 | 3 | 5 => None,
-                // These are the ones we expect to be here
-                _ => Some(e),
+                _ => Some(entry),
             })
             .collect();
         assert_eq!(

@@ -2,12 +2,9 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
-use crate::{
-    Result,
-    repository::{
-        config::{Cfg, CoreConfig},
-        db::Db,
-    },
+use crate::repository::{
+    config::{Cfg, CoreConfig},
+    db::Db,
 };
 
 mod db;

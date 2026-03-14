@@ -1,12 +1,11 @@
 use std::{
-    fmt::Debug,
     fs::{self, File},
     path::{Path, PathBuf},
 };
 
-use agdb::{DbId, DbValue, QueryBuilder, QueryId};
 use compress_tools::{Ownership, uncompress_archive};
 use heck::ToSnakeCase;
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, EntityTrait, ModelTrait};
 use tracing::info;
 
 use crate::{
@@ -15,31 +14,39 @@ use crate::{
         Cfg,
         db::{
             Db,
-            models::{GameModel, ModModel},
+            models::mods,
         },
-        entities::{EntityId, Error, Result, Uid, game::Game, get_field, set_field},
+        entities::{Error, Game, Result, map_duplicate_name},
     },
 };
 
-/// Represents a mod entity in the Barnacle system.
-///
-/// Provides methods to inspect and modify this mod's data.
-/// Always reflects the current database state.
 #[derive(Debug, Clone)]
 pub struct Mod {
-    pub(crate) id: EntityId,
+    pub(crate) id: i64,
     pub(crate) db: Db,
     pub(crate) cfg: Cfg,
 }
 
 impl Mod {
-    pub(crate) fn load(db_id: DbId, db: Db, cfg: Cfg) -> Result<Self> {
-        let id = EntityId::load(&db, db_id)?;
-        Ok(Self { id, db, cfg })
+    pub(crate) fn load(row_id: i64, db: Db, cfg: Cfg) -> Result<Self> {
+        let model = db.run(mods::Entity::find_by_id(row_id).one(db.conn()))?;
+        let Some(model) = model else {
+            return Err(Error::RemovedEntity);
+        };
+        Ok(Self {
+            id: model.id,
+            db,
+            cfg,
+        })
+    }
+
+    fn model(&self) -> Result<mods::Model> {
+        let model = self.db.run(mods::Entity::find_by_id(self.id).one(self.db.conn()))?;
+        model.ok_or(Error::RemovedEntity)
     }
 
     pub fn name(&self) -> Result<String> {
-        self.get_field("name")
+        Ok(self.model()?.name)
     }
 
     pub fn dir(&self) -> Result<PathBuf> {
@@ -50,27 +57,9 @@ impl Mod {
             .join(self.name()?.to_snake_case()))
     }
 
-    /// Returns the parent [`Game`] of this [`Mod`]
     pub fn parent(&self) -> Result<Game> {
-        let db_id = self.id.db_id(&self.db)?;
-        let parent_game_id = self
-            .db
-            .read()
-            .exec(
-                QueryBuilder::select()
-                    .elements::<GameModel>()
-                    .search()
-                    // Reverse search to parent game from mod
-                    .to(db_id)
-                    .limit(1)
-                    .query(),
-            )?
-            .elements
-            .pop()
-            .expect("a Mod should have a parent Game")
-            .id;
-
-        Game::load(parent_game_id, self.db.clone(), self.cfg.clone())
+        let game_id = self.model()?.game_id;
+        Game::load(game_id, self.db.clone(), self.cfg.clone())
     }
 
     pub(crate) fn add(
@@ -80,49 +69,25 @@ impl Mod {
         name: &str,
         path: Option<&Path>,
     ) -> Result<Self> {
-        let model = ModModel::new(Uid::new(&db)?, name);
-        if game
-            .mods()?
-            .iter()
-            .any(|m: &Mod| m.name().unwrap() == model.name())
-        {
-            return Err(Error::DuplicateName);
-        }
+        let inserted = db.run(async {
+            let model = mods::ActiveModel {
+                id: sea_orm::ActiveValue::NotSet,
+                game_id: Set(game.id),
+                name: Set(name.to_string()),
+            };
+            model.insert(db.conn()).await
+        })
+        .map_err(map_duplicate_name)?;
 
-        let game_id = game.id.db_id(&db)?;
+        let mod_ = Mod::load(inserted.id, db.clone(), cfg.clone())?;
 
-        let model = ModModel::new(Uid::new(&db)?, name);
-        let mod_id = db.write().transaction_mut(|t| -> Result<DbId> {
-            let mod_id = t
-                .exec_mut(QueryBuilder::insert().element(model).query())?
-                .elements
-                .first()
-                .expect("ModModel insertion should return the ID as the first element")
-                .id;
-
-            // Link Mod to the specified Game node and root "mods" node
-            t.exec_mut(
-                QueryBuilder::insert()
-                    .edges()
-                    .from([QueryId::from("mods"), QueryId::from(game_id)])
-                    .to(mod_id)
-                    .query(),
-            )?;
-
-            Ok(mod_id)
-        })?;
-
-        let mod_ = Mod::load(mod_id, db.clone(), cfg.clone())?;
-
-        // TODO: Only attempt to open the archive if the input_path is an archive
         if let Some(path) = path {
             let archive = File::open(path).unwrap();
             uncompress_archive(archive, &mod_.dir()?, Ownership::Preserve).unwrap();
             change_dir_permissions(&mod_.dir()?, Permissions::ReadOnly);
         } else {
-            let path = mod_.dir()?;
-            fs::create_dir_all(path).unwrap();
-        };
+            fs::create_dir_all(mod_.dir()?).unwrap();
+        }
 
         Ok(mod_)
     }
@@ -130,32 +95,20 @@ impl Mod {
     pub fn remove(self) -> Result<()> {
         let name = self.name()?;
         let dir = self.dir()?;
+        self.db.run(async {
+            let Some(model) = mods::Entity::find_by_id(self.id).one(self.db.conn()).await? else {
+                return Err(sea_orm::DbErr::Custom("missing mod during delete".into()));
+            };
+            model.delete(self.db.conn()).await?;
+            Ok(())
+        })?;
 
-        let db_id = self.id.db_id(&self.db)?;
-        self.db
-            .write()
-            .exec_mut(QueryBuilder::remove().ids(db_id).query())?;
-
-        fs::remove_dir_all(dir).unwrap();
+        if dir.exists() {
+            fs::remove_dir_all(dir).unwrap();
+        }
 
         info!("Removed mod: {name}");
-
         Ok(())
-    }
-
-    fn get_field<T>(&self, field: &str) -> Result<T>
-    where
-        T: TryFrom<DbValue>,
-        T::Error: Debug,
-    {
-        get_field(&self.db, self.id, field)
-    }
-
-    pub(crate) fn set_field<T>(&self, field: &str, value: T) -> Result<()>
-    where
-        T: Into<DbValue>,
-    {
-        set_field(&self.db, self.id, field, value)
     }
 }
 
@@ -209,7 +162,7 @@ mod test {
         mod_.remove().unwrap();
 
         assert_eq!(game.mods().unwrap().len(), 0);
-        assert!(!dir.exists())
+        assert!(!dir.exists());
     }
 
     #[test]
