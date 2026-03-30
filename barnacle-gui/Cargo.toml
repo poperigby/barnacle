@@ -20,7 +20,7 @@ rfd = "0.17.2"
 serde = { version = "1.0.228", features = ["derive"] }
 strum = "0.27.2"
 sweeten = { git = "https://github.com/airstrike/sweeten" }
-tokio = { version = "1.49.0", features = ["sync"] }
+tokio = { version = "1.50.0", features = ["sync"] }
 toml = "1.0.1"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
