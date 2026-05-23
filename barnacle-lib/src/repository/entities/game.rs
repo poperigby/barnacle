@@ -27,8 +27,8 @@ pub struct Game {
 }
 
 impl Game {
-    pub(crate) fn load(row_id: i64, db: Db, cfg: Cfg) -> Result<Self> {
-        let model = db.run(games::Entity::find_by_id(row_id).one(db.conn()))?;
+    pub(crate) async fn load(row_id: i64, db: Db, cfg: Cfg) -> Result<Self> {
+        let model = games::Entity::find_by_id(row_id).one(db.conn()).await?;
         let Some(model) = model else {
             return Err(Error::RemovedEntity);
         };
@@ -39,69 +39,72 @@ impl Game {
         })
     }
 
-    fn model(&self) -> Result<games::Model> {
-        let model = self.db.run(games::Entity::find_by_id(self.id).one(self.db.conn()))?;
+    async fn model(&self) -> Result<games::Model> {
+        let model = games::Entity::find_by_id(self.id)
+            .one(self.db.conn())
+            .await?;
         model.ok_or(Error::RemovedEntity)
     }
 
-    pub fn name(&self) -> Result<String> {
-        Ok(self.model()?.name)
+    pub async fn name(&self) -> Result<String> {
+        Ok(self.model().await?.name)
     }
 
-    pub fn set_name(&self, new_name: &str) -> Result<()> {
-        if new_name == self.name()? {
+    pub async fn set_name(&self, new_name: &str) -> Result<()> {
+        if new_name == self.name().await? {
             return Ok(());
         }
 
-        let old_dir = self.dir()?;
-        let mut active = self.model()?.into_active_model();
+        let old_dir = self.dir().await?;
+        let mut active = self.model().await?.into_active_model();
         active.name = Set(new_name.to_string());
-        self.db
-            .run(active.update(self.db.conn()))
+        active
+            .update(self.db.conn())
+            .await
+            .map_err(Error::from)
             .map_err(map_duplicate_name)?;
-        let new_dir = self.dir()?;
+        let new_dir = self.dir().await?;
         fs::rename(old_dir, new_dir).unwrap();
         Ok(())
     }
 
-    pub fn targets(&self) -> Result<Vec<PathBuf>> {
-        let model = self.model()?;
+    pub async fn targets(&self) -> Result<Vec<PathBuf>> {
+        let model = self.model().await?;
         serde_json::from_str(&model.targets_json)
             .map_err(|err| Error::Serialization(err.to_string()))
     }
 
-    pub fn deploy_kind(&self) -> Result<DeployKind> {
-        let model = self.model()?;
+    pub async fn deploy_kind(&self) -> Result<DeployKind> {
+        let model = self.model().await?;
         model
             .deploy_kind
             .parse()
             .map_err(|err| Error::Serialization(format!("invalid deploy kind: {err}")))
     }
 
-    pub fn set_deploy_kind(&self, new_deploy_kind: DeployKind) -> Result<()> {
-        if new_deploy_kind == self.deploy_kind()? {
+    pub async fn set_deploy_kind(&self, new_deploy_kind: DeployKind) -> Result<()> {
+        if new_deploy_kind == self.deploy_kind().await? {
             return Ok(());
         }
 
-        let mut active = self.model()?.into_active_model();
+        let mut active = self.model().await?.into_active_model();
         active.deploy_kind = Set(new_deploy_kind.to_string());
-        self.db.run(active.update(self.db.conn()))?;
+        active.update(self.db.conn()).await?;
         Ok(())
     }
 
-    pub fn dir(&self) -> Result<PathBuf> {
-        Ok(self
-            .cfg
-            .read()
-            .library_dir()
-            .join(self.name()?.to_snake_case()))
+    pub async fn dir(&self) -> Result<PathBuf> {
+        let name = self.name().await?;
+        let library_dir = self.cfg.read().library_dir().to_path_buf();
+        Ok(library_dir.join(name.to_snake_case()))
     }
 
-    pub fn remove(self) -> Result<()> {
-        for profile in self.profiles()? {
-            let profile_name = profile.name().unwrap();
+    pub async fn remove(self) -> Result<()> {
+        for profile in self.profiles().await? {
+            let profile_name = profile.name().await.unwrap();
             profile
                 .remove()
+                .await
                 .or_else(|err| match err {
                     Error::RemovedEntity => Ok(()),
                     other => Err(other),
@@ -111,10 +114,10 @@ impl Game {
                 });
         }
 
-        for mod_ in self.mods()? {
-            let mod_name = mod_.name().unwrap();
-            mod_
-                .remove()
+        for mod_ in self.mods().await? {
+            let mod_name = mod_.name().await.unwrap();
+            mod_.remove()
+                .await
                 .or_else(|err| match err {
                     Error::RemovedEntity => Ok(()),
                     other => Err(other),
@@ -122,148 +125,165 @@ impl Game {
                 .unwrap_or_else(|_| panic!("Failed to remove mod: {mod_name} during game cleanup"));
         }
 
-        let name = self.name()?;
-        let dir = self.dir()?;
-        let was_active = self.is_active()?;
-        self.db.run(async {
-            let Some(model) = games::Entity::find_by_id(self.id).one(self.db.conn()).await? else {
-                return Err(sea_orm::DbErr::Custom("missing game during delete".into()));
-            };
-            model.delete(self.db.conn()).await?;
-            Ok(())
-        })?;
+        let name = self.name().await?;
+        let dir = self.dir().await?;
+        let was_active = self.is_active().await?;
+        let Some(model) = games::Entity::find_by_id(self.id)
+            .one(self.db.conn())
+            .await?
+        else {
+            return Err(Error::Internal(sea_orm::DbErr::Custom(
+                "missing game during delete".into(),
+            )));
+        };
+        model.delete(self.db.conn()).await?;
 
         if dir.exists() {
             fs::remove_dir_all(dir).unwrap();
         }
 
-        if was_active && let Some(first_game) = Game::list(self.db.clone(), self.cfg.clone())?.first() {
-            first_game.activate()?;
+        if was_active
+            && let Some(first_game) = Game::list(self.db.clone(), self.cfg.clone()).await?.first()
+        {
+            first_game.activate().await?;
         }
 
         info!("Removed game: {name}");
         Ok(())
     }
 
-    pub fn add_profile(&self, name: &str) -> Result<Profile> {
-        Profile::add(&self.db, &self.cfg, self, name)
+    pub async fn add_profile(&self, name: &str) -> Result<Profile> {
+        Profile::add(&self.db, &self.cfg, self, name).await
     }
 
-    pub fn profiles(&self) -> Result<Vec<Profile>> {
-        Profile::list(&self.db, &self.cfg, self)
+    pub async fn profiles(&self) -> Result<Vec<Profile>> {
+        Profile::list(&self.db, &self.cfg, self).await
     }
 
-    pub fn mods(&self) -> Result<Vec<Mod>> {
-        let models = self.db.run(
-            mods::Entity::find()
-                .filter(mods::Column::GameId.eq(self.id))
-                .order_by_asc(mods::Column::Id)
-                .all(self.db.conn()),
-        )?;
+    pub async fn mods(&self) -> Result<Vec<Mod>> {
+        let models = mods::Entity::find()
+            .filter(mods::Column::GameId.eq(self.id))
+            .order_by_asc(mods::Column::Id)
+            .all(self.db.conn())
+            .await?;
 
-        models
-            .into_iter()
-            .map(|model| Mod::load(model.id, self.db.clone(), self.cfg.clone()))
-            .collect()
+        let mut out = Vec::with_capacity(models.len());
+        for model in models {
+            out.push(Mod::load(model.id, self.db.clone(), self.cfg.clone()).await?);
+        }
+        Ok(out)
     }
 
-    pub fn add_mod(&self, name: &str, path: Option<&Path>) -> Result<Mod> {
-        Mod::add(self.db.clone(), self.cfg.clone(), self, name, path)
+    pub async fn add_mod(&self, name: &str, path: Option<&Path>) -> Result<Mod> {
+        Mod::add(self.db.clone(), self.cfg.clone(), self, name, path).await
     }
 
-    pub(crate) fn add(db: &Db, cfg: Cfg, name: &str, deploy_kind: DeployKind) -> Result<Self> {
-        let inserted = db.run(async {
-            let model = games::ActiveModel {
-                id: sea_orm::ActiveValue::NotSet,
-                name: Set(name.to_string()),
-                targets_json: Set("[]".to_string()),
-                deploy_kind: Set(deploy_kind.to_string()),
-                is_active: Set(false),
-            };
-            model.insert(db.conn()).await
-        })
-        .map_err(map_duplicate_name)?;
+    pub(crate) async fn add(
+        db: &Db,
+        cfg: Cfg,
+        name: &str,
+        deploy_kind: DeployKind,
+    ) -> Result<Self> {
+        let model = games::ActiveModel {
+            id: sea_orm::ActiveValue::NotSet,
+            name: Set(name.to_string()),
+            targets_json: Set("[]".to_string()),
+            deploy_kind: Set(deploy_kind.to_string()),
+            is_active: Set(false),
+        };
+        let inserted = model
+            .insert(db.conn())
+            .await
+            .map_err(Error::from)
+            .map_err(map_duplicate_name)?;
 
-        let game = Game::load(inserted.id, db.clone(), cfg.clone())?;
-        fs::create_dir_all(game.dir().unwrap()).unwrap();
+        let game = Game::load(inserted.id, db.clone(), cfg.clone()).await?;
+        fs::create_dir_all(game.dir().await.unwrap()).unwrap();
 
-        if Game::active(db.clone(), cfg.clone())?.is_none()
-            && let Some(first_game) = Game::list(db.clone(), cfg.clone())?.first()
+        if Game::active(db.clone(), cfg.clone()).await?.is_none()
+            && let Some(first_game) = Game::list(db.clone(), cfg.clone()).await?.first()
         {
-            first_game.activate()?;
+            first_game.activate().await?;
         }
 
-        info!("Created new game: {}", game.name()?);
+        info!("Created new game: {}", game.name().await?);
         Ok(game)
     }
 
-    pub(crate) fn list(db: Db, cfg: Cfg) -> Result<Vec<Game>> {
-        let models = db.run(
-            games::Entity::find()
-                .order_by_asc(games::Column::Name)
-                .all(db.conn()),
-        )?;
+    pub(crate) async fn list(db: Db, cfg: Cfg) -> Result<Vec<Game>> {
+        let models = games::Entity::find()
+            .order_by_asc(games::Column::Name)
+            .all(db.conn())
+            .await?;
 
-        models
-            .into_iter()
-            .map(|model| Game::load(model.id, db.clone(), cfg.clone()))
-            .collect()
+        let mut out = Vec::with_capacity(models.len());
+        for model in models {
+            out.push(Game::load(model.id, db.clone(), cfg.clone()).await?);
+        }
+        Ok(out)
     }
 
-    pub(crate) fn search(db: Db, cfg: Cfg, name: &str) -> Result<Option<Game>> {
-        let model = db.run(
-            games::Entity::find()
-                .filter(games::Column::Name.eq(name))
-                .one(db.conn()),
-        )?;
+    pub(crate) async fn search(db: Db, cfg: Cfg, name: &str) -> Result<Option<Game>> {
+        let model = games::Entity::find()
+            .filter(games::Column::Name.eq(name))
+            .one(db.conn())
+            .await?;
 
-        model
-            .map(|model| Game::load(model.id, db.clone(), cfg.clone()))
-            .transpose()
+        if let Some(model) = model {
+            Ok(Some(Game::load(model.id, db.clone(), cfg.clone()).await?))
+        } else {
+            Ok(None)
+        }
     }
 
-    pub fn activate(&self) -> Result<()> {
-        self.db.run(async {
-            games::Entity::update_many()
-                .col_expr(games::Column::IsActive, sea_orm::sea_query::Expr::value(false))
-                .exec(self.db.conn())
-                .await?;
+    pub async fn activate(&self) -> Result<()> {
+        games::Entity::update_many()
+            .col_expr(
+                games::Column::IsActive,
+                sea_orm::sea_query::Expr::value(false),
+            )
+            .exec(self.db.conn())
+            .await?;
 
-            let Some(model) = games::Entity::find_by_id(self.id).one(self.db.conn()).await? else {
-                return Err(sea_orm::DbErr::Custom("missing game during activation".into()));
-            };
-            let mut active = model.into_active_model();
-            active.is_active = Set(true);
-            active.update(self.db.conn()).await?;
-            Ok(())
-        })?;
+        let Some(model) = games::Entity::find_by_id(self.id)
+            .one(self.db.conn())
+            .await?
+        else {
+            return Err(Error::Internal(sea_orm::DbErr::Custom(
+                "missing game during activation".into(),
+            )));
+        };
+        let mut active = model.into_active_model();
+        active.is_active = Set(true);
+        active.update(self.db.conn()).await?;
 
         Ok(())
     }
 
-    pub fn is_active(&self) -> Result<bool> {
-        Ok(Game::active(self.db.clone(), self.cfg.clone())? == Some(self.clone()))
+    pub async fn is_active(&self) -> Result<bool> {
+        Ok(Game::active(self.db.clone(), self.cfg.clone()).await? == Some(self.clone()))
     }
 
-    pub(crate) fn active(db: Db, cfg: Cfg) -> Result<Option<Game>> {
-        let model = db.run(
-            games::Entity::find()
-                .filter(games::Column::IsActive.eq(true))
-                .order_by_asc(games::Column::Id)
-                .one(db.conn()),
-        )?;
+    pub(crate) async fn active(db: Db, cfg: Cfg) -> Result<Option<Game>> {
+        let model = games::Entity::find()
+            .filter(games::Column::IsActive.eq(true))
+            .order_by_asc(games::Column::Id)
+            .one(db.conn())
+            .await?;
 
-        model
-            .map(|model| Game::load(model.id, db.clone(), cfg.clone()))
-            .transpose()
+        if let Some(model) = model {
+            Ok(Some(Game::load(model.id, db.clone(), cfg.clone()).await?))
+        } else {
+            Ok(None)
+        }
     }
 
-    pub fn active_profile(&self) -> Result<Option<Profile>> {
-        Profile::active(self.db.clone(), self.cfg.clone(), self.clone())
+    pub async fn active_profile(&self) -> Result<Option<Profile>> {
+        Profile::active(self.db.clone(), self.cfg.clone(), self.clone()).await
     }
 
-    pub fn search_profile(&self, name: &str) -> Result<Option<Profile>> {
-        Profile::search(self.db.clone(), self.cfg.clone(), self, name)
+    pub async fn search_profile(&self, name: &str) -> Result<Option<Profile>> {
+        Profile::search(self.db.clone(), self.cfg.clone(), self, name).await
     }
 }
 
@@ -278,138 +298,173 @@ mod test {
     use super::*;
     use crate::Repository;
 
-    #[test]
-    fn test_add() {
-        let repo = Repository::mock();
+    #[tokio::test]
+    async fn test_add() {
+        let repo = Repository::mock().await;
 
-        let game1 = repo.add_game("Skyrim", DeployKind::CreationEngine).unwrap();
-        repo.add_game("Morrowind", DeployKind::OpenMW).unwrap();
+        let game1 = repo
+            .add_game("Skyrim", DeployKind::CreationEngine)
+            .await
+            .unwrap();
+        repo.add_game("Morrowind", DeployKind::OpenMW)
+            .await
+            .unwrap();
 
-        let games = repo.games().unwrap();
+        let games = repo.games().await.unwrap();
 
-        assert!(game1.dir().unwrap().exists());
+        assert!(game1.dir().await.unwrap().exists());
         assert_eq!(games.len(), 2);
-        assert_eq!(games.first().unwrap().name().unwrap(), "Morrowind");
+        assert_eq!(games.first().unwrap().name().await.unwrap(), "Morrowind");
         assert_eq!(
-            games.last().unwrap().deploy_kind().unwrap(),
+            games.last().unwrap().deploy_kind().await.unwrap(),
             DeployKind::CreationEngine
         );
     }
 
-    #[test]
-    fn test_add_duplicate() {
-        let repo = Repository::mock();
+    #[tokio::test]
+    async fn test_add_duplicate() {
+        let repo = Repository::mock().await;
 
-        let _game = repo.add_game("Morrowind", DeployKind::OpenMW).unwrap();
+        let _game = repo
+            .add_game("Morrowind", DeployKind::OpenMW)
+            .await
+            .unwrap();
 
         assert!(matches!(
-            repo.add_game("Morrowind", DeployKind::OpenMW),
+            repo.add_game("Morrowind", DeployKind::OpenMW).await,
             Err(Error::DuplicateName)
         ));
     }
 
-    #[test]
-    fn test_remove() {
-        let repo = Repository::mock();
+    #[tokio::test]
+    async fn test_remove() {
+        let repo = Repository::mock().await;
 
-        let game = repo.add_game("Skyrim", DeployKind::CreationEngine).unwrap();
-        let profile = game.add_profile("test_profile_1").unwrap();
-        let mod_ = game.add_mod("test_mod", None).unwrap();
+        let game = repo
+            .add_game("Skyrim", DeployKind::CreationEngine)
+            .await
+            .unwrap();
+        let profile = game.add_profile("test_profile_1").await.unwrap();
+        let mod_ = game.add_mod("test_mod", None).await.unwrap();
 
-        assert_eq!(repo.games().unwrap().len(), 1);
+        assert_eq!(repo.games().await.unwrap().len(), 1);
 
-        let dir = game.dir().unwrap();
+        let dir = game.dir().await.unwrap();
 
-        game.remove().unwrap();
+        game.remove().await.unwrap();
 
-        assert!(matches!(profile.remove(), Err(Error::RemovedEntity)));
-        assert!(matches!(mod_.remove(), Err(Error::RemovedEntity)));
-
+        assert!(matches!(profile.remove().await, Err(Error::RemovedEntity)));
+        assert!(matches!(mod_.remove().await, Err(Error::RemovedEntity)));
         assert!(!dir.exists());
-        assert_eq!(repo.games().unwrap().len(), 0);
+
+        assert_eq!(repo.games().await.unwrap().len(), 0);
     }
 
-    #[test]
-    fn test_remove_made_next_game_active() {
-        let repo = Repository::mock();
-        let game1 = repo.add_game("Skyrim", DeployKind::CreationEngine).unwrap();
-        let game2 = repo.add_game("Morrowind", DeployKind::OpenMW).unwrap();
+    #[tokio::test]
+    async fn test_remove_active() {
+        let repo = Repository::mock().await;
 
-        game1.activate().unwrap();
-        assert!(game1.is_active().unwrap());
-
-        game1.remove().unwrap();
-        assert!(game2.is_active().unwrap());
-    }
-
-    #[test]
-    fn test_list() {
-        let repo = Repository::mock();
-
-        assert_eq!(repo.games().unwrap().len(), 0);
-        repo.add_game("Skyrim", DeployKind::CreationEngine).unwrap();
-        assert_eq!(repo.games().unwrap().len(), 1);
-    }
-
-    #[test]
-    fn test_name() {
-        let repo = Repository::mock();
-
-        let game = repo
-            .add_game("Fallout: New Vegas", DeployKind::Gamebryo)
+        let game1 = repo
+            .add_game("Skyrim", DeployKind::CreationEngine)
+            .await
+            .unwrap();
+        let game2 = repo
+            .add_game("Morrowind", DeployKind::OpenMW)
+            .await
             .unwrap();
 
-        game.name().unwrap();
+        game1.activate().await.unwrap();
+        assert!(game1.is_active().await.unwrap());
+
+        game1.remove().await.unwrap();
+        assert!(game2.is_active().await.unwrap());
     }
 
-    #[test]
-    fn test_set_name() {
-        let repo = Repository::mock();
-        let game = repo.add_game("Skyrim", DeployKind::CreationEngine).unwrap();
+    #[tokio::test]
+    async fn test_list() {
+        let repo = Repository::mock().await;
 
-        assert_eq!(game.name().unwrap(), "Skyrim");
-
-        game.set_name("Skyrim 3: Electric Boogaloo").unwrap();
-
-        assert_eq!(game.name().unwrap(), "Skyrim 3: Electric Boogaloo");
+        assert_eq!(repo.games().await.unwrap().len(), 0);
+        repo.add_game("Skyrim", DeployKind::CreationEngine)
+            .await
+            .unwrap();
+        assert_eq!(repo.games().await.unwrap().len(), 1);
     }
 
-    #[test]
-    fn test_deploy_kind() {
-        let repo = Repository::mock();
+    #[tokio::test]
+    async fn test_name() {
+        let repo = Repository::mock().await;
+
+        repo.add_game("Fallout: New Vegas", DeployKind::Gamebryo)
+            .await
+            .unwrap()
+            .name()
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_set_name() {
+        let repo = Repository::mock().await;
 
         let game = repo
-            .add_game("Fallout: New Vegas", DeployKind::Gamebryo)
+            .add_game("Skyrim", DeployKind::CreationEngine)
+            .await
             .unwrap();
 
-        game.deploy_kind().unwrap();
+        assert_eq!(game.name().await.unwrap(), "Skyrim");
+
+        game.set_name("Skyrim 3: Electric Boogaloo").await.unwrap();
+
+        assert_eq!(game.name().await.unwrap(), "Skyrim 3: Electric Boogaloo");
     }
 
-    #[test]
-    fn test_dir() {
-        let repo = Repository::mock();
+    #[tokio::test]
+    async fn test_deploy_kind() {
+        let repo = Repository::mock().await;
 
+        repo.add_game("Fallout: New Vegas", DeployKind::Gamebryo)
+            .await
+            .unwrap()
+            .deploy_kind()
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_dir() {
+        let repo = Repository::mock().await;
         let game = repo
             .add_game("Fallout: New Vegas", DeployKind::Gamebryo)
+            .await
             .unwrap();
 
         let expected_dir = repo
+            .clone()
+            .games()
+            .await
+            .unwrap()
+            .first()
+            .unwrap()
             .cfg
             .read()
             .library_dir()
-            .join(game.name().unwrap().to_snake_case());
+            .join(game.name().await.unwrap().to_snake_case());
 
-        assert_eq!(game.dir().unwrap(), expected_dir);
+        assert_eq!(game.dir().await.unwrap(), expected_dir);
     }
 
-    #[test]
-    fn test_activate() {
-        let repo = Repository::mock();
+    #[tokio::test]
+    async fn test_activate() {
+        let repo = Repository::mock().await;
 
-        let game = repo.add_game("Morrowind", DeployKind::OpenMW).unwrap();
-        game.activate().unwrap();
+        let game = repo
+            .add_game("Morrowind", DeployKind::OpenMW)
+            .await
+            .unwrap();
+        game.activate().await.unwrap();
 
-        assert!(game.is_active().unwrap());
-        assert_eq!(repo.active_game().unwrap().unwrap(), game);
+        assert!(game.is_active().await.unwrap());
+        assert_eq!(repo.active_game().await.unwrap().unwrap(), game);
     }
 }

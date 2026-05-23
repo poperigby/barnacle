@@ -10,7 +10,7 @@ use iced::{
     widget::{button, column, combo_box, row, space, text},
 };
 use parking_lot::RwLock;
-use tokio::task::spawn_blocking;
+use tokio::runtime::Builder;
 
 use crate::{
     components::{
@@ -74,12 +74,16 @@ pub struct App {
 impl App {
     pub const TITLE: &str = "Barnacle";
     pub fn new() -> (Self, Task<Message>) {
-        let repo = Repository::new();
+        let repo = Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(Repository::new());
         let cfg = Arc::new(RwLock::new(GuiConfig::load()));
         let theme = cfg.read().theme();
 
-        let (add_mod_dialog, _add_mod_dialog_class) = AddModDialog::new(repo.clone());
-        let mod_list = ModList::new(repo.clone(), cfg.clone());
+        let (add_mod_dialog, _add_mod_dialog_class) = AddModDialog::new();
+        let mod_list = ModList::new(cfg.clone());
         let (library_manager, library_manager_task) = LibraryManager::new(repo.clone());
 
         (
@@ -138,21 +142,19 @@ impl App {
                     self.show_add_mod_dialog = false;
                     let repo = self.repo.clone();
                     Task::perform(
-                        async {
-                            spawn_blocking(move || {
-                                if let Some(active_game) = repo.active_game().unwrap() {
-                                    let mod_ = active_game
-                                        .add_mod(&name, Some(&PathBuf::from(path)))
-                                        .unwrap();
+                        async move {
+                            if let Some(active_game) = repo.active_game().await.unwrap() {
+                                let mod_ = active_game
+                                    .add_mod(&name, Some(&PathBuf::from(path)))
+                                    .await
+                                    .unwrap();
 
-                                    if let Some(active_profile) =
-                                        active_game.active_profile().unwrap()
-                                    {
-                                        active_profile.add_mod_entry(mod_).unwrap();
-                                    }
+                                if let Some(active_profile) =
+                                    active_game.active_profile().await.unwrap()
+                                {
+                                    active_profile.add_mod_entry(mod_).await.unwrap();
                                 }
-                            })
-                            .await
+                            }
                         },
                         |_| Message::ModAdded,
                     )
@@ -172,31 +174,24 @@ impl App {
                 library_manager::Action::CreateGame(new_game) => Task::perform(
                     {
                         let repo = self.repo.clone();
-                        async move {
-                            spawn_blocking(move || {
-                                repo.add_game(&new_game.name, new_game.deploy_kind)
-                            })
-                            .await
-                        }
+                        async move { repo.add_game(&new_game.name, new_game.deploy_kind).await }
                     },
                     |_| Message::GameAdded,
                 ),
-                library_manager::Action::DeleteGame(game) => Task::perform(
-                    async move { spawn_blocking(move || game.remove().unwrap()).await },
-                    |_| Message::GameDeleted,
-                ),
-                library_manager::Action::ActivateGame(game) => Task::perform(
-                    async move { spawn_blocking(move || game.activate().unwrap()).await },
-                    |_| Message::GameActivated,
-                ),
+                library_manager::Action::DeleteGame(game) => {
+                    Task::perform(async move { game.remove().await.unwrap() }, |_| {
+                        Message::GameDeleted
+                    })
+                }
+                library_manager::Action::ActivateGame(game) => {
+                    Task::perform(async move { game.activate().await.unwrap() }, |_| {
+                        Message::GameActivated
+                    })
+                }
                 library_manager::Action::CreateProfile { game, new_profile } => Task::perform(
                     {
                         let game = game.clone();
-                        async {
-                            spawn_blocking(move || game.add_profile(&new_profile.name).unwrap())
-                                .await
-                                .unwrap()
-                        }
+                        async move { game.add_profile(&new_profile.name).await.unwrap() }
                     },
                     |_| Message::ProfileAdded,
                 ),
@@ -211,16 +206,11 @@ impl App {
                 //     },
                 //     |_| Message::GameEdited,
                 // ),
-                library_manager::Action::DeleteProfile(profile) => Task::perform(
-                    async {
-                        spawn_blocking(move || {
-                            profile.remove().unwrap();
-                        })
-                        .await
-                        .unwrap()
-                    },
-                    |_| Message::ProfileDeleted,
-                ),
+                library_manager::Action::DeleteProfile(profile) => {
+                    Task::perform(async { profile.remove().await.unwrap() }, |_| {
+                        Message::ProfileDeleted
+                    })
+                }
                 library_manager::Action::Close => {
                     self.show_library_manager = false;
                     Task::none()
@@ -245,12 +235,8 @@ impl App {
                 self.profile_selector.selected = Some(profile.clone());
                 Task::perform(
                     async {
-                        spawn_blocking(move || {
-                            profile.activate().unwrap();
-                            profile.entity
-                        })
-                        .await
-                        .unwrap()
+                        profile.activate().await.unwrap();
+                        profile.entity
                     },
                     Message::ProfileActivated,
                 )
@@ -335,33 +321,34 @@ impl App {
 }
 
 fn load_state(repo: Repository) -> Task<Message> {
-    let repo = repo.clone();
     Task::perform(
-        async {
-            spawn_blocking(move || {
-                if let Some(active_game) = repo.active_game().unwrap() {
-                    let active_profile = active_game.active_profile().unwrap();
-                    State::Loaded {
-                        active_profile: active_profile.map(|p| ProfileOption {
-                            entity: p.clone(),
-                            name: p.name().unwrap(),
-                        }),
-                        profiles: active_game
-                            .profiles()
-                            .unwrap()
-                            .into_iter()
-                            .map(|p| ProfileOption {
-                                entity: p.clone(),
-                                name: p.name().unwrap(),
-                            })
-                            .collect(),
-                    }
-                } else {
-                    State::NoGames
+        async move {
+            if let Some(active_game) = repo.active_game().await.unwrap() {
+                let active_profile = active_game.active_profile().await.unwrap();
+                let profiles = active_game.profiles().await.unwrap();
+
+                let mut loaded_profiles = Vec::with_capacity(profiles.len());
+                for p in profiles {
+                    loaded_profiles.push(ProfileOption {
+                        name: p.name().await.unwrap(),
+                        entity: p,
+                    });
                 }
-            })
-            .await
-            .unwrap()
+
+                State::Loaded {
+                    active_profile: if let Some(p) = active_profile {
+                        Some(ProfileOption {
+                            name: p.name().await.unwrap(),
+                            entity: p,
+                        })
+                    } else {
+                        None
+                    },
+                    profiles: loaded_profiles,
+                }
+            } else {
+                State::NoGames
+            }
         },
         Message::StateChanged,
     )

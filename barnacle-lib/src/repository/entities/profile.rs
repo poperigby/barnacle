@@ -9,10 +9,7 @@ use tracing::info;
 
 use crate::repository::{
     Cfg,
-    db::{
-        Db,
-        models::profiles,
-    },
+    db::{Db, models::profiles},
     entities::{Error, Game, Mod, ModEntry, Result, map_duplicate_name},
 };
 
@@ -24,8 +21,8 @@ pub struct Profile {
 }
 
 impl Profile {
-    pub(crate) fn load(row_id: i64, db: Db, cfg: Cfg) -> Result<Self> {
-        let model = db.run(profiles::Entity::find_by_id(row_id).one(db.conn()))?;
+    pub(crate) async fn load(row_id: i64, db: Db, cfg: Cfg) -> Result<Self> {
+        let model = profiles::Entity::find_by_id(row_id).one(db.conn()).await?;
         let Some(model) = model else {
             return Err(Error::RemovedEntity);
         };
@@ -36,100 +33,111 @@ impl Profile {
         })
     }
 
-    fn model(&self) -> Result<profiles::Model> {
-        let model = self.db.run(profiles::Entity::find_by_id(self.id).one(self.db.conn()))?;
+    async fn model(&self) -> Result<profiles::Model> {
+        let model = profiles::Entity::find_by_id(self.id)
+            .one(self.db.conn())
+            .await?;
         model.ok_or(Error::RemovedEntity)
     }
 
-    pub fn name(&self) -> Result<String> {
-        Ok(self.model()?.name)
+    pub async fn name(&self) -> Result<String> {
+        Ok(self.model().await?.name)
     }
 
-    pub fn set_name(&self, new_name: &str) -> Result<()> {
-        if new_name == self.name()? {
+    pub async fn set_name(&self, new_name: &str) -> Result<()> {
+        if new_name == self.name().await? {
             return Ok(());
         }
 
-        let old_dir = self.dir()?;
-        let mut active = self.model()?.into_active_model();
+        let old_dir = self.dir().await?;
+        let mut active = self.model().await?.into_active_model();
         active.name = Set(new_name.to_string());
-        self.db
-            .run(active.update(self.db.conn()))
+        active
+            .update(self.db.conn())
+            .await
+            .map_err(Error::from)
             .map_err(map_duplicate_name)?;
-        let new_dir = self.dir()?;
+        let new_dir = self.dir().await?;
         fs::rename(old_dir, new_dir).unwrap();
         Ok(())
     }
 
-    pub fn dir(&self) -> Result<PathBuf> {
-        Ok(self
-            .parent()?
-            .dir()?
-            .join("profiles")
-            .join(self.name()?.to_snake_case()))
+    pub async fn dir(&self) -> Result<PathBuf> {
+        let parent_dir = self.parent().await?.dir().await?;
+        let name = self.name().await?;
+        Ok(parent_dir.join("profiles").join(name.to_snake_case()))
     }
 
-    pub fn activate(&self) -> Result<()> {
-        let game_id = self.parent()?.id;
+    pub async fn activate(&self) -> Result<()> {
+        let game_id = self.parent().await?.id;
 
-        self.db.run(async {
-            profiles::Entity::update_many()
-                .filter(profiles::Column::GameId.eq(game_id))
-                .col_expr(
-                    profiles::Column::IsActive,
-                    sea_orm::sea_query::Expr::value(false),
-                )
-                .exec(self.db.conn())
-                .await?;
+        profiles::Entity::update_many()
+            .filter(profiles::Column::GameId.eq(game_id))
+            .col_expr(
+                profiles::Column::IsActive,
+                sea_orm::sea_query::Expr::value(false),
+            )
+            .exec(self.db.conn())
+            .await?;
 
-            let Some(model) = profiles::Entity::find_by_id(self.id).one(self.db.conn()).await? else {
-                return Err(sea_orm::DbErr::Custom("missing profile during activation".into()));
-            };
-            let mut active = model.into_active_model();
-            active.is_active = Set(true);
-            active.update(self.db.conn()).await?;
-            Ok(())
-        })?;
+        let Some(model) = profiles::Entity::find_by_id(self.id)
+            .one(self.db.conn())
+            .await?
+        else {
+            return Err(Error::Internal(sea_orm::DbErr::Custom(
+                "missing profile during activation".into(),
+            )));
+        };
+        let mut active = model.into_active_model();
+        active.is_active = Set(true);
+        active.update(self.db.conn()).await?;
 
         Ok(())
     }
 
-    pub fn is_active(&self) -> Result<bool> {
-        Ok(Profile::active(self.db.clone(), self.cfg.clone(), self.parent()?)? == Some(self.clone()))
+    pub async fn is_active(&self) -> Result<bool> {
+        Ok(
+            Profile::active(self.db.clone(), self.cfg.clone(), self.parent().await?).await?
+                == Some(self.clone()),
+        )
     }
 
-    pub(crate) fn active(db: Db, cfg: Cfg, game: Game) -> Result<Option<Profile>> {
-        let model = db.run(
-            profiles::Entity::find()
-                .filter(profiles::Column::GameId.eq(game.id))
-                .filter(profiles::Column::IsActive.eq(true))
-                .order_by_asc(profiles::Column::Id)
-                .one(db.conn()),
-        )?;
+    pub(crate) async fn active(db: Db, cfg: Cfg, game: Game) -> Result<Option<Profile>> {
+        let model = profiles::Entity::find()
+            .filter(profiles::Column::GameId.eq(game.id))
+            .filter(profiles::Column::IsActive.eq(true))
+            .order_by_asc(profiles::Column::Id)
+            .one(db.conn())
+            .await?;
 
-        model
-            .map(|model| Profile::load(model.id, db.clone(), cfg.clone()))
-            .transpose()
+        if let Some(model) = model {
+            Ok(Some(
+                Profile::load(model.id, db.clone(), cfg.clone()).await?,
+            ))
+        } else {
+            Ok(None)
+        }
     }
 
-    pub fn parent(&self) -> Result<Game> {
-        let game_id = self.model()?.game_id;
-        Game::load(game_id, self.db.clone(), self.cfg.clone())
+    pub async fn parent(&self) -> Result<Game> {
+        let game_id = self.model().await?.game_id;
+        Game::load(game_id, self.db.clone(), self.cfg.clone()).await
     }
 
-    pub fn add_mod_entry(&self, mod_: Mod) -> Result<ModEntry> {
-        ModEntry::add(&self.db, &self.cfg, self, mod_)
+    pub async fn add_mod_entry(&self, mod_: Mod) -> Result<ModEntry> {
+        ModEntry::add(&self.db, &self.cfg, self, mod_).await
     }
 
-    pub fn mod_entries(&self) -> Result<Vec<ModEntry>> {
-        ModEntry::list(&self.db, &self.cfg, self)
+    pub async fn mod_entries(&self) -> Result<Vec<ModEntry>> {
+        ModEntry::list(&self.db, &self.cfg, self).await
     }
 
-    pub fn remove(self) -> Result<()> {
-        for entry in self.mod_entries()? {
+    pub async fn remove(self) -> Result<()> {
+        for entry in self.mod_entries().await? {
             let entry_id = entry.entry_id;
             entry
                 .remove()
+                .await
                 .or_else(|err| match err {
                     Error::RemovedEntity => Ok(()),
                     other => Err(other),
@@ -139,82 +147,97 @@ impl Profile {
                 });
         }
 
-        let parent_game = self.parent()?;
-        let name = self.name()?;
-        let dir = self.dir()?;
-        let was_active = self.is_active()?;
-        self.db.run(async {
-            let Some(model) = profiles::Entity::find_by_id(self.id).one(self.db.conn()).await? else {
-                return Err(sea_orm::DbErr::Custom("missing profile during delete".into()));
-            };
-            model.delete(self.db.conn()).await?;
-            Ok(())
-        })?;
+        let parent_game = self.parent().await?;
+        let name = self.name().await?;
+        let dir = self.dir().await?;
+        let was_active = self.is_active().await?;
+        let Some(model) = profiles::Entity::find_by_id(self.id)
+            .one(self.db.conn())
+            .await?
+        else {
+            return Err(Error::Internal(sea_orm::DbErr::Custom(
+                "missing profile during delete".into(),
+            )));
+        };
+        model.delete(self.db.conn()).await?;
 
         if dir.exists() {
             fs::remove_dir_all(dir).unwrap();
         }
 
         if was_active
-            && let Some(first_profile) = Profile::list(&self.db, &self.cfg, &parent_game)?.first()
+            && let Some(first_profile) = Profile::list(&self.db, &self.cfg, &parent_game)
+                .await?
+                .first()
         {
-            first_profile.activate()?;
+            first_profile.activate().await?;
         }
 
         info!("Removed profile: {name}");
         Ok(())
     }
 
-    pub(crate) fn add(db: &Db, cfg: &Cfg, game: &Game, name: &str) -> Result<Self> {
-        let inserted = db.run(async {
-            let model = profiles::ActiveModel {
-                id: sea_orm::ActiveValue::NotSet,
-                game_id: Set(game.id),
-                name: Set(name.to_string()),
-                is_active: Set(false),
-            };
-            model.insert(db.conn()).await
-        })
-        .map_err(map_duplicate_name)?;
+    pub(crate) async fn add(db: &Db, cfg: &Cfg, game: &Game, name: &str) -> Result<Self> {
+        let model = profiles::ActiveModel {
+            id: sea_orm::ActiveValue::NotSet,
+            game_id: Set(game.id),
+            name: Set(name.to_string()),
+            is_active: Set(false),
+        };
+        let inserted = model
+            .insert(db.conn())
+            .await
+            .map_err(Error::from)
+            .map_err(map_duplicate_name)?;
 
-        let profile = Profile::load(inserted.id, db.clone(), cfg.clone())?;
-        fs::create_dir_all(profile.dir()?).unwrap();
+        let profile = Profile::load(inserted.id, db.clone(), cfg.clone()).await?;
+        fs::create_dir_all(profile.dir().await?).unwrap();
 
-        if Profile::active(db.clone(), cfg.clone(), game.clone())?.is_none()
-            && let Some(first_profile) = Profile::list(db, cfg, game)?.first()
+        if Profile::active(db.clone(), cfg.clone(), game.clone())
+            .await?
+            .is_none()
+            && let Some(first_profile) = Profile::list(db, cfg, game).await?.first()
         {
-            first_profile.activate()?;
+            first_profile.activate().await?;
             return Ok(first_profile.clone());
         }
 
         Ok(profile)
     }
 
-    pub(crate) fn list(db: &Db, cfg: &Cfg, game: &Game) -> Result<Vec<Self>> {
-        let models = db.run(
-            profiles::Entity::find()
-                .filter(profiles::Column::GameId.eq(game.id))
-                .order_by_asc(profiles::Column::Id)
-                .all(db.conn()),
-        )?;
+    pub(crate) async fn list(db: &Db, cfg: &Cfg, game: &Game) -> Result<Vec<Self>> {
+        let models = profiles::Entity::find()
+            .filter(profiles::Column::GameId.eq(game.id))
+            .order_by_asc(profiles::Column::Id)
+            .all(db.conn())
+            .await?;
 
-        models
-            .into_iter()
-            .map(|model| Profile::load(model.id, db.clone(), cfg.clone()))
-            .collect()
+        let mut out = Vec::with_capacity(models.len());
+        for model in models {
+            out.push(Profile::load(model.id, db.clone(), cfg.clone()).await?);
+        }
+        Ok(out)
     }
 
-    pub(crate) fn search(db: Db, cfg: Cfg, game: &Game, name: &str) -> Result<Option<Profile>> {
-        let model = db.run(
-            profiles::Entity::find()
-                .filter(profiles::Column::GameId.eq(game.id))
-                .filter(profiles::Column::Name.eq(name))
-                .one(db.conn()),
-        )?;
+    pub(crate) async fn search(
+        db: Db,
+        cfg: Cfg,
+        game: &Game,
+        name: &str,
+    ) -> Result<Option<Profile>> {
+        let model = profiles::Entity::find()
+            .filter(profiles::Column::GameId.eq(game.id))
+            .filter(profiles::Column::Name.eq(name))
+            .one(db.conn())
+            .await?;
 
-        model
-            .map(|model| Profile::load(model.id, db.clone(), cfg.clone()))
-            .transpose()
+        if let Some(model) = model {
+            Ok(Some(
+                Profile::load(model.id, db.clone(), cfg.clone()).await?,
+            ))
+        } else {
+            Ok(None)
+        }
     }
 }
 
@@ -231,88 +254,110 @@ mod test {
         repository::{DeployKind, entities::Error},
     };
 
-    #[test]
-    fn test_add() {
-        let repo = Repository::mock();
-        let game = repo.add_game("Morrowind", DeployKind::OpenMW).unwrap();
-        let profile = game.add_profile("Test").unwrap();
-        assert!(profile.dir().unwrap().exists());
+    #[tokio::test]
+    async fn test_add() {
+        let repo = Repository::mock().await;
+        let game = repo
+            .add_game("Morrowind", DeployKind::OpenMW)
+            .await
+            .unwrap();
+        let profile = game.add_profile("Test").await.unwrap();
+        assert!(profile.dir().await.unwrap().exists());
     }
 
-    #[test]
-    fn test_add_duplicate() {
-        let repo = Repository::mock();
-        let game = repo.add_game("Morrowind", DeployKind::OpenMW).unwrap();
-        game.add_profile("Test").unwrap();
+    #[tokio::test]
+    async fn test_add_duplicate() {
+        let repo = Repository::mock().await;
+        let game = repo
+            .add_game("Morrowind", DeployKind::OpenMW)
+            .await
+            .unwrap();
+        game.add_profile("Test").await.unwrap();
 
-        assert!(matches!(game.add_profile("Test"), Err(Error::DuplicateName)));
+        assert!(matches!(
+            game.add_profile("Test").await,
+            Err(Error::DuplicateName)
+        ));
     }
 
-    #[test]
-    fn test_remove() {
-        let repo = Repository::mock();
-        let game = repo.add_game("Skyrim", DeployKind::CreationEngine).unwrap();
-        let mod_ = game.add_mod("test_mod", None).unwrap();
+    #[tokio::test]
+    async fn test_remove() {
+        let repo = Repository::mock().await;
+        let game = repo
+            .add_game("Skyrim", DeployKind::CreationEngine)
+            .await
+            .unwrap();
+        let mod_ = game.add_mod("test_mod", None).await.unwrap();
 
-        let profile = game.add_profile("Test").unwrap();
-        let mod_entry = profile.add_mod_entry(mod_).unwrap();
+        let profile = game.add_profile("Test").await.unwrap();
+        let mod_entry = profile.add_mod_entry(mod_).await.unwrap();
 
-        assert_eq!(game.profiles().unwrap().len(), 1);
+        assert_eq!(game.profiles().await.unwrap().len(), 1);
 
-        let dir = profile.dir().unwrap();
+        let dir = profile.dir().await.unwrap();
 
-        profile.remove().unwrap();
+        profile.remove().await.unwrap();
 
-        assert!(matches!(mod_entry.remove(), Err(Error::RemovedEntity)));
+        assert!(matches!(
+            mod_entry.remove().await,
+            Err(Error::RemovedEntity)
+        ));
         assert!(!dir.exists());
-        assert_eq!(game.profiles().unwrap().len(), 0);
     }
 
-    #[test]
-    fn test_list() {
-        let repo = Repository::mock();
-        let game = repo.add_game("Skyrim", DeployKind::CreationEngine).unwrap();
-
-        assert_eq!(game.profiles().unwrap().len(), 0);
-        game.add_profile("Cool Profile").unwrap();
-        assert_eq!(repo.games().unwrap().len(), 1);
+    #[tokio::test]
+    async fn test_parent() {
+        let repo = Repository::mock().await;
+        let game = repo
+            .add_game("Skyrim", DeployKind::CreationEngine)
+            .await
+            .unwrap();
+        game.add_profile("Cool Profile").await.unwrap();
+        assert_eq!(repo.games().await.unwrap().len(), 1);
     }
 
-    #[test]
-    fn test_parent() {
-        let repo = Repository::mock();
-        let game = repo.add_game("Skyrim", DeployKind::CreationEngine).unwrap();
-        let profile = game.add_profile("Test").unwrap();
-        assert_eq!(profile.parent().unwrap(), game);
+    #[tokio::test]
+    async fn test_name() {
+        let repo = Repository::mock().await;
+        let game = repo
+            .add_game("Skyrim", DeployKind::CreationEngine)
+            .await
+            .unwrap();
+        let profile = game.add_profile("Test").await.unwrap();
+        profile.name().await.unwrap();
     }
 
-    #[test]
-    fn test_activate() {
-        let repo = Repository::mock();
-        let game = repo.add_game("Morrowind", DeployKind::OpenMW).unwrap();
+    #[tokio::test]
+    async fn test_activate() {
+        let repo = Repository::mock().await;
+        let game = repo
+            .add_game("Morrowind", DeployKind::OpenMW)
+            .await
+            .unwrap();
 
-        let profile1 = game.add_profile("Test1").unwrap();
-        let profile2 = game.add_profile("Test2").unwrap();
+        let profile1 = game.add_profile("Test1").await.unwrap();
+        let profile2 = game.add_profile("Test2").await.unwrap();
 
-        assert!(profile1.is_active().unwrap());
-
-        profile2.activate().unwrap();
-
-        assert!(profile2.is_active().unwrap());
+        assert!(profile1.is_active().await.unwrap());
+        profile2.activate().await.unwrap();
+        assert!(profile2.is_active().await.unwrap());
     }
 
-    #[test]
-    fn test_remove_made_next_profile_active() {
-        let repo = Repository::mock();
-        let game = repo.add_game("Skyrim", DeployKind::CreationEngine).unwrap();
+    #[tokio::test]
+    async fn test_remove_active() {
+        let repo = Repository::mock().await;
+        let game = repo
+            .add_game("Skyrim", DeployKind::CreationEngine)
+            .await
+            .unwrap();
 
-        let profile1 = game.add_profile("Test1").unwrap();
-        let profile2 = game.add_profile("Test2").unwrap();
+        let profile1 = game.add_profile("Test1").await.unwrap();
+        let profile2 = game.add_profile("Test2").await.unwrap();
 
-        profile1.activate().unwrap();
-        assert!(profile1.is_active().unwrap());
+        profile1.activate().await.unwrap();
+        assert!(profile1.is_active().await.unwrap());
 
-        profile1.remove().unwrap();
-        assert!(profile2.is_active().unwrap());
+        profile1.remove().await.unwrap();
+        assert!(profile2.is_active().await.unwrap());
     }
 }

@@ -21,9 +21,11 @@ pub struct ModEntry {
 }
 
 impl ModEntry {
-    pub(crate) fn load(entry_row_id: i64, mod_row_id: i64, db: Db, cfg: Cfg) -> Result<Self> {
-        let entry_model = db.run(mod_entries::Entity::find_by_id(entry_row_id).one(db.conn()))?;
-        let mod_model = db.run(mods::Entity::find_by_id(mod_row_id).one(db.conn()))?;
+    pub(crate) async fn load(entry_row_id: i64, mod_row_id: i64, db: Db, cfg: Cfg) -> Result<Self> {
+        let entry_model = mod_entries::Entity::find_by_id(entry_row_id)
+            .one(db.conn())
+            .await?;
+        let mod_model = mods::Entity::find_by_id(mod_row_id).one(db.conn()).await?;
 
         let Some(entry_model) = entry_model else {
             return Err(Error::RemovedEntity);
@@ -40,108 +42,107 @@ impl ModEntry {
         })
     }
 
-    fn entry_model(&self) -> Result<mod_entries::Model> {
-        let model = self
-            .db
-            .run(mod_entries::Entity::find_by_id(self.entry_id).one(self.db.conn()))?;
+    async fn entry_model(&self) -> Result<mod_entries::Model> {
+        let model = mod_entries::Entity::find_by_id(self.entry_id)
+            .one(self.db.conn())
+            .await?;
         model.ok_or(Error::RemovedEntity)
     }
 
-    fn mod_model(&self) -> Result<mods::Model> {
-        let model = self
-            .db
-            .run(mods::Entity::find_by_id(self.mod_id).one(self.db.conn()))?;
+    async fn mod_model(&self) -> Result<mods::Model> {
+        let model = mods::Entity::find_by_id(self.mod_id)
+            .one(self.db.conn())
+            .await?;
         model.ok_or(Error::RemovedEntity)
     }
 
-    pub fn name(&self) -> Result<String> {
-        Ok(self.mod_model()?.name)
+    pub async fn name(&self) -> Result<String> {
+        Ok(self.mod_model().await?.name)
     }
 
-    pub fn enabled(&self) -> Result<bool> {
-        Ok(self.entry_model()?.enabled)
+    pub async fn enabled(&self) -> Result<bool> {
+        Ok(self.entry_model().await?.enabled)
     }
 
-    pub fn set_enabled(&self, value: bool) -> Result<()> {
-        let mut active = self.entry_model()?.into_active_model();
+    pub async fn set_enabled(&self, value: bool) -> Result<()> {
+        let mut active = self.entry_model().await?.into_active_model();
         active.enabled = Set(value);
-        self.db.run(active.update(self.db.conn()))?;
+        active.update(self.db.conn()).await?;
         Ok(())
     }
 
-    pub fn notes(&self) -> Result<String> {
-        Ok(self.entry_model()?.notes)
+    pub async fn notes(&self) -> Result<String> {
+        Ok(self.entry_model().await?.notes)
     }
 
-    pub fn parent(&self) -> Result<Profile> {
-        let profile_id = self.entry_model()?.profile_id;
-        Profile::load(profile_id, self.db.clone(), self.cfg.clone())
+    pub async fn parent(&self) -> Result<Profile> {
+        let profile_id = self.entry_model().await?.profile_id;
+        Profile::load(profile_id, self.db.clone(), self.cfg.clone()).await
     }
 
-    pub(crate) fn add(db: &Db, cfg: &Cfg, profile: &Profile, mod_: Mod) -> Result<Self> {
+    pub(crate) async fn add(db: &Db, cfg: &Cfg, profile: &Profile, mod_: Mod) -> Result<Self> {
         let profile_id = profile.id;
         let mod_id = mod_.id;
-        let next_position = profile.mod_entries()?.len() as i64;
+        let next_position = profile.mod_entries().await?.len() as i64;
 
-        let inserted = db.run(async {
-            let model = mod_entries::ActiveModel {
-                id: sea_orm::ActiveValue::NotSet,
-                profile_id: Set(profile_id),
-                mod_id: Set(mod_id),
-                position: Set(next_position),
-                enabled: Set(true),
-                notes: Set(String::new()),
-            };
-            model.insert(db.conn()).await
-        })?;
+        let model = mod_entries::ActiveModel {
+            id: sea_orm::ActiveValue::NotSet,
+            profile_id: Set(profile_id),
+            mod_id: Set(mod_id),
+            position: Set(next_position),
+            enabled: Set(true),
+            notes: Set(String::new()),
+        };
+        let inserted = model.insert(db.conn()).await?;
 
-        ModEntry::load(inserted.id, mod_id, db.clone(), cfg.clone())
+        ModEntry::load(inserted.id, mod_id, db.clone(), cfg.clone()).await
     }
 
-    pub fn remove(self) -> Result<()> {
-        let entry_model = self.entry_model()?;
+    pub async fn remove(self) -> Result<()> {
+        let entry_model = self.entry_model().await?;
         let removed_position = entry_model.position;
         let profile_id = entry_model.profile_id;
         let row_id = entry_model.id;
 
-        self.db.run(async {
-            let Some(model) = mod_entries::Entity::find_by_id(row_id).one(self.db.conn()).await? else {
-                return Err(sea_orm::DbErr::Custom("missing mod entry during delete".into()));
-            };
-            model.delete(self.db.conn()).await?;
+        let Some(model) = mod_entries::Entity::find_by_id(row_id)
+            .one(self.db.conn())
+            .await?
+        else {
+            return Err(Error::Internal(sea_orm::DbErr::Custom(
+                "missing mod entry during delete".into(),
+            )));
+        };
+        model.delete(self.db.conn()).await?;
 
-            let trailing = mod_entries::Entity::find()
-                .filter(mod_entries::Column::ProfileId.eq(profile_id))
-                .filter(mod_entries::Column::Position.gt(removed_position))
-                .order_by_asc(mod_entries::Column::Position)
-                .all(self.db.conn())
-                .await?;
+        let trailing = mod_entries::Entity::find()
+            .filter(mod_entries::Column::ProfileId.eq(profile_id))
+            .filter(mod_entries::Column::Position.gt(removed_position))
+            .order_by_asc(mod_entries::Column::Position)
+            .all(self.db.conn())
+            .await?;
 
-            for model in trailing {
-                let mut active = model.into_active_model();
-                active.position = Set(active.position.unwrap() - 1);
-                active.update(self.db.conn()).await?;
-            }
-
-            Ok(())
-        })?;
+        for model in trailing {
+            let mut active = model.into_active_model();
+            active.position = Set(active.position.unwrap() - 1);
+            active.update(self.db.conn()).await?;
+        }
 
         Ok(())
     }
 
-    pub(crate) fn list(db: &Db, cfg: &Cfg, profile: &Profile) -> Result<Vec<Self>> {
-        let models = db.run(
-            mod_entries::Entity::find()
-                .filter(mod_entries::Column::ProfileId.eq(profile.id))
-                .order_by_asc(mod_entries::Column::Position)
-                .order_by_asc(mod_entries::Column::Id)
-                .all(db.conn()),
-        )?;
+    pub(crate) async fn list(db: &Db, cfg: &Cfg, profile: &Profile) -> Result<Vec<Self>> {
+        let models = mod_entries::Entity::find()
+            .filter(mod_entries::Column::ProfileId.eq(profile.id))
+            .order_by_asc(mod_entries::Column::Position)
+            .order_by_asc(mod_entries::Column::Id)
+            .all(db.conn())
+            .await?;
 
-        models
-            .into_iter()
-            .map(|model| ModEntry::load(model.id, model.mod_id, db.clone(), cfg.clone()))
-            .collect()
+        let mut out = Vec::with_capacity(models.len());
+        for model in models {
+            out.push(ModEntry::load(model.id, model.mod_id, db.clone(), cfg.clone()).await?);
+        }
+        Ok(out)
     }
 }
 
@@ -156,47 +157,57 @@ mod test {
     use super::*;
     use crate::{Repository, repository::DeployKind};
 
-    #[test]
-    fn test_add() {
-        let repo = Repository::mock();
+    #[tokio::test]
+    async fn test_add() {
+        let repo = Repository::mock().await;
 
-        let game = repo.add_game("Morrowind", DeployKind::OpenMW).unwrap();
-        let profile = game.add_profile("Test").unwrap();
+        let game = repo
+            .add_game("Morrowind", DeployKind::OpenMW)
+            .await
+            .unwrap();
+        let profile = game.add_profile("Test").await.unwrap();
 
-        let mod1 = game.add_mod("Super Duper Mod", None).unwrap();
-        let mod2 = game.add_mod("Super Duper Mod: 2", None).unwrap();
+        let mod1 = game.add_mod("Super Duper Mod", None).await.unwrap();
+        let mod2 = game.add_mod("Super Duper Mod: 2", None).await.unwrap();
 
-        profile.add_mod_entry(mod1).unwrap();
-        profile.add_mod_entry(mod2).unwrap();
+        profile.add_mod_entry(mod1).await.unwrap();
+        profile.add_mod_entry(mod2).await.unwrap();
 
-        assert_eq!(profile.mod_entries().unwrap().len(), 2);
+        assert_eq!(profile.mod_entries().await.unwrap().len(), 2);
     }
 
-    #[test]
-    fn test_remove() {
-        let repo = Repository::mock();
+    #[tokio::test]
+    async fn test_remove() {
+        let repo = Repository::mock().await;
 
-        let game = repo.add_game("Morrowind", DeployKind::OpenMW).unwrap();
-        let profile = game.add_profile("Test").unwrap();
+        let game = repo
+            .add_game("Morrowind", DeployKind::OpenMW)
+            .await
+            .unwrap();
+        let profile = game.add_profile("Test").await.unwrap();
 
-        let mod_entries: Vec<_> = (1..=6)
-            .map(|i| {
-                let mod_ = game.add_mod(&format!("Mod{i}"), None).unwrap();
-                profile.add_mod_entry(mod_).unwrap()
-            })
-            .collect();
-
-        assert_eq!(profile.mod_entries().unwrap().len(), 6);
-
-        let remove_and_check = |entry: &ModEntry| {
-            entry.clone().remove().unwrap();
-            let entries = profile.mod_entries().unwrap();
-            assert!(!entries.contains(entry));
+        let mod_entries: Vec<_> = {
+            let mut entries = Vec::new();
+            for i in 1..=6 {
+                let mod_ = game.add_mod(&format!("Mod{i}"), None).await.unwrap();
+                entries.push(profile.add_mod_entry(mod_).await.unwrap());
+            }
+            entries
         };
 
-        remove_and_check(mod_entries.first().unwrap());
-        remove_and_check(mod_entries.get(3).unwrap());
-        remove_and_check(mod_entries.get(5).unwrap());
+        assert_eq!(profile.mod_entries().await.unwrap().len(), 6);
+
+        let first = mod_entries.first().unwrap();
+        first.clone().remove().await.unwrap();
+        assert!(!profile.mod_entries().await.unwrap().contains(first));
+
+        let middle = mod_entries.get(3).unwrap();
+        middle.clone().remove().await.unwrap();
+        assert!(!profile.mod_entries().await.unwrap().contains(middle));
+
+        let last = mod_entries.get(5).unwrap();
+        last.clone().remove().await.unwrap();
+        assert!(!profile.mod_entries().await.unwrap().contains(last));
 
         let remaining: Vec<&ModEntry> = mod_entries
             .iter()
@@ -207,53 +218,73 @@ mod test {
             })
             .collect();
         assert_eq!(
-            profile.mod_entries().unwrap().iter().collect::<Vec<_>>(),
+            profile
+                .mod_entries()
+                .await
+                .unwrap()
+                .iter()
+                .collect::<Vec<_>>(),
             remaining
         );
     }
 
-    #[test]
-    fn test_parent() {
-        let repo = Repository::mock();
+    #[tokio::test]
+    async fn test_parent() {
+        let repo = Repository::mock().await;
 
-        let game = repo.add_game("Skyrim", DeployKind::CreationEngine).unwrap();
-        let profile = game.add_profile("The Best Profile").unwrap();
+        let game = repo
+            .add_game("Skyrim", DeployKind::CreationEngine)
+            .await
+            .unwrap();
+        let profile = game.add_profile("The Best Profile").await.unwrap();
         let mod_ = game
             .add_mod(
                 "Better Khajiit Balls 16K - Remastered - 2025 Edition - REAL",
                 None,
             )
+            .await
             .unwrap();
-        let entry = profile.add_mod_entry(mod_).unwrap();
+        let entry = profile.add_mod_entry(mod_).await.unwrap();
 
-        assert_eq!(entry.parent().unwrap(), profile);
+        assert_eq!(entry.parent().await.unwrap(), profile);
     }
 
-    #[test]
-    fn test_name() {
-        let repo = Repository::mock();
+    #[tokio::test]
+    async fn test_name() {
+        let repo = Repository::mock().await;
 
-        let game = repo.add_game("Morrowind", DeployKind::OpenMW).unwrap();
-        let profile = game.add_profile("Test").unwrap();
-        let mod_ = game.add_mod("Super Duper Mod", None).unwrap();
+        let game = repo
+            .add_game("Morrowind", DeployKind::OpenMW)
+            .await
+            .unwrap();
+        let profile = game.add_profile("Test").await.unwrap();
+        let mod_ = game.add_mod("Super Duper Mod", None).await.unwrap();
 
-        profile.add_mod_entry(mod_).unwrap().name().unwrap();
+        profile
+            .add_mod_entry(mod_)
+            .await
+            .unwrap()
+            .name()
+            .await
+            .unwrap();
     }
 
-    #[test]
-    fn test_enabled() {
-        let repo = Repository::mock();
+    #[tokio::test]
+    async fn test_enabled() {
+        let repo = Repository::mock().await;
 
-        let game = repo.add_game("Morrowind", DeployKind::OpenMW).unwrap();
-        let profile = game.add_profile("Test").unwrap();
-        let mod_ = game.add_mod("Super Duper Mod", None).unwrap();
+        let game = repo
+            .add_game("Morrowind", DeployKind::OpenMW)
+            .await
+            .unwrap();
+        let profile = game.add_profile("Test").await.unwrap();
+        let mod_ = game.add_mod("Super Duper Mod", None).await.unwrap();
+        let entry = profile.add_mod_entry(mod_).await.unwrap();
 
-        let entry = profile.add_mod_entry(mod_).unwrap();
+        assert!(entry.enabled().await.unwrap());
 
-        assert!(entry.enabled().unwrap());
+        entry.set_enabled(false).await.unwrap();
 
-        entry.set_enabled(false).unwrap();
-
-        assert!(!entry.enabled().unwrap());
+        assert!(!entry.enabled().await.unwrap());
     }
 }

@@ -13,7 +13,6 @@ use iced::{
     widget::{Column, button, column, container, row, rule, scrollable, space, text},
 };
 use iced_aw::Spinner;
-use tokio::task::spawn_blocking;
 
 pub mod new_game_dialog;
 pub mod profiles_tab;
@@ -77,7 +76,7 @@ pub struct LibraryManager {
 impl LibraryManager {
     pub fn new(repo: Repository) -> (Self, Task<Message>) {
         let (new_game_dialog, new_game_dialog_task) = new_game_dialog::Dialog::new();
-        let profiles_tab = profiles_tab::Tab::new(repo.clone());
+        let profiles_tab = profiles_tab::Tab::new();
 
         (
             Self {
@@ -268,32 +267,26 @@ impl LibraryManager {
 }
 
 fn load_state(repo: Repository) -> Task<Message> {
-    let repo = repo.clone();
     Task::perform(
-        async {
-            spawn_blocking(move || {
-                let active_game = repo.active_game().unwrap();
-                let games: Vec<GameRow> = repo
-                    .games()
-                    .unwrap()
-                    .iter()
-                    .map(|g| GameRow {
-                        entity: g.clone(),
-                        name: g.name().unwrap(),
-                    })
-                    .collect();
+        async move {
+            let active_game = repo.active_game().await.unwrap();
+            let games = repo.games().await.unwrap();
+            let mut rows = Vec::with_capacity(games.len());
+            for game in games {
+                rows.push(GameRow {
+                    name: game.name().await.unwrap(),
+                    entity: game,
+                });
+            }
 
-                if !games.is_empty() {
-                    State::Loaded {
-                        active_game: active_game.unwrap(),
-                        games,
-                    }
-                } else {
-                    State::NoGames
+            if let Some(active_game) = active_game {
+                State::Loaded {
+                    active_game,
+                    games: rows,
                 }
-            })
-            .await
-            .unwrap()
+            } else {
+                State::NoGames
+            }
         },
         Message::StateChanged,
     )

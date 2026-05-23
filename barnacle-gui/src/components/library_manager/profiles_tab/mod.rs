@@ -1,17 +1,13 @@
 use crate::{
     components::library_manager::profiles_tab::new_dialog::NewProfile, icons::icon, modal,
 };
-use barnacle_lib::{
-    Repository,
-    repository::{Game, Profile},
-};
+use barnacle_lib::repository::{Game, Profile};
 use fluent_i18n::t;
 use iced::{
     Element, Length, Task,
     widget::{Column, button, column, container, row, scrollable, space, text},
 };
 use iced_aw::Spinner;
-use tokio::task::spawn_blocking;
 
 use crate::components::library_manager::profiles_tab::{
     edit_dialog::EditDialog, new_dialog::NewDialog,
@@ -45,11 +41,10 @@ pub enum Action {
 pub enum State {
     Loading,
     Error(String),
-    Loaded(Vec<Profile>),
+    Loaded(Vec<ProfileRow>),
 }
 
 pub struct Tab {
-    repo: Repository,
     state: State,
 
     show_new_dialog: bool,
@@ -60,12 +55,11 @@ pub struct Tab {
 }
 
 impl Tab {
-    pub fn new(repo: Repository) -> Self {
+    pub fn new() -> Self {
         let (new_dialog, _) = NewDialog::new();
         let (edit_dialog, _) = EditDialog::new();
 
         Self {
-            repo: repo.clone(),
             state: State::Loading,
 
             show_new_dialog: false,
@@ -79,12 +73,16 @@ impl Tab {
     pub fn refresh(&self, game: &Game) -> Task<Message> {
         let game = game.clone();
         Task::perform(
-            {
-                async {
-                    spawn_blocking(move || State::Loaded(game.profiles().unwrap()))
-                        .await
-                        .unwrap()
+            async move {
+                let profiles = game.profiles().await.unwrap();
+                let mut rows = Vec::with_capacity(profiles.len());
+                for profile in profiles {
+                    rows.push(ProfileRow {
+                        name: profile.name().await.unwrap(),
+                        entity: profile,
+                    });
                 }
+                State::Loaded(rows)
             },
             Message::StateChanged,
         )
@@ -103,7 +101,11 @@ impl Tab {
                 Action::None
             }
             Message::EditButtonPressed(profile) => {
-                self.edit_dialog.load(profile);
+                if let State::Loaded(profiles) = &self.state
+                    && let Some(row) = profiles.iter().find(|row| row.entity == profile)
+                {
+                    self.edit_dialog.load(profile, row.name.clone());
+                }
                 Action::None
             }
             Message::DeleteButtonPressed(profile) => {
@@ -129,12 +131,7 @@ impl Tab {
                     edit_dialog::Action::Run(task) => Action::Run(task.map(Message::EditDialog)),
                     edit_dialog::Action::Cancel => Action::None,
                     edit_dialog::Action::Edit { profile, name } => Action::Run(Task::perform(
-                        async {
-                            spawn_blocking(move || {
-                                profile.set_name(&name).unwrap();
-                            })
-                            .await
-                        },
+                        async move { profile.set_name(&name).await.unwrap() },
                         |_| Message::ProfileEdited,
                     )),
                 },
@@ -166,13 +163,14 @@ impl Tab {
         }
     }
 
-    fn profile_row<'a>(&'a self, profile: &'a Profile) -> Element<'a, Message> {
+    fn profile_row<'a>(&'a self, profile: &'a ProfileRow) -> Element<'a, Message> {
         container(
             row![
-                text(profile.name().unwrap()),
+                text(profile.name.clone()),
                 space::horizontal(),
-                button(icon("edit")),
-                button(icon("delete")).on_press(Message::DeleteButtonPressed(profile.clone()))
+                button(icon("edit")).on_press(Message::EditButtonPressed(profile.entity.clone())),
+                button(icon("delete"))
+                    .on_press(Message::DeleteButtonPressed(profile.entity.clone()))
             ]
             .padding(12),
         )
@@ -180,4 +178,10 @@ impl Tab {
         .style(container::bordered_box)
         .into()
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct ProfileRow {
+    entity: Profile,
+    name: String,
 }

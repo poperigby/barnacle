@@ -27,42 +27,36 @@ pub struct Repository {
 }
 
 impl Repository {
-    pub fn new() -> Self {
+    pub async fn new() -> Self {
         Self {
-            db: Db::new(),
+            db: Db::new().await,
             cfg: Arc::new(RwLock::new(CoreConfig::load())),
         }
     }
 
-    pub fn add_game(&self, name: &str, deploy_kind: DeployKind) -> entities::Result<Game> {
-        Game::add(&self.db.clone(), self.cfg.clone(), name, deploy_kind)
+    pub async fn add_game(&self, name: &str, deploy_kind: DeployKind) -> entities::Result<Game> {
+        Game::add(&self.db.clone(), self.cfg.clone(), name, deploy_kind).await
     }
 
-    pub fn games(&self) -> entities::Result<Vec<Game>> {
-        Game::list(self.db.clone(), self.cfg.clone())
+    pub async fn games(&self) -> entities::Result<Vec<Game>> {
+        Game::list(self.db.clone(), self.cfg.clone()).await
     }
 
-    pub fn search_game(&self, name: &str) -> entities::Result<Option<Game>> {
-        Game::search(self.db.clone(), self.cfg.clone(), name)
+    pub async fn search_game(&self, name: &str) -> entities::Result<Option<Game>> {
+        Game::search(self.db.clone(), self.cfg.clone(), name).await
     }
 
-    pub fn active_game(&self) -> entities::Result<Option<Game>> {
-        Game::active(self.db.clone(), self.cfg.clone())
+    pub async fn active_game(&self) -> entities::Result<Option<Game>> {
+        Game::active(self.db.clone(), self.cfg.clone()).await
     }
 
     #[cfg(test)]
     /// A mock version of a [`Repository`] with an in-memory database and configuration
     /// file, for using in tests.
-    pub(crate) fn mock() -> Self {
+    pub(crate) async fn mock() -> Self {
         Self {
-            db: Db::in_memory(),
+            db: Db::in_memory().await,
             cfg: Arc::new(RwLock::new(CoreConfig::mock())),
         }
-    }
-}
-
-impl Default for Repository {
-    fn default() -> Self {
-        Self::new()
     }
 }

@@ -12,37 +12,35 @@ use crate::repository::{
 pub struct Tool {
     id: i64,
     db: Db,
-    cfg: Cfg,
 }
 
 impl Tool {
-    pub(crate) fn load(row_id: i64, db: Db, cfg: Cfg) -> Result<Self> {
-        let model = db.run(tools::Entity::find_by_id(row_id).one(db.conn()))?;
+    #[allow(dead_code)]
+    pub(crate) async fn load(row_id: i64, db: Db, _cfg: Cfg) -> Result<Self> {
+        let model = tools::Entity::find_by_id(row_id).one(db.conn()).await?;
         let Some(model) = model else {
             return Err(Error::RemovedEntity);
         };
-        Ok(Self {
-            id: model.id,
-            db,
-            cfg,
-        })
+        Ok(Self { id: model.id, db })
     }
 
-    fn model(&self) -> Result<tools::Model> {
-        let model = self.db.run(tools::Entity::find_by_id(self.id).one(self.db.conn()))?;
+    async fn model(&self) -> Result<tools::Model> {
+        let model = tools::Entity::find_by_id(self.id)
+            .one(self.db.conn())
+            .await?;
         model.ok_or(Error::RemovedEntity)
     }
 
-    pub fn name(&self) -> Result<String> {
-        Ok(self.model()?.name)
+    pub async fn name(&self) -> Result<String> {
+        Ok(self.model().await?.name)
     }
 
-    pub fn path(&self) -> Result<PathBuf> {
-        Ok(PathBuf::from(self.model()?.path))
+    pub async fn path(&self) -> Result<PathBuf> {
+        Ok(PathBuf::from(self.model().await?.path))
     }
 
-    pub fn args(&self) -> Result<String> {
-        Ok(self.model()?.args.unwrap_or_default())
+    pub async fn args(&self) -> Result<String> {
+        Ok(self.model().await?.args.unwrap_or_default())
     }
 }
 

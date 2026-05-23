@@ -37,7 +37,8 @@ enum Command {
     Mod(mod_::Command),
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     human_panic::setup_panic!();
 
     let subscriber = FmtSubscriber::builder()
@@ -46,22 +47,22 @@ fn main() {
         .finish();
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
-    let repo = Repository::new();
+    let repo = Repository::new().await;
     let cli = Cli::parse();
 
     match &cli.command {
         Some(cmd) => match cmd {
-            Command::Game(cmd) => game::handle(&repo, cmd),
-            Command::Profile(cmd) => profile::handle(&repo, cmd),
-            Command::Mod(cmd) => mod_::handle(&repo, cmd),
+            Command::Game(cmd) => game::handle(&repo, cmd).await,
+            Command::Profile(cmd) => profile::handle(&repo, cmd).await,
+            Command::Mod(cmd) => mod_::handle(&repo, cmd).await,
         },
-        None => status(&repo),
+        None => status(&repo).await,
     }
 }
 
-fn status(repo: &Repository) {
-    let active_game = match repo.active_game().unwrap() {
-        Some(game) => game.name().unwrap().green(),
+async fn status(repo: &Repository) {
+    let active_game = match repo.active_game().await.unwrap() {
+        Some(game) => game.name().await.unwrap().green(),
         None => "None".red(),
     };
 

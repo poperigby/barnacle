@@ -1,6 +1,5 @@
 use std::env;
 
-use barnacle_lib::Repository;
 use fluent_i18n::t;
 use iced::{
     Element, Task,
@@ -35,16 +34,14 @@ pub enum PickPathKind {
 }
 
 pub struct AddModDialog {
-    repo: Repository,
     name: String,
     path: String,
 }
 
 impl AddModDialog {
-    pub fn new(repo: Repository) -> (Self, Task<Message>) {
+    pub fn new() -> (Self, Task<Message>) {
         (
             Self {
-                repo: repo.clone(),
                 name: "".into(),
                 path: "".into(),
             },

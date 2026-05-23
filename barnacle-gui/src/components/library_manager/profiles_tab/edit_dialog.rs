@@ -36,10 +36,9 @@ impl EditDialog {
     }
 
     /// Load a new [`Profile`] for editing.
-    pub fn load(&mut self, profile: Profile) {
+    pub fn load(&mut self, profile: Profile, name: String) {
         self.profile = Some(profile.clone());
-
-        self.name = profile.name().unwrap();
+        self.name = name;
     }
 
     /// Reset the dialog state

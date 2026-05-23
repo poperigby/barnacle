@@ -1,7 +1,9 @@
 use sea_orm::entity::prelude::*;
 use strum::{Display, EnumIter, EnumString};
 
-#[derive(Debug, Clone, Default, Copy, PartialEq, Eq, PartialOrd, Ord, Display, EnumIter, EnumString)]
+#[derive(
+    Debug, Clone, Default, Copy, PartialEq, Eq, PartialOrd, Ord, Display, EnumIter, EnumString,
+)]
 #[strum(serialize_all = "title_case")]
 pub enum DeployKind {
     #[default]
