@@ -1,18 +1,12 @@
-use sea_orm::{ConnectionTrait, Database, DatabaseConnection};
+use sea_orm::{Database, DatabaseConnection};
 
-use crate::{
-    fs::state_dir,
-    repository::{
-        db::models::{games, mod_entries, mods, profiles, tools},
-        entities::Result,
-    },
-};
+use crate::{fs::state_dir, repository::entities::Result};
 
 pub(crate) mod models;
 
 #[derive(Clone, Debug)]
 pub(crate) struct Db {
-    conn: DatabaseConnection,
+    db: DatabaseConnection,
 }
 
 impl Db {
@@ -22,36 +16,29 @@ impl Db {
             .await
             .unwrap_or_else(|err| panic!("failed to open sqlite database: {err}"));
 
-        let db = Self { conn };
+        let db = Self { db: conn };
         db.init().await.unwrap();
         db
     }
 
     async fn init(&self) -> Result<()> {
-        self.conn
-            .execute_unprepared("PRAGMA foreign_keys = ON")
-            .await?;
-        self.conn
-            .get_schema_builder()
-            .register(games::Entity)
-            .register(profiles::Entity)
-            .register(mods::Entity)
-            .register(mod_entries::Entity)
-            .register(tools::Entity)
-            .sync(&self.conn)
+        let model_path = module_path!().split("::").next().unwrap();
+        self.db
+            .get_schema_registry(model_path)
+            .sync(&self.db)
             .await?;
 
         Ok(())
     }
 
     pub(crate) fn conn(&self) -> &DatabaseConnection {
-        &self.conn
+        &self.db
     }
 
     #[cfg(test)]
     pub(crate) async fn in_memory() -> Self {
         let conn = Database::connect("sqlite::memory:").await.unwrap();
-        let db = Self { conn };
+        let db = Self { db: conn };
         db.init().await.unwrap();
         db
     }
