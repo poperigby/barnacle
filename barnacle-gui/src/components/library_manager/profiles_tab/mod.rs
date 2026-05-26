@@ -104,7 +104,7 @@ impl Tab {
                 if let State::Loaded(profiles) = &self.state
                     && let Some(row) = profiles.iter().find(|row| row.entity == profile)
                 {
-                    self.edit_dialog.load(profile, row.name.clone());
+                    self.edit_dialog.load(row);
                 }
                 Action::None
             }

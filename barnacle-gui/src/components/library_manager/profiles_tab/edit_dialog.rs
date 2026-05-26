@@ -5,6 +5,8 @@ use iced::{
     widget::{button, column, container, row, space, text, text_input},
 };
 
+use crate::components::library_manager::profiles_tab::ProfileRow;
+
 #[derive(Debug, Clone)]
 pub enum Message {
     NameInput(String),
@@ -36,9 +38,9 @@ impl EditDialog {
     }
 
     /// Load a new [`Profile`] for editing.
-    pub fn load(&mut self, profile: Profile, name: String) {
-        self.profile = Some(profile.clone());
-        self.name = name;
+    pub fn load(&mut self, row: &ProfileRow) {
+        self.profile = Some(row.entity.clone());
+        self.name = row.name.clone();
     }
 
     /// Reset the dialog state
