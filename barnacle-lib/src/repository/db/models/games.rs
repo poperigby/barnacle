@@ -6,10 +6,15 @@ use strum::{Display, EnumIter, EnumString};
 )]
 #[strum(serialize_all = "title_case")]
 pub enum DeployKind {
+    /// Deploys directly to the game directory with OverlayFS.
     #[default]
     Overlay,
+    /// Same as the overlay type, but with support for Gamebryo/Creation Engine `plugins.txt`.
     Gamebryo,
     CreationEngine,
+    /// Deploys mods to an intermediary staging directory with OverlayFS, preventing the mod store
+    /// from needing to be modified. The individual mod directories are then added to `openmw.cfg`.
+    /// Plugins are also handled.
     #[strum(serialize = "OpenMW")]
     OpenMW,
     #[strum(serialize = "Baldur's Gate 3")]
@@ -23,7 +28,7 @@ pub struct Model {
     pub id: i64,
     #[sea_orm(unique)]
     pub name: String,
-    pub targets_json: String,
+    pub targets: String,
     pub deploy_kind: String,
     pub is_active: bool,
 }

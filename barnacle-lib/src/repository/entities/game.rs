@@ -70,7 +70,7 @@ impl Game {
 
     pub async fn targets(&self) -> Result<Vec<PathBuf>> {
         let model = self.model().await?;
-        serde_json::from_str(&model.targets_json)
+        serde_json::from_str(&model.targets)
             .map_err(|err| Error::Serialization(err.to_string()))
     }
 
@@ -187,7 +187,7 @@ impl Game {
         let model = games::ActiveModel {
             id: sea_orm::ActiveValue::NotSet,
             name: Set(name.to_string()),
-            targets_json: Set("[]".to_string()),
+            targets: Set("[]".to_string()),
             deploy_kind: Set(deploy_kind.to_string()),
             is_active: Set(false),
         };
