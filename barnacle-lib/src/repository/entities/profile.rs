@@ -10,7 +10,7 @@ use tracing::info;
 use crate::repository::{
     Cfg,
     db::{Db, models::profiles},
-    entities::{Error, Game, Mod, ModEntry, Result, map_duplicate_name},
+    entities::{Error, Game, Mod, ModEntry, Result},
 };
 
 #[derive(Debug, Clone)]
@@ -55,8 +55,7 @@ impl Profile {
         active
             .update(self.db.conn())
             .await
-            .map_err(Error::from)
-            .map_err(map_duplicate_name)?;
+            .map_err(Error::from)?;
         let new_dir = self.dir().await?;
         fs::rename(old_dir, new_dir).unwrap();
         Ok(())
@@ -187,8 +186,7 @@ impl Profile {
         let inserted = model
             .insert(db.conn())
             .await
-            .map_err(Error::from)
-            .map_err(map_duplicate_name)?;
+            .map_err(Error::from)?;
 
         let profile = Profile::load(inserted.id, db.clone(), cfg.clone()).await?;
         fs::create_dir_all(profile.dir().await?).unwrap();
@@ -276,7 +274,7 @@ mod test {
 
         assert!(matches!(
             game.add_profile("Test").await,
-            Err(Error::DuplicateName)
+            Err(Error::Internal(err)) if err.to_string().contains("UNIQUE constraint failed")
         ));
     }
 

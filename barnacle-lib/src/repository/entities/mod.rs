@@ -23,17 +23,6 @@ pub enum Error {
     Internal(#[from] DbErr),
     #[error("This entity has been deleted")]
     RemovedEntity,
-    #[error("An entity with the given name already exists")]
-    DuplicateName,
     #[error("Internal database error {0}")]
     Serialization(String),
-}
-
-pub(crate) fn map_duplicate_name(err: Error) -> Error {
-    match err {
-        Error::Internal(db_err) if db_err.to_string().contains("UNIQUE constraint failed") => {
-            Error::DuplicateName
-        }
-        other => other,
-    }
 }

@@ -16,7 +16,7 @@ use crate::repository::{
         Db,
         models::{DeployKind, games, mods},
     },
-    entities::{Error, Mod, Profile, Result, map_duplicate_name},
+    entities::{Error, Mod, Profile, Result},
 };
 
 #[derive(Debug, Clone)]
@@ -61,8 +61,7 @@ impl Game {
         active
             .update(self.db.conn())
             .await
-            .map_err(Error::from)
-            .map_err(map_duplicate_name)?;
+            .map_err(Error::from)?;
         let new_dir = self.dir().await?;
         fs::rename(old_dir, new_dir).unwrap();
         Ok(())
@@ -194,8 +193,7 @@ impl Game {
         let inserted = model
             .insert(db.conn())
             .await
-            .map_err(Error::from)
-            .map_err(map_duplicate_name)?;
+            .map_err(Error::from)?;
 
         let game = Game::load(inserted.id, db.clone(), cfg.clone()).await?;
         fs::create_dir_all(game.dir().await.unwrap()).unwrap();
@@ -332,7 +330,7 @@ mod test {
 
         assert!(matches!(
             repo.add_game("Morrowind", DeployKind::OpenMW).await,
-            Err(Error::DuplicateName)
+            Err(Error::Internal(err)) if err.to_string().contains("UNIQUE constraint failed")
         ));
     }
 

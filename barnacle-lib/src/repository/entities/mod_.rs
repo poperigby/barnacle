@@ -13,7 +13,7 @@ use crate::{
     repository::{
         Cfg,
         db::{Db, models::mods},
-        entities::{Error, Game, Result, map_duplicate_name},
+        entities::{Error, Game, Result},
     },
 };
 
@@ -78,8 +78,7 @@ impl Mod {
         let inserted = model
             .insert(db.conn())
             .await
-            .map_err(Error::from)
-            .map_err(map_duplicate_name)?;
+            .map_err(Error::from)?;
 
         let mod_ = Mod::load(inserted.id, db.clone(), cfg.clone()).await?;
 
@@ -154,7 +153,7 @@ mod test {
 
         assert!(matches!(
             game.add_mod("Test", None).await,
-            Err(Error::DuplicateName)
+            Err(Error::Internal(err)) if err.to_string().contains("UNIQUE constraint failed")
         ));
     }
 
