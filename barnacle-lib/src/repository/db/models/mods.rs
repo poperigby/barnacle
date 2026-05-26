@@ -5,9 +5,10 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i64,
-    #[sea_orm(unique_key = "game_name")]
+    // Composite unique key: mod names only need to be unique within a game.
+    #[sea_orm(unique_key = "per_game_name")]
     pub game_id: i64,
-    #[sea_orm(unique_key = "game_name")]
+    #[sea_orm(unique_key = "per_game_name")]
     pub name: String,
 }
 
