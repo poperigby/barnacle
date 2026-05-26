@@ -8,7 +8,7 @@ workspace = true
 
 [dependencies]
 agdb = "0.12.6"
-chrono = "0.4.43"
+chrono = "0.4.44"
 clap = { version = "4.5.58", features = ["derive"] }
 compress-tools = "0.15.1"
 damascus = { version = "0.0.11", default-features=false, features = ["overlayfs"] }
