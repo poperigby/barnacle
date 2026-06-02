@@ -24,7 +24,7 @@ thiserror = "2.0.18"
 tokio = { version = "1.50.0" }
 toml = "1.0.1"
 tracing = "0.1.44"
-tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 walkdir = "2.5.0"
 xdg = "3.0.0"
 zip = "8.4.0"
