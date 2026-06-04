@@ -1,6 +1,6 @@
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, IntoActiveModel, ModelTrait,
-    QueryFilter, QueryOrder,
+    ActiveModelTrait, ActiveValue::Set, EntityTrait, IntoActiveModel, ModelTrait, QueryFilter,
+    QueryOrder,
 };
 
 use crate::repository::{
@@ -115,9 +115,9 @@ impl ModEntry {
         model.delete(self.db.conn()).await?;
 
         let trailing = mod_entries::Entity::find()
-            .filter(mod_entries::Column::ProfileId.eq(profile_id))
-            .filter(mod_entries::Column::Position.gt(removed_position))
-            .order_by_asc(mod_entries::Column::Position)
+            .filter(mod_entries::COLUMN.profile_id.eq(profile_id))
+            .filter(mod_entries::COLUMN.position.gt(removed_position))
+            .order_by_asc(mod_entries::COLUMN.position)
             .all(self.db.conn())
             .await?;
 
@@ -132,9 +132,9 @@ impl ModEntry {
 
     pub(crate) async fn list(db: &Db, cfg: &Cfg, profile: &Profile) -> Result<Vec<Self>> {
         let models = mod_entries::Entity::find()
-            .filter(mod_entries::Column::ProfileId.eq(profile.id))
-            .order_by_asc(mod_entries::Column::Position)
-            .order_by_asc(mod_entries::Column::Id)
+            .filter(mod_entries::COLUMN.profile_id.eq(profile.id))
+            .order_by_asc(mod_entries::COLUMN.position)
+            .order_by_asc(mod_entries::COLUMN.id)
             .all(db.conn())
             .await?;
 

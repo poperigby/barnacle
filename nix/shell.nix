@@ -20,6 +20,7 @@ pkgs.mkShell {
         rustPackages.clippy
         rustc
         rustfmt
+        sqlite
 
         # Useful shell Aliases as "packages"
         (writeShellScriptBin "rmshare" ''

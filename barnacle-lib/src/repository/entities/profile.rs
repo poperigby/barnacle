@@ -2,8 +2,8 @@ use std::{fs, path::PathBuf};
 
 use heck::ToSnakeCase;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, IntoActiveModel, ModelTrait,
-    QueryFilter, QueryOrder,
+    ActiveModelTrait, ActiveValue::Set, EntityTrait, IntoActiveModel, ModelTrait, QueryFilter,
+    QueryOrder,
 };
 use tracing::info;
 
@@ -52,10 +52,7 @@ impl Profile {
         let old_dir = self.dir().await?;
         let mut active = self.model().await?.into_active_model();
         active.name = Set(new_name.to_string());
-        active
-            .update(self.db.conn())
-            .await
-            .map_err(Error::from)?;
+        active.update(self.db.conn()).await.map_err(Error::from)?;
         let new_dir = self.dir().await?;
         fs::rename(old_dir, new_dir).unwrap();
         Ok(())
@@ -71,9 +68,9 @@ impl Profile {
         let game_id = self.parent().await?.id;
 
         profiles::Entity::update_many()
-            .filter(profiles::Column::GameId.eq(game_id))
+            .filter(profiles::COLUMN.game_id.eq(game_id))
             .col_expr(
-                profiles::Column::IsActive,
+                profiles::COLUMN.is_active,
                 sea_orm::sea_query::Expr::value(false),
             )
             .exec(self.db.conn())
@@ -103,9 +100,9 @@ impl Profile {
 
     pub(crate) async fn active(db: Db, cfg: Cfg, game: Game) -> Result<Option<Profile>> {
         let model = profiles::Entity::find()
-            .filter(profiles::Column::GameId.eq(game.id))
-            .filter(profiles::Column::IsActive.eq(true))
-            .order_by_asc(profiles::Column::Id)
+            .filter(profiles::COLUMN.game_id.eq(game.id))
+            .filter(profiles::COLUMN.is_active.eq(true))
+            .order_by_asc(profiles::COLUMN.id)
             .one(db.conn())
             .await?;
 
@@ -183,10 +180,7 @@ impl Profile {
             name: Set(name.to_string()),
             is_active: Set(false),
         };
-        let inserted = model
-            .insert(db.conn())
-            .await
-            .map_err(Error::from)?;
+        let inserted = model.insert(db.conn()).await.map_err(Error::from)?;
 
         let profile = Profile::load(inserted.id, db.clone(), cfg.clone()).await?;
         fs::create_dir_all(profile.dir().await?).unwrap();
@@ -205,8 +199,8 @@ impl Profile {
 
     pub(crate) async fn list(db: &Db, cfg: &Cfg, game: &Game) -> Result<Vec<Self>> {
         let models = profiles::Entity::find()
-            .filter(profiles::Column::GameId.eq(game.id))
-            .order_by_asc(profiles::Column::Id)
+            .filter(profiles::COLUMN.game_id.eq(game.id))
+            .order_by_asc(profiles::COLUMN.id)
             .all(db.conn())
             .await?;
 
@@ -224,8 +218,8 @@ impl Profile {
         name: &str,
     ) -> Result<Option<Profile>> {
         let model = profiles::Entity::find()
-            .filter(profiles::Column::GameId.eq(game.id))
-            .filter(profiles::Column::Name.eq(name))
+            .filter(profiles::COLUMN.game_id.eq(game.id))
+            .filter(profiles::COLUMN.name.eq(name))
             .one(db.conn())
             .await?;
 

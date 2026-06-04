@@ -5,8 +5,8 @@ use std::{
 
 use heck::ToSnakeCase;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, IntoActiveModel, ModelTrait,
-    QueryFilter, QueryOrder,
+    ActiveModelTrait, ActiveValue::Set, EntityTrait, IntoActiveModel, ModelTrait, QueryFilter,
+    QueryOrder,
 };
 use tracing::info;
 
@@ -27,8 +27,8 @@ pub struct Game {
 }
 
 impl Game {
-    pub(crate) async fn load(row_id: i64, db: Db, cfg: Cfg) -> Result<Self> {
-        let model = games::Entity::find_by_id(row_id).one(db.conn()).await?;
+    pub(crate) async fn load(id: i64, db: Db, cfg: Cfg) -> Result<Self> {
+        let model = games::Entity::find_by_id(id).one(db.conn()).await?;
         let Some(model) = model else {
             return Err(Error::RemovedEntity);
         };
@@ -51,26 +51,26 @@ impl Game {
     }
 
     pub async fn set_name(&self, new_name: &str) -> Result<()> {
+        // Prevents us from performing FS operations if we don't need to
         if new_name == self.name().await? {
             return Ok(());
         }
 
         let old_dir = self.dir().await?;
+
         let mut active = self.model().await?.into_active_model();
         active.name = Set(new_name.to_string());
-        active
-            .update(self.db.conn())
-            .await
-            .map_err(Error::from)?;
+        active.update(self.db.conn()).await.map_err(Error::from)?;
+
         let new_dir = self.dir().await?;
         fs::rename(old_dir, new_dir).unwrap();
+
         Ok(())
     }
 
     pub async fn targets(&self) -> Result<Vec<PathBuf>> {
         let model = self.model().await?;
-        serde_json::from_str(&model.targets)
-            .map_err(|err| Error::Serialization(err.to_string()))
+        serde_json::from_str(&model.targets).map_err(|err| Error::Serialization(err.to_string()))
     }
 
     pub async fn deploy_kind(&self) -> Result<DeployKind> {
@@ -82,10 +82,6 @@ impl Game {
     }
 
     pub async fn set_deploy_kind(&self, new_deploy_kind: DeployKind) -> Result<()> {
-        if new_deploy_kind == self.deploy_kind().await? {
-            return Ok(());
-        }
-
         let mut active = self.model().await?.into_active_model();
         active.deploy_kind = Set(new_deploy_kind.to_string());
         active.update(self.db.conn()).await?;
@@ -161,8 +157,8 @@ impl Game {
 
     pub async fn mods(&self) -> Result<Vec<Mod>> {
         let models = mods::Entity::find()
-            .filter(mods::Column::GameId.eq(self.id))
-            .order_by_asc(mods::Column::Id)
+            .filter(mods::COLUMN.game_id.eq(self.id))
+            .order_by_asc(mods::COLUMN.id)
             .all(self.db.conn())
             .await?;
 
@@ -190,10 +186,7 @@ impl Game {
             deploy_kind: Set(deploy_kind.to_string()),
             is_active: Set(false),
         };
-        let inserted = model
-            .insert(db.conn())
-            .await
-            .map_err(Error::from)?;
+        let inserted = model.insert(db.conn()).await.map_err(Error::from)?;
 
         let game = Game::load(inserted.id, db.clone(), cfg.clone()).await?;
         fs::create_dir_all(game.dir().await.unwrap()).unwrap();
@@ -210,7 +203,7 @@ impl Game {
 
     pub(crate) async fn list(db: Db, cfg: Cfg) -> Result<Vec<Game>> {
         let models = games::Entity::find()
-            .order_by_asc(games::Column::Name)
+            .order_by_asc(games::COLUMN.name)
             .all(db.conn())
             .await?;
 
@@ -223,7 +216,7 @@ impl Game {
 
     pub(crate) async fn search(db: Db, cfg: Cfg, name: &str) -> Result<Option<Game>> {
         let model = games::Entity::find()
-            .filter(games::Column::Name.eq(name))
+            .filter(games::COLUMN.name.eq(name))
             .one(db.conn())
             .await?;
 
@@ -237,7 +230,7 @@ impl Game {
     pub async fn activate(&self) -> Result<()> {
         games::Entity::update_many()
             .col_expr(
-                games::Column::IsActive,
+                games::COLUMN.is_active,
                 sea_orm::sea_query::Expr::value(false),
             )
             .exec(self.db.conn())
@@ -264,8 +257,8 @@ impl Game {
 
     pub(crate) async fn active(db: Db, cfg: Cfg) -> Result<Option<Game>> {
         let model = games::Entity::find()
-            .filter(games::Column::IsActive.eq(true))
-            .order_by_asc(games::Column::Id)
+            .filter(games::COLUMN.is_active.eq(true))
+            .order_by_asc(games::COLUMN.id)
             .one(db.conn())
             .await?;
 
