@@ -102,17 +102,8 @@ impl ModEntry {
         let entry_model = self.entry_model().await?;
         let removed_position = entry_model.position;
         let profile_id = entry_model.profile_id;
-        let row_id = entry_model.id;
 
-        let Some(model) = mod_entries::Entity::find_by_id(row_id)
-            .one(self.db.conn())
-            .await?
-        else {
-            return Err(Error::Internal(sea_orm::DbErr::Custom(
-                "missing mod entry during delete".into(),
-            )));
-        };
-        model.delete(self.db.conn()).await?;
+        self.entry_model().await?.delete(self.db.conn()).await?;
 
         let trailing = mod_entries::Entity::find()
             .filter(mod_entries::COLUMN.profile_id.eq(profile_id))

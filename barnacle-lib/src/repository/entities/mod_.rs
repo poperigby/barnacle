@@ -75,10 +75,7 @@ impl Mod {
             game_id: Set(game.id),
             name: Set(name.to_string()),
         };
-        let inserted = model
-            .insert(db.conn())
-            .await
-            .map_err(Error::from)?;
+        let inserted = model.insert(db.conn()).await.map_err(Error::from)?;
 
         let mod_ = Mod::load(inserted.id, db.clone(), cfg.clone()).await?;
 
@@ -96,15 +93,8 @@ impl Mod {
     pub async fn remove(self) -> Result<()> {
         let name = self.name().await?;
         let dir = self.dir().await?;
-        let Some(model) = mods::Entity::find_by_id(self.id)
-            .one(self.db.conn())
-            .await?
-        else {
-            return Err(Error::Internal(sea_orm::DbErr::Custom(
-                "missing mod during delete".into(),
-            )));
-        };
-        model.delete(self.db.conn()).await?;
+
+        self.model().await?.delete(self.db.conn()).await?;
 
         if dir.exists() {
             fs::remove_dir_all(dir).unwrap();

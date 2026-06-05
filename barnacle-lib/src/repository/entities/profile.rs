@@ -136,15 +136,8 @@ impl Profile {
         let name = self.name().await?;
         let dir = self.dir().await?;
         let was_active = self.is_active().await?;
-        let Some(model) = profiles::Entity::find_by_id(self.id)
-            .one(self.db.conn())
-            .await?
-        else {
-            return Err(Error::Internal(sea_orm::DbErr::Custom(
-                "missing profile during delete".into(),
-            )));
-        };
-        model.delete(self.db.conn()).await?;
+
+        self.model().await?.delete(self.db.conn()).await?;
 
         if dir.exists() {
             fs::remove_dir_all(dir).unwrap();
