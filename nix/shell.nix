@@ -36,6 +36,17 @@ pkgs.mkShell {
             rm -rf ~/.local/state/barnacle
             rm -rf ~/.config/barnacle
         '')
+
+        (
+            let
+                cli = "cargo run --package barnacle-cli";
+            in
+            writeShellScriptBin "barntest" ''
+                ${cli} game add "Morrowind"
+                ${cli} profile add "TEST"
+                ${cli} mod add "AHHHHHH"
+            ''
+        )
     ];
 
     # Ensure runtime dependencies are available

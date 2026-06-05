@@ -7,6 +7,8 @@ pub enum Command {
     List,
     /// Add a new game
     Add { name: String },
+    /// Remove the given game
+    Remove { name: String },
     /// Activate the given game
     Activate { name: String },
 }
@@ -22,12 +24,22 @@ pub async fn handle(repo: &Repository, cmd: &Command) {
         Command::Add { name } => {
             repo.add_game(name, DeployKind::Overlay).await.unwrap();
         }
+        Command::Remove { name } => {
+            let game = repo
+                .search_game(name)
+                .await
+                .unwrap()
+                .expect("game not found");
+
+            game.remove().await.unwrap();
+        }
         Command::Activate { name } => {
             let game = repo
                 .search_game(name)
                 .await
                 .unwrap()
                 .expect("game not found");
+
             game.activate().await.unwrap();
         }
     }

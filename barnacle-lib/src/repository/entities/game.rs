@@ -95,31 +95,6 @@ impl Game {
     }
 
     pub async fn remove(self) -> Result<()> {
-        for profile in self.profiles().await? {
-            let profile_name = profile.name().await.unwrap();
-            profile
-                .remove()
-                .await
-                .or_else(|err| match err {
-                    Error::RemovedEntity => Ok(()),
-                    other => Err(other),
-                })
-                .unwrap_or_else(|_| {
-                    panic!("Failed to remove profile: {profile_name} during game cleanup")
-                });
-        }
-
-        for mod_ in self.mods().await? {
-            let mod_name = mod_.name().await.unwrap();
-            mod_.remove()
-                .await
-                .or_else(|err| match err {
-                    Error::RemovedEntity => Ok(()),
-                    other => Err(other),
-                })
-                .unwrap_or_else(|_| panic!("Failed to remove mod: {mod_name} during game cleanup"));
-        }
-
         let name = self.name().await?;
         let dir = self.dir().await?;
         let was_active = self.is_active().await?;

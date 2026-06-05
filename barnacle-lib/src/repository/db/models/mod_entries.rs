@@ -8,11 +8,11 @@ pub struct Model {
     pub id: i64,
 
     pub profile_id: i64,
-    #[sea_orm(belongs_to, from = "profile_id", to = "id")]
+    #[sea_orm(belongs_to, from = "profile_id", to = "id", on_delete = "Cascade")]
     pub profile: HasOne<super::profiles::Entity>,
 
     pub mod_id: i64,
-    #[sea_orm(belongs_to, from = "mod_id", to = "id")]
+    #[sea_orm(belongs_to, from = "mod_id", to = "id", on_delete = "Cascade")]
     #[sea_orm(column_name = "mod")]
     pub mod_: HasOne<super::mods::Entity>,
 

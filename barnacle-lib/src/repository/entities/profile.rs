@@ -50,11 +50,14 @@ impl Profile {
         }
 
         let old_dir = self.dir().await?;
+
         let mut active = self.model().await?.into_active_model();
         active.name = Set(new_name.to_string());
         active.update(self.db.conn()).await.map_err(Error::from)?;
+
         let new_dir = self.dir().await?;
         fs::rename(old_dir, new_dir).unwrap();
+
         Ok(())
     }
 
@@ -129,20 +132,6 @@ impl Profile {
     }
 
     pub async fn remove(self) -> Result<()> {
-        for entry in self.mod_entries().await? {
-            let entry_id = entry.entry_id;
-            entry
-                .remove()
-                .await
-                .or_else(|err| match err {
-                    Error::RemovedEntity => Ok(()),
-                    other => Err(other),
-                })
-                .unwrap_or_else(|err| {
-                    panic!("Failed to remove mod entry: {entry_id:?}: {err} during profile cleanup")
-                });
-        }
-
         let parent_game = self.parent().await?;
         let name = self.name().await?;
         let dir = self.dir().await?;
