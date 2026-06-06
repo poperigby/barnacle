@@ -13,7 +13,7 @@ pub struct Model {
     pub game: HasOne<super::games::Entity>,
 
     #[sea_orm(has_many)]
-    pub mod_entry: HasMany<super::mod_entries::Entity>,
+    pub mod_entries: HasMany<super::mod_entries::Entity>,
 
     #[sea_orm(unique_key = "per_game_name")]
     pub name: String,

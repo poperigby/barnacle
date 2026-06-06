@@ -30,12 +30,13 @@ pub struct Model {
 
     // Children
     #[sea_orm(has_many)]
-    pub profile: HasMany<super::profiles::Entity>,
+    pub profiles: HasMany<super::profiles::Entity>,
+
     #[sea_orm(has_many)]
-    #[sea_orm(column_name = "mod")]
-    pub mod_: HasMany<super::mods::Entity>,
+    pub mods: HasMany<super::mods::Entity>,
+
     #[sea_orm(has_many)]
-    pub tool: HasMany<super::tools::Entity>,
+    pub tools: HasMany<super::tools::Entity>,
 
     #[sea_orm(unique)]
     pub name: String,
