@@ -1,6 +1,6 @@
-pub(crate) mod schema;
+pub(crate) mod entity;
 
-pub(crate) use schema::*;
+pub(crate) use entity::*;
 
 use std::{fs, path::PathBuf};
 
@@ -14,7 +14,7 @@ use tracing::info;
 use crate::repository::{
     Cfg,
     db::Db,
-    entities::{Error, Game, Mod, ModEntry, Result},
+    models::{Error, Game, Mod, ModEntry, Result},
 };
 
 #[derive(Debug, Clone)]
@@ -73,9 +73,9 @@ impl Profile {
         let game_id = self.parent().await?.id;
 
         Entity::update_many()
-            .filter(schema::COLUMN.game_id.eq(game_id))
+            .filter(entity::COLUMN.game_id.eq(game_id))
             .col_expr(
-                schema::COLUMN.is_active,
+                entity::COLUMN.is_active,
                 sea_orm::sea_query::Expr::value(false),
             )
             .exec(self.db.conn())
@@ -102,9 +102,9 @@ impl Profile {
 
     pub(crate) async fn active(db: Db, cfg: Cfg, game: Game) -> Result<Option<Profile>> {
         let model = Entity::find()
-            .filter(schema::COLUMN.game_id.eq(game.id))
-            .filter(schema::COLUMN.is_active.eq(true))
-            .order_by_asc(schema::COLUMN.id)
+            .filter(entity::COLUMN.game_id.eq(game.id))
+            .filter(entity::COLUMN.is_active.eq(true))
+            .order_by_asc(entity::COLUMN.id)
             .one(db.conn())
             .await?;
 
@@ -180,8 +180,8 @@ impl Profile {
 
     pub(crate) async fn list(db: &Db, cfg: &Cfg, game: &Game) -> Result<Vec<Self>> {
         let models = Entity::find()
-            .filter(schema::COLUMN.game_id.eq(game.id))
-            .order_by_asc(schema::COLUMN.id)
+            .filter(entity::COLUMN.game_id.eq(game.id))
+            .order_by_asc(entity::COLUMN.id)
             .all(db.conn())
             .await?;
 
@@ -199,8 +199,8 @@ impl Profile {
         name: &str,
     ) -> Result<Option<Profile>> {
         let model = Entity::find()
-            .filter(schema::COLUMN.game_id.eq(game.id))
-            .filter(schema::COLUMN.name.eq(name))
+            .filter(entity::COLUMN.game_id.eq(game.id))
+            .filter(entity::COLUMN.name.eq(name))
             .one(db.conn())
             .await?;
 
@@ -224,7 +224,7 @@ impl PartialEq for Profile {
 mod test {
     use crate::{
         Repository,
-        repository::{DeployKind, entities::Error},
+        repository::{DeployKind, models::Error},
     };
 
     #[tokio::test]

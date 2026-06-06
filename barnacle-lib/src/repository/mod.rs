@@ -10,9 +10,9 @@ use crate::repository::{
 mod db;
 
 pub mod config;
-pub mod entities;
+pub mod models;
 
-pub use entities::{DeployKind, Game, Mod, ModEntry, Profile, Tool};
+pub use models::{DeployKind, Game, Mod, ModEntry, Profile, Tool};
 
 /// Central access point for all persistent data.
 ///
@@ -33,19 +33,19 @@ impl Repository {
         }
     }
 
-    pub async fn add_game(&self, name: &str, deploy_kind: DeployKind) -> entities::Result<Game> {
+    pub async fn add_game(&self, name: &str, deploy_kind: DeployKind) -> models::Result<Game> {
         Game::add(&self.db.clone(), self.cfg.clone(), name, deploy_kind).await
     }
 
-    pub async fn games(&self) -> entities::Result<Vec<Game>> {
+    pub async fn games(&self) -> models::Result<Vec<Game>> {
         Game::list(self.db.clone(), self.cfg.clone()).await
     }
 
-    pub async fn search_game(&self, name: &str) -> entities::Result<Option<Game>> {
+    pub async fn search_game(&self, name: &str) -> models::Result<Option<Game>> {
         Game::search(self.db.clone(), self.cfg.clone(), name).await
     }
 
-    pub async fn active_game(&self) -> entities::Result<Option<Game>> {
+    pub async fn active_game(&self) -> models::Result<Option<Game>> {
         Game::active(self.db.clone(), self.cfg.clone()).await
     }
 

@@ -1,6 +1,6 @@
 use sea_orm::{Database, DatabaseConnection};
 
-use crate::{fs::state_dir, repository::entities::Result};
+use crate::{fs::state_dir, repository::models::Result};
 
 #[derive(Clone, Debug)]
 pub(crate) struct Db {

@@ -2,7 +2,7 @@ use std::io;
 
 use thiserror::Error;
 
-use crate::repository::entities;
+use crate::repository::models;
 
 // mod deployers;
 pub mod fs;
@@ -19,5 +19,5 @@ pub enum Error {
     #[error("I/O error: {0}")]
     Io(#[from] io::Error),
     #[error("Entity error: {0}")]
-    Entity(#[from] entities::Error),
+    Entity(#[from] models::Error),
 }

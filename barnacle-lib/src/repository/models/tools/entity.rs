@@ -1,6 +1,6 @@
 use sea_orm::entity::prelude::*;
 
-use crate::entities;
+use crate::models;
 
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
@@ -11,7 +11,7 @@ pub struct Model {
 
     pub game_id: i64,
     #[sea_orm(belongs_to, from = "game_id", to = "id")]
-    pub game: HasOne<entities::games::Entity>,
+    pub game: HasOne<models::games::Entity>,
 
     pub name: String,
     pub path: String,

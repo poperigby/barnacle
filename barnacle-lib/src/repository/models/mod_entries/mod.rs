@@ -1,6 +1,6 @@
-pub(crate) mod schema;
+pub(crate) mod entity;
 
-pub(crate) use schema::*;
+pub(crate) use entity::*;
 
 use sea_orm::{
     ActiveModelTrait, ActiveValue::Set, EntityTrait, IntoActiveModel, ModelTrait, QueryFilter,
@@ -10,7 +10,7 @@ use sea_orm::{
 use crate::repository::{
     Cfg, Mod, Profile,
     db::Db,
-    entities::{Error, Result, mods},
+    models::{Error, Result, mods},
 };
 
 #[derive(Debug, Clone)]
@@ -24,7 +24,7 @@ pub struct ModEntry {
 impl ModEntry {
     pub(crate) async fn load(entry_row_id: i64, mod_row_id: i64, db: Db, cfg: Cfg) -> Result<Self> {
         let entry_model = Entity::find_by_id(entry_row_id).one(db.conn()).await?;
-        let mod_model = mods::schema::Entity::find_by_id(mod_row_id)
+        let mod_model = mods::entity::Entity::find_by_id(mod_row_id)
             .one(db.conn())
             .await?;
 
@@ -50,8 +50,8 @@ impl ModEntry {
         model.ok_or(Error::RemovedEntity)
     }
 
-    async fn mod_model(&self) -> Result<mods::schema::Model> {
-        let model = mods::schema::Entity::find_by_id(self.mod_id)
+    async fn mod_model(&self) -> Result<mods::entity::Model> {
+        let model = mods::entity::Entity::find_by_id(self.mod_id)
             .one(self.db.conn())
             .await?;
         model.ok_or(Error::RemovedEntity)
@@ -107,9 +107,9 @@ impl ModEntry {
         self.entry_model().await?.delete(self.db.conn()).await?;
 
         let trailing = Entity::find()
-            .filter(schema::COLUMN.profile_id.eq(profile_id))
-            .filter(schema::COLUMN.position.gt(removed_position))
-            .order_by_asc(schema::COLUMN.position)
+            .filter(entity::COLUMN.profile_id.eq(profile_id))
+            .filter(entity::COLUMN.position.gt(removed_position))
+            .order_by_asc(entity::COLUMN.position)
             .all(self.db.conn())
             .await?;
 
@@ -124,9 +124,9 @@ impl ModEntry {
 
     pub(crate) async fn list(db: &Db, cfg: &Cfg, profile: &Profile) -> Result<Vec<Self>> {
         let models = Entity::find()
-            .filter(schema::COLUMN.profile_id.eq(profile.id))
-            .order_by_asc(schema::COLUMN.position)
-            .order_by_asc(schema::COLUMN.id)
+            .filter(entity::COLUMN.profile_id.eq(profile.id))
+            .order_by_asc(entity::COLUMN.position)
+            .order_by_asc(entity::COLUMN.id)
             .all(db.conn())
             .await?;
 

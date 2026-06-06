@@ -1,6 +1,6 @@
-pub(crate) mod schema;
+pub(crate) mod entity;
 
-pub(crate) use schema::*;
+pub(crate) use entity::*;
 
 use std::path::PathBuf;
 
@@ -9,7 +9,7 @@ use sea_orm::EntityTrait;
 use crate::repository::{
     config::Cfg,
     db::Db,
-    entities::{Error, Result},
+    models::{Error, Result},
 };
 
 #[derive(Debug, Clone)]

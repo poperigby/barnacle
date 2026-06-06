@@ -2,7 +2,7 @@
 
 ## Database
 
-Barnacle uses SQLite through [SeaORM](https://www.sea-ql.org/SeaORM/). The persistent model is relational:
+Barnacle uses SQLite through [SeaORM]:
 
 - `games`
 - `profiles` with a `game_id`
@@ -11,7 +11,7 @@ Barnacle uses SQLite through [SeaORM](https://www.sea-ql.org/SeaORM/). The persi
 - `tools` with a `game_id`
 - `meta` for internal state such as schema version and UID allocation
 
-The domain shape is still the same:
+The schema is as follows:
 
 ```mermaid
 graph TD

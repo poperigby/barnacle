@@ -3,7 +3,7 @@ use crate::{
     config::Cfg,
     widgets::table::{self, table},
 };
-use barnacle_lib::repository::{Profile, entities::ModEntry};
+use barnacle_lib::repository::{Profile, models::ModEntry};
 use iced::{
     Element, Length, Point, Task,
     widget::{button, checkbox, column, row, scrollable, text},

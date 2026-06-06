@@ -1,7 +1,7 @@
 use sea_orm::entity::prelude::*;
 use strum::{Display, EnumIter, EnumString};
 
-use crate::entities;
+use crate::models;
 
 #[derive(
     Debug, Clone, Default, Copy, PartialEq, Eq, PartialOrd, Ord, Display, EnumIter, EnumString,
@@ -32,13 +32,13 @@ pub struct Model {
 
     // Children
     #[sea_orm(has_many)]
-    pub profiles: HasMany<entities::profiles::Entity>,
+    pub profiles: HasMany<models::profiles::Entity>,
 
     #[sea_orm(has_many)]
-    pub mods: HasMany<entities::mods::Entity>,
+    pub mods: HasMany<models::mods::Entity>,
 
     #[sea_orm(has_many)]
-    pub tools: HasMany<entities::tools::Entity>,
+    pub tools: HasMany<models::tools::Entity>,
 
     #[sea_orm(unique)]
     pub name: String,

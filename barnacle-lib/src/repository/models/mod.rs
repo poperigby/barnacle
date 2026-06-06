@@ -1,4 +1,4 @@
-//! Core domain entities
+//! Core domain models
 
 use sea_orm::DbErr;
 use thiserror::Error;
@@ -9,7 +9,7 @@ mod mods;
 mod profiles;
 mod tools;
 
-pub use games::{Game, schema::DeployKind};
+pub use games::{Game, entity::DeployKind};
 pub use mod_entries::ModEntry;
 pub use mods::Mod;
 pub use profiles::Profile;

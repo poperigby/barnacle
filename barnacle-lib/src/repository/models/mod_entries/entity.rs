@@ -1,6 +1,6 @@
 use sea_orm::entity::prelude::*;
 
-use crate::entities;
+use crate::models;
 
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
@@ -11,12 +11,12 @@ pub struct Model {
 
     pub profile_id: i64,
     #[sea_orm(belongs_to, from = "profile_id", to = "id", on_delete = "Cascade")]
-    pub profile: HasOne<entities::profiles::Entity>,
+    pub profile: HasOne<models::profiles::Entity>,
 
     pub mod_id: i64,
     #[sea_orm(belongs_to, from = "mod_id", to = "id", on_delete = "Cascade")]
     #[sea_orm(column_name = "mod")]
-    pub mod_: HasOne<entities::mods::Entity>,
+    pub mod_: HasOne<models::mods::Entity>,
 
     #[sea_orm(unique_key = "profile_position")]
     pub position: i64,

@@ -1,6 +1,6 @@
-pub(crate) mod schema;
+pub(crate) mod entity;
 
-pub(crate) use schema::*;
+pub(crate) use entity::*;
 
 use std::{
     fs::{self, File},
@@ -17,7 +17,7 @@ use crate::{
     repository::{
         Cfg,
         db::Db,
-        entities::{Error, Game, Result},
+        models::{Error, Game, Result},
     },
 };
 
@@ -117,7 +117,7 @@ impl PartialEq for Mod {
 mod test {
     use crate::{
         Repository,
-        repository::{DeployKind, entities::Error},
+        repository::{DeployKind, models::Error},
     };
 
     #[tokio::test]
