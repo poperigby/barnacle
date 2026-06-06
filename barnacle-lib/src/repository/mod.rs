@@ -12,8 +12,7 @@ mod db;
 pub mod config;
 pub mod entities;
 
-pub use db::models::DeployKind;
-pub use entities::{Game, Mod, ModEntry, Profile, Tool};
+pub use entities::{DeployKind, Game, Mod, ModEntry, Profile, Tool};
 
 /// Central access point for all persistent data.
 ///

@@ -1,3 +1,7 @@
+pub(crate) mod schema;
+
+pub(crate) use schema::*;
+
 use std::{fs, path::PathBuf};
 
 use heck::ToSnakeCase;
@@ -9,7 +13,7 @@ use tracing::info;
 
 use crate::repository::{
     Cfg,
-    db::{Db, models::profiles},
+    db::Db,
     entities::{Error, Game, Mod, ModEntry, Result},
 };
 
@@ -22,7 +26,7 @@ pub struct Profile {
 
 impl Profile {
     pub(crate) async fn load(row_id: i64, db: Db, cfg: Cfg) -> Result<Self> {
-        let model = profiles::Entity::find_by_id(row_id).one(db.conn()).await?;
+        let model = Entity::find_by_id(row_id).one(db.conn()).await?;
         let Some(model) = model else {
             return Err(Error::RemovedEntity);
         };
@@ -33,10 +37,8 @@ impl Profile {
         })
     }
 
-    async fn model(&self) -> Result<profiles::Model> {
-        let model = profiles::Entity::find_by_id(self.id)
-            .one(self.db.conn())
-            .await?;
+    async fn model(&self) -> Result<Model> {
+        let model = Entity::find_by_id(self.id).one(self.db.conn()).await?;
         model.ok_or(Error::RemovedEntity)
     }
 
@@ -70,19 +72,16 @@ impl Profile {
     pub async fn activate(&self) -> Result<()> {
         let game_id = self.parent().await?.id;
 
-        profiles::Entity::update_many()
-            .filter(profiles::COLUMN.game_id.eq(game_id))
+        Entity::update_many()
+            .filter(schema::COLUMN.game_id.eq(game_id))
             .col_expr(
-                profiles::COLUMN.is_active,
+                schema::COLUMN.is_active,
                 sea_orm::sea_query::Expr::value(false),
             )
             .exec(self.db.conn())
             .await?;
 
-        let Some(model) = profiles::Entity::find_by_id(self.id)
-            .one(self.db.conn())
-            .await?
-        else {
+        let Some(model) = Entity::find_by_id(self.id).one(self.db.conn()).await? else {
             return Err(Error::Internal(sea_orm::DbErr::Custom(
                 "missing profile during activation".into(),
             )));
@@ -102,10 +101,10 @@ impl Profile {
     }
 
     pub(crate) async fn active(db: Db, cfg: Cfg, game: Game) -> Result<Option<Profile>> {
-        let model = profiles::Entity::find()
-            .filter(profiles::COLUMN.game_id.eq(game.id))
-            .filter(profiles::COLUMN.is_active.eq(true))
-            .order_by_asc(profiles::COLUMN.id)
+        let model = Entity::find()
+            .filter(schema::COLUMN.game_id.eq(game.id))
+            .filter(schema::COLUMN.is_active.eq(true))
+            .order_by_asc(schema::COLUMN.id)
             .one(db.conn())
             .await?;
 
@@ -156,7 +155,7 @@ impl Profile {
     }
 
     pub(crate) async fn add(db: &Db, cfg: &Cfg, game: &Game, name: &str) -> Result<Self> {
-        let model = profiles::ActiveModel {
+        let model = ActiveModel {
             id: sea_orm::ActiveValue::NotSet,
             game_id: Set(game.id),
             name: Set(name.to_string()),
@@ -180,9 +179,9 @@ impl Profile {
     }
 
     pub(crate) async fn list(db: &Db, cfg: &Cfg, game: &Game) -> Result<Vec<Self>> {
-        let models = profiles::Entity::find()
-            .filter(profiles::COLUMN.game_id.eq(game.id))
-            .order_by_asc(profiles::COLUMN.id)
+        let models = Entity::find()
+            .filter(schema::COLUMN.game_id.eq(game.id))
+            .order_by_asc(schema::COLUMN.id)
             .all(db.conn())
             .await?;
 
@@ -199,9 +198,9 @@ impl Profile {
         game: &Game,
         name: &str,
     ) -> Result<Option<Profile>> {
-        let model = profiles::Entity::find()
-            .filter(profiles::COLUMN.game_id.eq(game.id))
-            .filter(profiles::COLUMN.name.eq(name))
+        let model = Entity::find()
+            .filter(schema::COLUMN.game_id.eq(game.id))
+            .filter(schema::COLUMN.name.eq(name))
             .one(db.conn())
             .await?;
 

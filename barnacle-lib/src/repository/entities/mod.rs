@@ -1,19 +1,19 @@
-//! Core domain entities for Barnacle.
+//! Core domain entities
 
 use sea_orm::DbErr;
 use thiserror::Error;
 
-mod game;
-mod mod_;
-mod mod_entry;
-mod profile;
-mod tool;
+mod games;
+mod mod_entries;
+mod mods;
+mod profiles;
+mod tools;
 
-pub use game::Game;
-pub use mod_::Mod;
-pub use mod_entry::ModEntry;
-pub use profile::Profile;
-pub use tool::Tool;
+pub use games::{Game, schema::DeployKind};
+pub use mod_entries::ModEntry;
+pub use mods::Mod;
+pub use profiles::Profile;
+pub use tools::Tool;
 
 pub type Result<T> = std::result::Result<T, Error>;
 

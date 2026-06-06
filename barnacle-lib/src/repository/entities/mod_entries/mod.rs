@@ -1,3 +1,7 @@
+pub(crate) mod schema;
+
+pub(crate) use schema::*;
+
 use sea_orm::{
     ActiveModelTrait, ActiveValue::Set, EntityTrait, IntoActiveModel, ModelTrait, QueryFilter,
     QueryOrder,
@@ -5,11 +9,8 @@ use sea_orm::{
 
 use crate::repository::{
     Cfg, Mod, Profile,
-    db::{
-        Db,
-        models::{mod_entries, mods},
-    },
-    entities::{Error, Result},
+    db::Db,
+    entities::{Error, Result, mods},
 };
 
 #[derive(Debug, Clone)]
@@ -22,10 +23,10 @@ pub struct ModEntry {
 
 impl ModEntry {
     pub(crate) async fn load(entry_row_id: i64, mod_row_id: i64, db: Db, cfg: Cfg) -> Result<Self> {
-        let entry_model = mod_entries::Entity::find_by_id(entry_row_id)
+        let entry_model = Entity::find_by_id(entry_row_id).one(db.conn()).await?;
+        let mod_model = mods::schema::Entity::find_by_id(mod_row_id)
             .one(db.conn())
             .await?;
-        let mod_model = mods::Entity::find_by_id(mod_row_id).one(db.conn()).await?;
 
         let Some(entry_model) = entry_model else {
             return Err(Error::RemovedEntity);
@@ -42,15 +43,15 @@ impl ModEntry {
         })
     }
 
-    async fn entry_model(&self) -> Result<mod_entries::Model> {
-        let model = mod_entries::Entity::find_by_id(self.entry_id)
+    async fn entry_model(&self) -> Result<Model> {
+        let model = Entity::find_by_id(self.entry_id)
             .one(self.db.conn())
             .await?;
         model.ok_or(Error::RemovedEntity)
     }
 
-    async fn mod_model(&self) -> Result<mods::Model> {
-        let model = mods::Entity::find_by_id(self.mod_id)
+    async fn mod_model(&self) -> Result<mods::schema::Model> {
+        let model = mods::schema::Entity::find_by_id(self.mod_id)
             .one(self.db.conn())
             .await?;
         model.ok_or(Error::RemovedEntity)
@@ -85,7 +86,7 @@ impl ModEntry {
         let mod_id = mod_.id;
         let next_position = profile.mod_entries().await?.len() as i64;
 
-        let model = mod_entries::ActiveModel {
+        let model = ActiveModel {
             id: sea_orm::ActiveValue::NotSet,
             profile_id: Set(profile_id),
             mod_id: Set(mod_id),
@@ -105,10 +106,10 @@ impl ModEntry {
 
         self.entry_model().await?.delete(self.db.conn()).await?;
 
-        let trailing = mod_entries::Entity::find()
-            .filter(mod_entries::COLUMN.profile_id.eq(profile_id))
-            .filter(mod_entries::COLUMN.position.gt(removed_position))
-            .order_by_asc(mod_entries::COLUMN.position)
+        let trailing = Entity::find()
+            .filter(schema::COLUMN.profile_id.eq(profile_id))
+            .filter(schema::COLUMN.position.gt(removed_position))
+            .order_by_asc(schema::COLUMN.position)
             .all(self.db.conn())
             .await?;
 
@@ -122,10 +123,10 @@ impl ModEntry {
     }
 
     pub(crate) async fn list(db: &Db, cfg: &Cfg, profile: &Profile) -> Result<Vec<Self>> {
-        let models = mod_entries::Entity::find()
-            .filter(mod_entries::COLUMN.profile_id.eq(profile.id))
-            .order_by_asc(mod_entries::COLUMN.position)
-            .order_by_asc(mod_entries::COLUMN.id)
+        let models = Entity::find()
+            .filter(schema::COLUMN.profile_id.eq(profile.id))
+            .order_by_asc(schema::COLUMN.position)
+            .order_by_asc(schema::COLUMN.id)
             .all(db.conn())
             .await?;
 

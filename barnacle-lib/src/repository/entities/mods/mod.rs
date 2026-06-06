@@ -1,3 +1,7 @@
+pub(crate) mod schema;
+
+pub(crate) use schema::*;
+
 use std::{
     fs::{self, File},
     path::{Path, PathBuf},
@@ -12,7 +16,7 @@ use crate::{
     fs::{Permissions, change_dir_permissions},
     repository::{
         Cfg,
-        db::{Db, models::mods},
+        db::Db,
         entities::{Error, Game, Result},
     },
 };
@@ -26,7 +30,7 @@ pub struct Mod {
 
 impl Mod {
     pub(crate) async fn load(row_id: i64, db: Db, cfg: Cfg) -> Result<Self> {
-        let model = mods::Entity::find_by_id(row_id).one(db.conn()).await?;
+        let model = Entity::find_by_id(row_id).one(db.conn()).await?;
         let Some(model) = model else {
             return Err(Error::RemovedEntity);
         };
@@ -37,10 +41,8 @@ impl Mod {
         })
     }
 
-    async fn model(&self) -> Result<mods::Model> {
-        let model = mods::Entity::find_by_id(self.id)
-            .one(self.db.conn())
-            .await?;
+    async fn model(&self) -> Result<Model> {
+        let model = Entity::find_by_id(self.id).one(self.db.conn()).await?;
         model.ok_or(Error::RemovedEntity)
     }
 
@@ -70,7 +72,7 @@ impl Mod {
         name: &str,
         path: Option<&Path>,
     ) -> Result<Self> {
-        let model = mods::ActiveModel {
+        let model = ActiveModel {
             id: sea_orm::ActiveValue::NotSet,
             game_id: Set(game.id),
             name: Set(name.to_string()),
