@@ -9,6 +9,13 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i64,
 
+    // Fields
+    #[sea_orm(unique_key = "profile_position")]
+    pub position: i64,
+    pub enabled: bool,
+    pub notes: String,
+
+    // Parents
     pub profile_id: i64,
     #[sea_orm(belongs_to, from = "profile_id", to = "id", on_delete = "Cascade")]
     pub profile: HasOne<models::profiles::Entity>,
@@ -17,11 +24,6 @@ pub struct Model {
     #[sea_orm(belongs_to, from = "mod_id", to = "id", on_delete = "Cascade")]
     #[sea_orm(column_name = "mod")]
     pub mod_: HasOne<models::mods::Entity>,
-
-    #[sea_orm(unique_key = "profile_position")]
-    pub position: i64,
-    pub enabled: bool,
-    pub notes: String,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

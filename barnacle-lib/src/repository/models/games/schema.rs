@@ -30,6 +30,13 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i64,
 
+    // Fields
+    #[sea_orm(unique)]
+    pub name: String,
+    pub targets: String,
+    pub deploy_kind: String,
+    pub is_active: bool,
+
     // Children
     #[sea_orm(has_many)]
     pub profiles: HasMany<models::profiles::Entity>,
@@ -39,12 +46,6 @@ pub struct Model {
 
     #[sea_orm(has_many)]
     pub tools: HasMany<models::tools::Entity>,
-
-    #[sea_orm(unique)]
-    pub name: String,
-    pub targets: String,
-    pub deploy_kind: String,
-    pub is_active: bool,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

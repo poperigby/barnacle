@@ -9,13 +9,15 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i64,
 
-    pub game_id: i64,
-    #[sea_orm(belongs_to, from = "game_id", to = "id")]
-    pub game: HasOne<models::games::Entity>,
-
+    // Fields
     pub name: String,
     pub path: String,
     pub args: Option<String>,
+
+    // Parent
+    pub game_id: i64,
+    #[sea_orm(belongs_to, from = "game_id", to = "id")]
+    pub game: HasOne<models::games::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
