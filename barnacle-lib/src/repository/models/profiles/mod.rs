@@ -1,6 +1,6 @@
-pub(crate) mod entity;
+pub(crate) mod schema;
 
-pub(crate) use entity::*;
+pub(crate) use schema::*;
 
 use std::{fs, path::PathBuf};
 
@@ -73,9 +73,9 @@ impl Profile {
         let game_id = self.parent().await?.id;
 
         Entity::update_many()
-            .filter(entity::COLUMN.game_id.eq(game_id))
+            .filter(schema::COLUMN.game_id.eq(game_id))
             .col_expr(
-                entity::COLUMN.is_active,
+                schema::COLUMN.is_active,
                 sea_orm::sea_query::Expr::value(false),
             )
             .exec(self.db.conn())
@@ -102,9 +102,9 @@ impl Profile {
 
     pub(crate) async fn active(db: Db, cfg: Cfg, game: Game) -> Result<Option<Profile>> {
         let model = Entity::find()
-            .filter(entity::COLUMN.game_id.eq(game.id))
-            .filter(entity::COLUMN.is_active.eq(true))
-            .order_by_asc(entity::COLUMN.id)
+            .filter(schema::COLUMN.game_id.eq(game.id))
+            .filter(schema::COLUMN.is_active.eq(true))
+            .order_by_asc(schema::COLUMN.id)
             .one(db.conn())
             .await?;
 
@@ -180,8 +180,8 @@ impl Profile {
 
     pub(crate) async fn list(db: &Db, cfg: &Cfg, game: &Game) -> Result<Vec<Self>> {
         let models = Entity::find()
-            .filter(entity::COLUMN.game_id.eq(game.id))
-            .order_by_asc(entity::COLUMN.id)
+            .filter(schema::COLUMN.game_id.eq(game.id))
+            .order_by_asc(schema::COLUMN.id)
             .all(db.conn())
             .await?;
 
@@ -199,8 +199,8 @@ impl Profile {
         name: &str,
     ) -> Result<Option<Profile>> {
         let model = Entity::find()
-            .filter(entity::COLUMN.game_id.eq(game.id))
-            .filter(entity::COLUMN.name.eq(name))
+            .filter(schema::COLUMN.game_id.eq(game.id))
+            .filter(schema::COLUMN.name.eq(name))
             .one(db.conn())
             .await?;
 

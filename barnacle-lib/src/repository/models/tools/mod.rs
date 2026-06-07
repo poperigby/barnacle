@@ -1,6 +1,6 @@
-pub(crate) mod entity;
+pub(crate) mod schema;
 
-pub(crate) use entity::*;
+pub(crate) use schema::*;
 
 use std::path::PathBuf;
 

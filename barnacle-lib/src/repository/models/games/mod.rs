@@ -1,6 +1,6 @@
-pub(crate) mod entity;
+pub(crate) mod schema;
 
-pub(crate) use entity::*;
+pub(crate) use schema::*;
 
 use std::{
     fs,
@@ -17,7 +17,7 @@ use tracing::info;
 use crate::repository::{
     Cfg,
     db::Db,
-    models::{Error, Mod, Profile, Result, games::entity::DeployKind, mods},
+    models::{Error, Mod, Profile, Result, games::schema::DeployKind, mods},
 };
 
 #[derive(Debug, Clone)]
@@ -124,8 +124,8 @@ impl Game {
 
     pub async fn mods(&self) -> Result<Vec<Mod>> {
         let models = mods::Entity::find()
-            .filter(mods::entity::COLUMN.game_id.eq(self.id))
-            .order_by_asc(mods::entity::COLUMN.id)
+            .filter(mods::schema::COLUMN.game_id.eq(self.id))
+            .order_by_asc(mods::schema::COLUMN.id)
             .all(self.db.conn())
             .await?;
 
@@ -156,6 +156,7 @@ impl Game {
         let inserted = model.insert(db.conn()).await.map_err(Error::from)?;
 
         let game = Game::load(inserted.id, db.clone(), cfg.clone()).await?;
+
         fs::create_dir_all(game.dir().await.unwrap()).unwrap();
 
         if Game::active(db.clone(), cfg.clone()).await?.is_none()
@@ -170,7 +171,7 @@ impl Game {
 
     pub(crate) async fn list(db: Db, cfg: Cfg) -> Result<Vec<Game>> {
         let models = Entity::find()
-            .order_by_asc(entity::COLUMN.name)
+            .order_by_asc(schema::COLUMN.name)
             .all(db.conn())
             .await?;
 
@@ -183,7 +184,7 @@ impl Game {
 
     pub(crate) async fn search(db: Db, cfg: Cfg, name: &str) -> Result<Option<Game>> {
         let model = Entity::find()
-            .filter(entity::COLUMN.name.eq(name))
+            .filter(schema::COLUMN.name.eq(name))
             .one(db.conn())
             .await?;
 
@@ -197,7 +198,7 @@ impl Game {
     pub async fn activate(&self) -> Result<()> {
         Entity::update_many()
             .col_expr(
-                entity::COLUMN.is_active,
+                schema::COLUMN.is_active,
                 sea_orm::sea_query::Expr::value(false),
             )
             .exec(self.db.conn())
@@ -221,8 +222,8 @@ impl Game {
 
     pub(crate) async fn active(db: Db, cfg: Cfg) -> Result<Option<Game>> {
         let model = Entity::find()
-            .filter(entity::COLUMN.is_active.eq(true))
-            .order_by_asc(entity::COLUMN.id)
+            .filter(schema::COLUMN.is_active.eq(true))
+            .order_by_asc(schema::COLUMN.id)
             .one(db.conn())
             .await?;
 
