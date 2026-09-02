@@ -1,24 +1,22 @@
-use agdb::{DbElement, DbId};
+use sea_orm::prelude::*;
 
-use crate::repository::entities::Uid;
+#[sea_orm::model]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
+#[sea_orm(table_name = "profiles")]
+pub struct Model {
+    #[sea_orm(primary_key)]
+    pub id: i32,
 
-#[derive(Debug, Clone, DbElement, PartialEq, PartialOrd)]
-pub(crate) struct ProfileModel {
-    db_id: Option<DbId>,
-    uid: u64,
-    name: String,
+    #[sea_orm(unique_key = "profile_name_per_game")]
+    pub name: String,
+
+    #[sea_orm(unique_key = "profile_name_per_game")]
+    pub game_id: i32,
+    #[sea_orm(belongs_to, from = "game_id", to = "id", on_delete = "Cascade")]
+    pub game: BelongsTo<super::games::Entity>,
+
+    #[sea_orm(has_many)]
+    pub fruit: HasMany<super::mod_entries::Entity>,
 }
 
-impl ProfileModel {
-    pub fn new(uid: Uid, name: &str) -> Self {
-        Self {
-            db_id: None,
-            uid: uid.0,
-            name: name.to_string(),
-        }
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-}
+impl ActiveModelBehavior for ActiveModel {}

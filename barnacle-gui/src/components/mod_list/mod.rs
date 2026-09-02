@@ -4,7 +4,7 @@ use crate::{
 };
 use barnacle_lib::{
     Repository,
-    repository::{Profile, entities::ModEntry},
+    repository::{Profile, handles::ModEntry},
 };
 use iced::{
     Element, Length, Point, Task,

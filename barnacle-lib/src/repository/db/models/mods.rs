@@ -1,25 +1,19 @@
-use agdb::{DbElement, DbId};
+use sea_orm::prelude::*;
 
-use crate::repository::entities::Uid;
+#[sea_orm::model]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
+#[sea_orm(table_name = "mods")]
+pub struct Model {
+    #[sea_orm(primary_key)]
+    pub id: i32,
 
-#[derive(Debug, Clone, DbElement, PartialEq, PartialOrd)]
-pub(crate) struct ModModel {
-    db_id: Option<DbId>,
-    uid: u64,
-    /// A human friendly display name
-    name: String,
+    #[sea_orm(unique_key = "mod_name_per_game")]
+    pub name: String,
+
+    #[sea_orm(unique_key = "mod_name_per_game")]
+    pub game_id: i32,
+    #[sea_orm(belongs_to, from = "game_id", to = "id", on_delete = "Cascade")]
+    pub game: BelongsTo<super::games::Entity>,
 }
 
-impl ModModel {
-    pub fn new(uid: Uid, name: &str) -> Self {
-        Self {
-            db_id: None,
-            uid: uid.0,
-            name: name.into(),
-        }
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-}
+impl ActiveModelBehavior for ActiveModel {}

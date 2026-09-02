@@ -1,29 +1,23 @@
-use std::path::PathBuf;
+use sea_orm::prelude::*;
 
-use agdb::{DbElement, DbId};
+#[sea_orm::model]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
+#[sea_orm(table_name = "tools")]
+pub struct Model {
+    #[sea_orm(primary_key)]
+    pub id: i32,
 
-use crate::repository::entities::Uid;
-
-#[derive(Debug, Clone, DbElement, PartialEq, PartialOrd)]
-pub struct ToolModel {
-    db_id: Option<DbId>,
-    uid: u64,
-    /// A human friendly display name
-    name: String,
+    #[sea_orm(unique_key = "tool_name_per_game")]
+    pub name: String,
     /// The path to the tool's executable
-    path: PathBuf,
+    pub path: String,
     /// Additional command-line arguments
-    args: Option<String>,
+    pub args: Option<String>,
+
+    #[sea_orm(unique_key = "tool_name_per_game")]
+    pub game_id: i32,
+    #[sea_orm(belongs_to, from = "game_id", to = "id", on_delete = "Cascade")]
+    pub game: BelongsTo<super::games::Entity>,
 }
 
-impl ToolModel {
-    pub fn new(uid: Uid, name: &str, path: PathBuf, args: Option<&str>) -> Self {
-        Self {
-            db_id: None,
-            uid: uid.0,
-            name: name.to_string(),
-            path,
-            args: args.map(str::to_string),
-        }
-    }
-}
+impl ActiveModelBehavior for ActiveModel {}
