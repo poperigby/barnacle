@@ -10,6 +10,9 @@ version = "0.1.0"
 edition = "2024"
 homepage = "https://github.com/poperigby/barnacle"
 
+[workspace.metadata.crane]
+name = "barnacle"
+
 [workspace.lints.rust]
 arithmetic_overflow = "deny"
 unnecessary_transmutes = "deny"
