@@ -19,7 +19,6 @@ parking_lot = "0.12.5"
 rfd = "0.17.2"
 serde = { version = "1.0.228", features = ["derive"] }
 strum = "0.28.0"
-sweeten = { git = "https://github.com/airstrike/sweeten" }
 tokio = { version = "1.50.0", features = ["sync"] }
 toml = "1.0.1"
 tracing = "0.1.44"

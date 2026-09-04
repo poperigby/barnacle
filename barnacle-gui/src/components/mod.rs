@@ -47,13 +47,52 @@ pub enum Message {
 }
 
 #[derive(Debug, Clone)]
-pub enum State {
+enum State {
     Loading,
     Error(String),
     Ready {
         data: AppData,
         components: Components,
     },
+}
+
+#[derive(Debug, Clone)]
+struct Components {
+    profile_selector: ProfileSelector,
+    show_library_manager: bool,
+    show_add_mod_dialog: bool,
+
+    add_mod_dialog: AddModDialog,
+    mod_list: ModList,
+    library_manager: LibraryManager,
+}
+
+impl Components {
+    fn new(repo: &Repository, cfg: Arc<RwLock<GuiConfig>>) -> (Self, Task<Message>) {
+        let (add_mod_dialog, add_mod_dialog_task) = AddModDialog::new(repo.clone());
+        let mod_list = ModList::new(repo.clone(), cfg.clone());
+        let (library_manager, library_manager_task) = LibraryManager::new(repo.clone());
+
+        (
+            Self {
+                show_library_manager: false,
+                show_add_mod_dialog: false,
+
+                profile_selector: ProfileSelector {
+                    state: combo_box::State::new(Vec::new()),
+                    selected: None,
+                },
+
+                add_mod_dialog,
+                mod_list,
+                library_manager,
+            },
+            Task::batch([
+                add_mod_dialog_task.map(Message::AddModDialog),
+                library_manager_task.map(Message::LibraryManager),
+            ]),
+        )
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -97,11 +136,6 @@ pub struct App {
 
     title: String,
     theme: Theme,
-    profile_selector: ProfileSelector,
-
-    // State
-    show_library_manager: bool,
-    show_add_mod_dialog: bool,
 }
 
 impl App {
@@ -119,14 +153,6 @@ impl App {
 
                 title: Self::TITLE.to_string(),
                 theme,
-
-                show_library_manager: false,
-                show_add_mod_dialog: false,
-
-                profile_selector: ProfileSelector {
-                    state: combo_box::State::new(Vec::new()),
-                    selected: None,
-                },
             },
             Self::load(),
         )
@@ -151,9 +177,10 @@ impl App {
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::AppLoaded(data) => {
-                let (components, components_task) = Components::new(&data.repo, self.cfg.clone());
+                let (mut components, components_task) =
+                    Components::new(&data.repo, self.cfg.clone());
 
-                self.profile_selector = ProfileSelector {
+                components.profile_selector = ProfileSelector {
                     state: combo_box::State::new(data.profile_options.clone()),
                     selected: data.active_profile.clone(),
                 };
@@ -185,7 +212,7 @@ impl App {
                             add_mod_dialog::Action::None => Task::none(),
                             add_mod_dialog::Action::Run(task) => task.map(Message::AddModDialog),
                             add_mod_dialog::Action::AddMod { name, path } => {
-                                self.show_add_mod_dialog = false;
+                                components.show_add_mod_dialog = false;
                                 let repo = repo.clone();
                                 Task::perform(
                                     async move {
@@ -207,7 +234,7 @@ impl App {
                                 )
                             }
                             add_mod_dialog::Action::Cancel => {
-                                self.show_add_mod_dialog = false;
+                                components.show_add_mod_dialog = false;
                                 Task::none()
                             }
                         }
@@ -266,21 +293,21 @@ impl App {
                                 |_| Message::ProfileDeleted,
                             ),
                             library_manager::Action::Close => {
-                                self.show_library_manager = false;
+                                components.show_library_manager = false;
                                 Task::none()
                             }
                         }
                     }
                     Message::AddModButtonPressed => {
-                        self.show_add_mod_dialog = true;
+                        components.show_add_mod_dialog = true;
                         Task::none()
                     }
                     Message::LibraryManagerButtonPressed => {
-                        self.show_library_manager = true;
+                        components.show_library_manager = true;
                         Task::none()
                     }
                     Message::ModAdded => {
-                        if let Some(active_profile) = &self.profile_selector.selected {
+                        if let Some(active_profile) = &components.profile_selector.selected {
                             components
                                 .mod_list
                                 .refresh(active_profile)
@@ -290,7 +317,7 @@ impl App {
                         }
                     }
                     Message::ProfileSelected(profile) => {
-                        self.profile_selector.selected = Some(profile.clone());
+                        components.profile_selector.selected = Some(profile.clone());
                         Task::perform(
                             async {
                                 profile.activate().await.unwrap();
@@ -344,9 +371,9 @@ impl App {
                         button(icon("wrench")),
                         text(t!("profile", { "count" => 1 })),
                         combo_box(
-                            &self.profile_selector.state,
+                            &components.profile_selector.state,
                             "...",
-                            self.profile_selector.selected.as_ref(),
+                            components.profile_selector.selected.as_ref(),
                             Message::ProfileSelected
                         ),
                         space::horizontal(),
@@ -358,7 +385,8 @@ impl App {
                     row![
                         button(text(t!("main_action-bar_add-mod", { "count" => 1 })))
                             .on_press_maybe(
-                                self.profile_selector
+                                components
+                                    .profile_selector
                                     .selected
                                     .is_some()
                                     .then_some(Message::AddModButtonPressed)
@@ -369,7 +397,7 @@ impl App {
                 ]
                 .height(Fill);
 
-                if self.show_library_manager {
+                if components.show_library_manager {
                     modal(
                         content,
                         components
@@ -378,7 +406,7 @@ impl App {
                             .map(Message::LibraryManager),
                         None,
                     )
-                } else if self.show_add_mod_dialog {
+                } else if components.show_add_mod_dialog {
                     modal(
                         content,
                         components.add_mod_dialog.view().map(Message::AddModDialog),
@@ -401,33 +429,6 @@ impl App {
 }
 
 #[derive(Debug, Clone)]
-struct Components {
-    add_mod_dialog: AddModDialog,
-    mod_list: ModList,
-    library_manager: LibraryManager,
-}
-
-impl Components {
-    fn new(repo: &Repository, cfg: Arc<RwLock<GuiConfig>>) -> (Self, Task<Message>) {
-        let (add_mod_dialog, add_mod_dialog_task) = AddModDialog::new(repo.clone());
-        let mod_list = ModList::new(repo.clone(), cfg.clone());
-        let (library_manager, library_manager_task) = LibraryManager::new(repo.clone());
-
-        (
-            Self {
-                add_mod_dialog,
-                mod_list,
-                library_manager,
-            },
-            Task::batch([
-                add_mod_dialog_task.map(Message::AddModDialog),
-                library_manager_task.map(Message::LibraryManager),
-            ]),
-        )
-    }
-}
-
-#[derive(Debug)]
 struct ProfileSelector {
     state: combo_box::State<ProfileOption>,
     selected: Option<ProfileOption>,

@@ -11,7 +11,6 @@ use iced::{
     widget::{button, checkbox, column, row, scrollable, table, text},
 };
 use iced_aw::Spinner;
-use sweeten::widget::mouse_area;
 
 pub mod state;
 
