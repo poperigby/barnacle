@@ -1,11 +1,13 @@
 use sea_orm::entity::prelude::*;
+use strum::Display;
 
-#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Display)]
 #[sea_orm(
     rs_type = "String",
     db_type = "String(StringLen::None)",
     rename_all = "camelCase"
 )]
+#[strum(serialize_all = "title_case")]
 pub enum DeployKind {
     /// Deploys directly to the game directory with an overlay filesystem.
     Overlay,
@@ -15,7 +17,9 @@ pub enum DeployKind {
     /// Deploys mods to an intermediary staging directory with OverlayFS, preventing the mod store
     /// from needing to be modified. The individual mod directories are then added to `openmw.cfg`.
     /// Plugins are also handled.
+    #[strum(serialize = "OpenMW")]
     OpenMW,
+    #[strum(serialize = "Baldur's Gate 3")]
     BaldursGate3,
 }
 

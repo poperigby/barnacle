@@ -13,7 +13,6 @@ use iced::{
     widget::{Column, button, column, container, row, rule, scrollable, space, text},
 };
 use iced_aw::Spinner;
-use tokio::task::spawn_blocking;
 
 pub mod new_game_dialog;
 pub mod profiles_tab;
@@ -58,10 +57,11 @@ pub enum State {
     NoGames,
     Loaded {
         active_game: Game,
-        games: Vec<GameRow>,
+        games_rows: Vec<GameRow>,
     },
 }
 
+#[derive(Debug, Clone)]
 pub struct LibraryManager {
     repo: Repository,
     state: State,
@@ -192,10 +192,13 @@ impl LibraryManager {
             State::Loading => Spinner::new().into(),
             State::Error(e) => text(e).into(),
             State::NoGames => column![text("No games"), new_game_button].into(),
-            State::Loaded { active_game, games } => {
+            State::Loaded {
+                active_game,
+                games_rows: games,
+            } => {
                 let game_rows = games
                     .iter()
-                    .map(|row| game_row(row, active_game, &self.selected_game));
+                    .map(|row| row.view(active_game, &self.selected_game));
 
                 let games_sidebar = column![
                     text(t!("game", { "count" => 2 })),
@@ -270,62 +273,60 @@ impl LibraryManager {
 fn load_state(repo: Repository) -> Task<Message> {
     let repo = repo.clone();
     Task::perform(
-        async {
-            spawn_blocking(move || {
-                let active_game = repo.active_game().unwrap();
-                let games: Vec<GameRow> = repo
-                    .games()
-                    .unwrap()
-                    .iter()
-                    .map(|g| GameRow {
-                        entity: g.clone(),
-                        name: g.name().unwrap(),
-                    })
-                    .collect();
+        async move {
+            let active_game = repo.active_game().await.unwrap();
 
-                if !games.is_empty() {
-                    State::Loaded {
-                        active_game: active_game.unwrap(),
-                        games,
-                    }
-                } else {
-                    State::NoGames
+            let mut rows = Vec::new();
+            for game in repo.games().await.unwrap() {
+                let name = game.name().await.unwrap();
+                rows.push(GameRow::new(game, name));
+            }
+
+            if !rows.is_empty() {
+                State::Loaded {
+                    active_game: active_game.unwrap(),
+                    games_rows: rows,
                 }
-            })
-            .await
-            .unwrap()
+            } else {
+                State::NoGames
+            }
         },
         Message::StateChanged,
     )
 }
 
-// Generate a row that represents a Game
-fn game_row<'a>(
-    row: &'a GameRow,
-    active_game: &'a Game,
-    selected_game: &'a Option<Game>,
-) -> Element<'a, Message> {
-    let mut content = row![text(row.name.clone()), space::horizontal()];
-
-    if &row.entity == active_game {
-        content = content.push(icon("check"));
-    }
-
-    let style = if Some(&row.entity) == selected_game.as_ref() {
-        button::primary
-    } else {
-        button::subtle
-    };
-
-    button(content)
-        .width(Length::Fill)
-        .style(style)
-        .on_press(Message::GameRowSelected(row.entity.clone()))
-        .into()
-}
-
 #[derive(Debug, Clone)]
 pub struct GameRow {
-    entity: Game,
+    game: Game,
     name: String,
+}
+
+impl GameRow {
+    pub fn new(game: Game, name: String) -> Self {
+        Self { game, name }
+    }
+
+    pub fn view<'a>(
+        &self,
+        active_game: &'a Game,
+        selected_game: &'a Option<Game>,
+    ) -> Element<'a, Message> {
+        let mut content = row![text(self.name.clone()), space::horizontal()];
+
+        if &self.game == active_game {
+            content = content.push(icon("check"));
+        }
+
+        let style = if Some(&self.game) == selected_game.as_ref() {
+            button::primary
+        } else {
+            button::subtle
+        };
+
+        button(content)
+            .width(Length::Fill)
+            .style(style)
+            .on_press(Message::GameRowSelected(self.game.clone()))
+            .into()
+    }
 }

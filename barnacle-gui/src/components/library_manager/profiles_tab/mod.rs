@@ -11,7 +11,6 @@ use iced::{
     widget::{Column, button, column, container, row, scrollable, space, text},
 };
 use iced_aw::Spinner;
-use tokio::task::spawn_blocking;
 
 use crate::components::library_manager::profiles_tab::{
     edit_dialog::EditDialog, new_dialog::NewDialog,
@@ -25,6 +24,7 @@ pub enum Message {
     StateChanged(State),
     NewButtonPressed,
     EditButtonPressed(Profile),
+    EditLoaded { profile: Profile, name: String },
     DeleteButtonPressed(Profile),
     ProfileCreated,
     ProfileEdited,
@@ -45,9 +45,10 @@ pub enum Action {
 pub enum State {
     Loading,
     Error(String),
-    Loaded(Vec<Profile>),
+    Loaded(Vec<ProfileRow>),
 }
 
+#[derive(Debug, Clone)]
 pub struct Tab {
     repo: Repository,
     state: State,
@@ -79,12 +80,13 @@ impl Tab {
     pub fn refresh(&self, game: &Game) -> Task<Message> {
         let game = game.clone();
         Task::perform(
-            {
-                async {
-                    spawn_blocking(move || State::Loaded(game.profiles().unwrap()))
-                        .await
-                        .unwrap()
+            async move {
+                let mut rows = Vec::new();
+                for profile in game.profiles().await.unwrap() {
+                    let name = profile.name().await.unwrap();
+                    rows.push(ProfileRow::new(profile, name));
                 }
+                State::Loaded(rows)
             },
             Message::StateChanged,
         )
@@ -102,8 +104,15 @@ impl Tab {
                 self.show_new_dialog = true;
                 Action::None
             }
-            Message::EditButtonPressed(profile) => {
-                self.edit_dialog.load(profile);
+            Message::EditButtonPressed(profile) => Action::Run(Task::perform(
+                async move {
+                    let name = profile.name().await.unwrap();
+                    (profile, name)
+                },
+                |(profile, name)| Message::EditLoaded { profile, name },
+            )),
+            Message::EditLoaded { profile, name } => {
+                self.edit_dialog.load(profile, name);
                 Action::None
             }
             Message::DeleteButtonPressed(profile) => {
@@ -129,11 +138,8 @@ impl Tab {
                     edit_dialog::Action::Run(task) => Action::Run(task.map(Message::EditDialog)),
                     edit_dialog::Action::Cancel => Action::None,
                     edit_dialog::Action::Edit { profile, name } => Action::Run(Task::perform(
-                        async {
-                            spawn_blocking(move || {
-                                profile.set_name(&name).unwrap();
-                            })
-                            .await
+                        async move {
+                            profile.set_name(&name).await.unwrap();
                         },
                         |_| Message::ProfileEdited,
                     )),
@@ -146,11 +152,9 @@ impl Tab {
         let content = match &self.state {
             State::Loading => Spinner::new().into(),
             State::Error(e) => text(e).into(),
-            State::Loaded(profiles) => column![
+            State::Loaded(profile_rows) => column![
                 button(text(t!("new"))).on_press(Message::NewButtonPressed),
-                scrollable(Column::with_children(
-                    profiles.iter().map(|p| self.profile_row(p))
-                ))
+                scrollable(Column::with_children(profile_rows.iter().map(|p| p.view())))
             ]
             .into(),
         };
@@ -165,14 +169,26 @@ impl Tab {
             content
         }
     }
+}
 
-    fn profile_row<'a>(&'a self, profile: &'a Profile) -> Element<'a, Message> {
+#[derive(Debug, Clone)]
+pub struct ProfileRow {
+    profile: Profile,
+    name: String,
+}
+
+impl ProfileRow {
+    pub fn new(profile: Profile, name: String) -> Self {
+        Self { profile, name }
+    }
+
+    pub fn view<'a>(&self) -> Element<'a, Message> {
         container(
             row![
-                text(profile.name().unwrap()),
+                text(self.name.clone()),
                 space::horizontal(),
                 button(icon("edit")),
-                button(icon("delete")).on_press(Message::DeleteButtonPressed(profile.clone()))
+                button(icon("delete")).on_press(Message::DeleteButtonPressed(self.profile.clone()))
             ]
             .padding(12),
         )

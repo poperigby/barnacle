@@ -1,5 +1,5 @@
 use crate::{
-    components::mod_list::state::{ContextMenuState, SortColumn, SortState},
+    components::mod_list::state::{SortColumn, SortState},
     config::Cfg,
 };
 use barnacle_lib::{
@@ -7,12 +7,11 @@ use barnacle_lib::{
     repository::{Profile, handles::ModEntry},
 };
 use iced::{
-    Element, Length, Point, Task,
+    Element, Length, Task,
     widget::{button, checkbox, column, row, scrollable, table, text},
 };
 use iced_aw::Spinner;
 use sweeten::widget::mouse_area;
-use tokio::task::spawn_blocking;
 
 pub mod state;
 
@@ -20,10 +19,9 @@ pub mod state;
 pub enum Message {
     StateChanged(State),
     SortChanged(SortColumn),
-    ClickedOutContextMenu,
-    ToggleModEntry(ModEntry, bool),
-    ModEntryRightClicked(ModEntry, Point),
-    ModEntryDeleted(ModEntry),
+    ToggleModEntry(ModEntryRow, bool),
+    ModEntryToggled,
+    ModEntryDeleted(ModEntryRow),
 }
 
 #[derive(Debug)]
@@ -36,15 +34,15 @@ pub enum Action {
 pub enum State {
     Loading,
     Error(String),
-    Loaded(Vec<ModEntry>),
+    Loaded(Vec<ModEntryRow>),
 }
 
+#[derive(Debug, Clone)]
 pub struct ModList {
     repo: Repository,
     cfg: Cfg,
     state: State,
     sort: SortState,
-    context_menu: Option<ContextMenuState>,
 }
 
 impl ModList {
@@ -54,17 +52,21 @@ impl ModList {
             cfg,
             state: State::Loading,
             sort: SortState::default(),
-            context_menu: None,
         }
     }
 
     pub fn refresh(&self, profile: &Profile) -> Task<Message> {
         let profile = profile.clone();
         Task::perform(
-            async {
-                spawn_blocking(move || State::Loaded(profile.mod_entries().unwrap()))
-                    .await
-                    .unwrap()
+            async move {
+                let mut rows = Vec::new();
+                for mod_entry in profile.mod_entries().await.unwrap() {
+                    let name = mod_entry.name().await.unwrap();
+                    let enabled = mod_entry.enabled().await.unwrap();
+                    rows.push(ModEntryRow::new(mod_entry, name, enabled));
+                }
+
+                State::Loaded(rows)
             },
             Message::StateChanged,
         )
@@ -81,25 +83,22 @@ impl ModList {
                 self.cfg.write().mod_list.sort_state = self.sort;
                 Action::None
             }
-            Message::ClickedOutContextMenu => {
-                self.context_menu = None;
-                Action::None
-            }
-            Message::ToggleModEntry(entry, state) => {
-                // TODO: This should be async
-                let entry = entry.clone();
-                entry.set_enabled(state).unwrap();
-                Action::None
-            }
-            Message::ModEntryRightClicked(entry, position) => {
-                self.context_menu = Some(ContextMenuState::new(entry, position));
-                Action::None
+            Message::ToggleModEntry(entry_row, state) => {
+                let entry = entry_row.entry.clone();
+
+                Action::Run(Task::perform(
+                    async move {
+                        entry.set_enabled(state).await.unwrap();
+                    },
+                    |_| Message::ModEntryToggled,
+                ))
             }
             Message::ModEntryDeleted(entry) => {
                 println!("Deletion of {:?}", entry);
                 // entry.remove().unwrap();
                 Action::None
             }
+            Message::ModEntryToggled => Action::None,
         }
     }
 
@@ -107,33 +106,49 @@ impl ModList {
         match &self.state {
             State::Loading => Spinner::new().into(),
             State::Error(e) => text(e).into(),
-            State::Loaded(mod_entries) => {
+            State::Loaded(mod_entries_rows) => {
                 let columns = [
                     table::column(
                         column_header("Name", &self.sort, SortColumn::Name),
-                        |entry: ModEntry| {
-                            mouse_area(text(entry.name().unwrap())).on_right_press(move |point| {
-                                Message::ModEntryRightClicked(entry.clone(), point)
-                            })
-                        },
+                        |entry_row: ModEntryRow| text(entry_row.name),
                     ),
                     table::column(
                         column_header("Cateogry", &self.sort, SortColumn::Category),
-                        |entry: ModEntry| text("Category"),
+                        |entry_row: ModEntryRow| text("Category"),
                     ),
-                    table::column(text("Status"), |entry: ModEntry| {
-                        checkbox(entry.enabled().unwrap())
-                            .on_toggle(move |state| Message::ToggleModEntry(entry.clone(), state))
+                    table::column(text("Status"), |entry_row: ModEntryRow| {
+                        checkbox(entry_row.enabled).on_toggle(move |state| {
+                            Message::ToggleModEntry(entry_row.clone(), state)
+                        })
                     }),
                 ];
 
                 column![scrollable(
-                    table(columns, mod_entries.clone()).width(Length::Fill)
+                    table(columns, mod_entries_rows.clone()).width(Length::Fill)
                 )]
                 .into()
             }
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct ModEntryRow {
+    entry: ModEntry,
+    name: String,
+    enabled: bool,
+}
+
+impl ModEntryRow {
+    pub fn new(entry: ModEntry, name: String, enabled: bool) -> Self {
+        Self {
+            entry,
+            name,
+            enabled,
+        }
+    }
+
+    // pub fn view<'a>(&self) -> Element<'a, Message> {}
 }
 
 fn column_header<'a>(

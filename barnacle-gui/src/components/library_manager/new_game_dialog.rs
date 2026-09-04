@@ -71,7 +71,7 @@ impl Dialog {
             }
             Message::CreatePressed => {
                 let name = self.name.clone();
-                let deploy_kind = self.deploy_kind.unwrap();
+                let deploy_kind = self.deploy_kind.clone().unwrap();
 
                 self.clear();
 
