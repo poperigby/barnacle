@@ -25,8 +25,12 @@ pub mod mod_list;
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    AppLoaded(AppData),
-    AppLoadFailed(String),
+    Initialized(AppData),
+    IntializeFailed(String),
+
+    Refreshed(AppData),
+    RefreshFailed(String),
+
     AddModButtonPressed,
     LibraryManagerButtonPressed,
     ModAdded,
@@ -64,7 +68,9 @@ struct Workspace {
 }
 
 impl Workspace {
-    fn new(repo: &Repository, cfg: Arc<RwLock<GuiConfig>>) -> (Self, Task<Message>) {
+    fn init(data: &AppData, cfg: Arc<RwLock<GuiConfig>>) -> (Self, Task<Message>) {
+        let repo = data.repo.clone();
+
         let (add_mod_dialog, add_mod_dialog_task) = AddModDialog::new(repo.clone());
         let mod_list = ModList::new(repo.clone(), cfg.clone());
         let (library_manager, library_manager_task) = LibraryManager::new(repo.clone());
@@ -75,8 +81,8 @@ impl Workspace {
                 show_add_mod_dialog: false,
 
                 profile_selector: ProfileSelector {
-                    state: combo_box::State::new(Vec::new()),
-                    selected: None,
+                    state: combo_box::State::new(data.profile_options.clone()),
+                    selected: data.active_profile.clone(),
                 },
 
                 add_mod_dialog,
@@ -88,6 +94,14 @@ impl Workspace {
                 library_manager_task.map(Message::LibraryManager),
             ]),
         )
+    }
+
+    /// Synchronize the workspace with the refreshed application data
+    fn refresh(&mut self, data: &AppData) {
+        self.profile_selector = ProfileSelector {
+            state: combo_box::State::new(data.profile_options.clone()),
+            selected: data.active_profile.clone(),
+        };
     }
 }
 
@@ -162,23 +176,18 @@ impl App {
                     AppData::load(repo).await
                 }
             },
-            Message::AppLoaded,
+            Message::Initialized,
         )
     }
 
     fn refresh(repo: &Repository) -> Task<Message> {
-        Task::perform(AppData::load(repo.clone()), Message::AppLoaded)
+        Task::perform(AppData::load(repo.clone()), Message::Refreshed)
     }
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::AppLoaded(data) => {
-                let (mut workspace, workspace_task) = Workspace::new(&data.repo, self.cfg.clone());
-
-                workspace.profile_selector = ProfileSelector {
-                    state: combo_box::State::new(data.profile_options.clone()),
-                    selected: data.active_profile.clone(),
-                };
+            Message::Initialized(data) => {
+                let (workspace, workspace_task) = Workspace::init(&data, self.cfg.clone());
 
                 let mod_list_task = data
                     .active_profile
@@ -190,7 +199,25 @@ impl App {
 
                 Task::batch([workspace_task, mod_list_task])
             }
-            Message::AppLoadFailed(e) => {
+            Message::IntializeFailed(e) => {
+                self.state = State::Error(e);
+                Task::none()
+            }
+            Message::Refreshed(new_data) => {
+                let State::Ready {
+                    data: current_data,
+                    workspace,
+                } = &mut self.state
+                else {
+                    return Task::none();
+                };
+
+                workspace.refresh(&new_data);
+                *current_data = new_data;
+
+                Task::none()
+            }
+            Message::RefreshFailed(e) => {
                 self.state = State::Error(e);
                 Task::none()
             }
@@ -347,7 +374,10 @@ impl App {
                     ]),
                     // TODO: Already handled in the outer match, but this is gross. Need to
                     // restructure this.
-                    Message::AppLoaded(_) | Message::AppLoadFailed(_) => Task::none(),
+                    Message::Initialized(_)
+                    | Message::IntializeFailed(_)
+                    | Message::Refreshed(_)
+                    | Message::RefreshFailed(_) => Task::none(),
                 }
             }
         }
