@@ -34,6 +34,7 @@ pub enum PickPathKind {
     Directory,
 }
 
+#[derive(Debug, Clone)]
 pub struct AddModDialog {
     repo: Repository,
     name: String,

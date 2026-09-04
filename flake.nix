@@ -45,6 +45,7 @@
                         buildInputs = with pkgs; [
                             libarchive
                             openssl
+                            sqlite
                         ];
                     };
 

@@ -18,6 +18,7 @@ pub enum Action {
     Cancel,
 }
 
+#[derive(Debug, Clone)]
 pub struct NewDialog {
     name: String,
 }

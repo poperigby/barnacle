@@ -11,20 +11,24 @@ pub enum Command {
     Activate { name: String },
 }
 
-pub fn handle(repo: &Repository, cmd: &Command) {
+pub async fn handle(repo: &Repository, cmd: &Command) {
     match cmd {
         Command::List => {
-            let games = repo.games().unwrap();
+            let games = repo.games().await.unwrap();
             for game in games {
-                println!("{}", game.name().unwrap());
+                println!("{}", game.name().await.unwrap());
             }
         }
         Command::Add { name } => {
-            repo.add_game(name, DeployKind::Overlay).unwrap();
+            repo.add_game(name, DeployKind::Overlay).await.unwrap();
         }
         Command::Activate { name } => {
-            let game = repo.search_game(name).unwrap().expect("game not found");
-            game.activate().unwrap();
+            let game = repo
+                .search_game(name)
+                .await
+                .unwrap()
+                .expect("game not found");
+            game.activate().await.unwrap();
         }
     }
 }

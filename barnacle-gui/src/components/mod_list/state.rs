@@ -1,20 +1,7 @@
-use barnacle_lib::repository::ModEntry;
-use iced::{Point, widget::Svg};
+use iced::widget::Svg;
 use serde::{Deserialize, Serialize};
 
 use crate::icons::icon;
-
-#[derive(Debug, Clone)]
-pub struct ContextMenuState {
-    pub entry: ModEntry,
-    pub position: Point,
-}
-
-impl ContextMenuState {
-    pub fn new(entry: ModEntry, position: Point) -> Self {
-        Self { entry, position }
-    }
-}
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum SortDirection {

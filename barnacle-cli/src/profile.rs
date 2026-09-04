@@ -12,24 +12,25 @@ pub enum Command {
     Activate { name: String },
 }
 
-pub fn handle(repo: &Repository, cmd: &Command) {
-    if let Some(active_game) = repo.active_game().unwrap() {
+pub async fn handle(repo: &Repository, cmd: &Command) {
+    if let Some(active_game) = repo.active_game().await.unwrap() {
         match cmd {
             Command::List => {
-                let profiles = active_game.profiles().unwrap();
+                let profiles = active_game.profiles().await.unwrap();
                 for profile in profiles {
-                    println!("* {}", profile.name().unwrap())
+                    println!("* {}", profile.name().await.unwrap())
                 }
             }
             Command::Add { name } => {
-                active_game.add_profile(name).unwrap();
+                active_game.add_profile(name).await.unwrap();
             }
             Command::Activate { name } => {
                 let profile = active_game
                     .search_profile(name)
+                    .await
                     .unwrap()
                     .expect("profile not found");
-                profile.activate().unwrap();
+                profile.activate().await.unwrap();
             }
         }
     } else {
