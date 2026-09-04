@@ -13,9 +13,7 @@ use iced_aw::Spinner;
 use parking_lot::RwLock;
 
 use crate::{
-    components::{
-        add_mod_dialog::AddModDialog, library_manager::LibraryManager, mod_list::ModList,
-    },
+    app::{add_mod_dialog::AddModDialog, library_manager::LibraryManager, mod_list::ModList},
     config::GuiConfig,
     icons::icon,
     modal,
@@ -40,7 +38,7 @@ pub enum Message {
     ProfileDeleted,
     ProfileSelected(ProfileOption),
     ProfileActivated(Profile),
-    // Child components
+    // Child workspace
     AddModDialog(add_mod_dialog::Message),
     ModList(mod_list::Message),
     LibraryManager(library_manager::Message),
@@ -50,14 +48,12 @@ pub enum Message {
 enum State {
     Loading,
     Error(String),
-    Ready {
-        data: AppData,
-        components: Components,
-    },
+    Ready { data: AppData, workspace: Workspace },
 }
 
+/// The user facing working area that exists once the app is loaded
 #[derive(Debug, Clone)]
-struct Components {
+struct Workspace {
     profile_selector: ProfileSelector,
     show_library_manager: bool,
     show_add_mod_dialog: bool,
@@ -67,7 +63,7 @@ struct Components {
     library_manager: LibraryManager,
 }
 
-impl Components {
+impl Workspace {
     fn new(repo: &Repository, cfg: Arc<RwLock<GuiConfig>>) -> (Self, Task<Message>) {
         let (add_mod_dialog, add_mod_dialog_task) = AddModDialog::new(repo.clone());
         let mod_list = ModList::new(repo.clone(), cfg.clone());
@@ -177,10 +173,9 @@ impl App {
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::AppLoaded(data) => {
-                let (mut components, components_task) =
-                    Components::new(&data.repo, self.cfg.clone());
+                let (mut workspace, workspace_task) = Workspace::new(&data.repo, self.cfg.clone());
 
-                components.profile_selector = ProfileSelector {
+                workspace.profile_selector = ProfileSelector {
                     state: combo_box::State::new(data.profile_options.clone()),
                     selected: data.active_profile.clone(),
                 };
@@ -188,19 +183,19 @@ impl App {
                 let mod_list_task = data
                     .active_profile
                     .as_ref()
-                    .map(|profile| components.mod_list.refresh(profile).map(Message::ModList))
+                    .map(|profile| workspace.mod_list.refresh(profile).map(Message::ModList))
                     .unwrap_or_else(Task::none);
 
-                self.state = State::Ready { data, components };
+                self.state = State::Ready { data, workspace };
 
-                Task::batch([components_task, mod_list_task])
+                Task::batch([workspace_task, mod_list_task])
             }
             Message::AppLoadFailed(e) => {
                 self.state = State::Error(e);
                 Task::none()
             }
             message => {
-                let State::Ready { data, components } = &mut self.state else {
+                let State::Ready { data, workspace } = &mut self.state else {
                     return Task::none();
                 };
 
@@ -208,11 +203,11 @@ impl App {
 
                 match message {
                     Message::AddModDialog(message) => {
-                        match components.add_mod_dialog.update(message) {
+                        match workspace.add_mod_dialog.update(message) {
                             add_mod_dialog::Action::None => Task::none(),
                             add_mod_dialog::Action::Run(task) => task.map(Message::AddModDialog),
                             add_mod_dialog::Action::AddMod { name, path } => {
-                                components.show_add_mod_dialog = false;
+                                workspace.show_add_mod_dialog = false;
                                 let repo = repo.clone();
                                 Task::perform(
                                     async move {
@@ -234,17 +229,17 @@ impl App {
                                 )
                             }
                             add_mod_dialog::Action::Cancel => {
-                                components.show_add_mod_dialog = false;
+                                workspace.show_add_mod_dialog = false;
                                 Task::none()
                             }
                         }
                     }
-                    Message::ModList(message) => match components.mod_list.update(message) {
+                    Message::ModList(message) => match workspace.mod_list.update(message) {
                         mod_list::Action::None => Task::none(),
                         mod_list::Action::Run(task) => task.map(Message::ModList),
                     },
                     Message::LibraryManager(message) => {
-                        match components.library_manager.update(message) {
+                        match workspace.library_manager.update(message) {
                             library_manager::Action::None => Task::none(),
                             library_manager::Action::Run(task) => task.map(Message::LibraryManager),
                             library_manager::Action::CreateGame(new_game) => Task::perform(
@@ -293,22 +288,22 @@ impl App {
                                 |_| Message::ProfileDeleted,
                             ),
                             library_manager::Action::Close => {
-                                components.show_library_manager = false;
+                                workspace.show_library_manager = false;
                                 Task::none()
                             }
                         }
                     }
                     Message::AddModButtonPressed => {
-                        components.show_add_mod_dialog = true;
+                        workspace.show_add_mod_dialog = true;
                         Task::none()
                     }
                     Message::LibraryManagerButtonPressed => {
-                        components.show_library_manager = true;
+                        workspace.show_library_manager = true;
                         Task::none()
                     }
                     Message::ModAdded => {
-                        if let Some(active_profile) = &components.profile_selector.selected {
-                            components
+                        if let Some(active_profile) = &workspace.profile_selector.selected {
+                            workspace
                                 .mod_list
                                 .refresh(active_profile)
                                 .map(Message::ModList)
@@ -317,7 +312,7 @@ impl App {
                         }
                     }
                     Message::ProfileSelected(profile) => {
-                        components.profile_selector.selected = Some(profile.clone());
+                        workspace.profile_selector.selected = Some(profile.clone());
                         Task::perform(
                             async {
                                 profile.activate().await.unwrap();
@@ -330,21 +325,21 @@ impl App {
                     // to know.
                     Message::ProfileAdded | Message::ProfileDeleted => Task::batch([
                         Self::refresh(&repo),
-                        components
+                        workspace
                             .library_manager
                             .refresh()
                             .map(Message::LibraryManager),
                     ]),
                     Message::ProfileActivated(profile) => Task::batch([
                         Self::refresh(&repo),
-                        components.mod_list.refresh(&profile).map(Message::ModList),
+                        workspace.mod_list.refresh(&profile).map(Message::ModList),
                     ]),
-                    Message::GameAdded | Message::GameEdited | Message::GameDeleted => components
+                    Message::GameAdded | Message::GameEdited | Message::GameDeleted => workspace
                         .library_manager
                         .refresh()
                         .map(Message::LibraryManager),
                     Message::GameActivated => Task::batch([
-                        components
+                        workspace
                             .library_manager
                             .refresh()
                             .map(Message::LibraryManager),
@@ -358,12 +353,12 @@ impl App {
         }
     }
 
-    // Render the application and pass along messages from components to update()
+    // Render the application and pass along messages from workspace to update()
     pub fn view(&self) -> Element<'_, Message> {
         match &self.state {
             State::Loading => Spinner::new().into(),
             State::Error(_) => panic!("ERROR"),
-            State::Ready { components, .. } => {
+            State::Ready { workspace, .. } => {
                 let content = column![
                     // Top bar
                     row![
@@ -371,9 +366,9 @@ impl App {
                         button(icon("wrench")),
                         text(t!("profile", { "count" => 1 })),
                         combo_box(
-                            &components.profile_selector.state,
+                            &workspace.profile_selector.state,
                             "...",
-                            components.profile_selector.selected.as_ref(),
+                            workspace.profile_selector.selected.as_ref(),
                             Message::ProfileSelected
                         ),
                         space::horizontal(),
@@ -385,7 +380,7 @@ impl App {
                     row![
                         button(text(t!("main_action-bar_add-mod", { "count" => 1 })))
                             .on_press_maybe(
-                                components
+                                workspace
                                     .profile_selector
                                     .selected
                                     .is_some()
@@ -393,23 +388,23 @@ impl App {
                             )
                     ],
                     // Mod list
-                    components.mod_list.view().map(Message::ModList),
+                    workspace.mod_list.view().map(Message::ModList),
                 ]
                 .height(Fill);
 
-                if components.show_library_manager {
+                if workspace.show_library_manager {
                     modal(
                         content,
-                        components
+                        workspace
                             .library_manager
                             .view()
                             .map(Message::LibraryManager),
                         None,
                     )
-                } else if components.show_add_mod_dialog {
+                } else if workspace.show_add_mod_dialog {
                     modal(
                         content,
-                        components.add_mod_dialog.view().map(Message::AddModDialog),
+                        workspace.add_mod_dialog.view().map(Message::AddModDialog),
                         None,
                     )
                 } else {

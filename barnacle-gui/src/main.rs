@@ -9,9 +9,9 @@ use iced::{
 use tracing::Level;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
-use crate::components::App;
+use crate::app::App;
 
-pub mod components;
+pub mod app;
 pub mod config;
 pub mod icons;
 

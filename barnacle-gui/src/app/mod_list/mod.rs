@@ -1,5 +1,5 @@
 use crate::{
-    components::mod_list::state::{SortColumn, SortState},
+    app::mod_list::state::{SortColumn, SortState},
     config::Cfg,
 };
 use barnacle_lib::{

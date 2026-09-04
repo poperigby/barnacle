@@ -4,7 +4,7 @@ use barnacle_lib::fs::config_dir;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 
-use crate::{components::mod_list::state::SortState, config::theme::Theme};
+use crate::{app::mod_list::state::SortState, config::theme::Theme};
 
 mod theme;
 

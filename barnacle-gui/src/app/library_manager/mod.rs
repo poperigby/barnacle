@@ -1,5 +1,5 @@
 use crate::{
-    components::library_manager::{new_game_dialog::NewGame, profiles_tab::new_dialog::NewProfile},
+    app::library_manager::{new_game_dialog::NewGame, profiles_tab::new_dialog::NewProfile},
     icons::icon,
     modal,
 };
