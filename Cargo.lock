@@ -574,6 +574,7 @@ dependencies = [
  "colored",
  "human-panic",
  "sysexits",
+ "tokio",
  "tracing",
  "tracing-subscriber",
 ]

@@ -11,6 +11,7 @@ cliux = "0.5.1"
 colored = "3.1.1"
 human-panic = "2.0.6"
 sysexits = "0.11.0"
+tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.44"
 tracing-subscriber = "0.3.22"
 

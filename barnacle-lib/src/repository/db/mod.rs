@@ -14,9 +14,9 @@ pub(crate) struct Db {
 impl Db {
     pub async fn new() -> Self {
         let path = state_dir().join("data.db");
+        let url = format!("sqlite://{}?mode=rwc", path.to_str().unwrap());
 
-        let connection =
-            Self::connect(&format!("sqlite://{}?mode=rwc", path.to_str().unwrap())).await;
+        let connection = Self::connect(&url).await;
 
         Self { conn: connection }
     }
