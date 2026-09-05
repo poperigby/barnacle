@@ -30,7 +30,7 @@ pub struct Repository {
 impl Repository {
     pub async fn new() -> Self {
         Self {
-            db: Db::new().await,
+            db: Db::new().await.unwrap(),
             cfg: Arc::new(RwLock::new(CoreConfig::load())),
         }
     }
@@ -56,7 +56,7 @@ impl Repository {
     /// file, for using in tests.
     pub(crate) async fn mock() -> Self {
         Self {
-            db: Db::in_memory().await,
+            db: Db::in_memory().await.unwrap(),
             cfg: Arc::new(RwLock::new(CoreConfig::mock())),
         }
     }
