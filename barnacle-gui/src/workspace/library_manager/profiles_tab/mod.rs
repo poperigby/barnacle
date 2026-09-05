@@ -1,6 +1,4 @@
-use crate::{
-    app::library_manager::profiles_tab::new_dialog::NewProfile, icons::icon, modal,
-};
+use crate::{icons::icon, modal, workspace::library_manager::profiles_tab::new_dialog::NewProfile};
 use barnacle_lib::{
     Repository,
     repository::{Game, Profile},
@@ -12,7 +10,7 @@ use iced::{
 };
 use iced_aw::Spinner;
 
-use crate::app::library_manager::profiles_tab::{
+use crate::workspace::library_manager::profiles_tab::{
     edit_dialog::EditDialog, new_dialog::NewDialog,
 };
 

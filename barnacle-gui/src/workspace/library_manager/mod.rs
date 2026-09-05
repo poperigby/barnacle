@@ -1,7 +1,7 @@
 use crate::{
-    app::library_manager::{new_game_dialog::NewGame, profiles_tab::new_dialog::NewProfile},
     icons::icon,
     modal,
+    workspace::library_manager::{new_game_dialog::NewGame, profiles_tab::new_dialog::NewProfile},
 };
 use barnacle_lib::{
     Repository,

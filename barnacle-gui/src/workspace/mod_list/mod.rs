@@ -1,6 +1,6 @@
 use crate::{
-    app::mod_list::state::{SortColumn, SortState},
     config::Cfg,
+    workspace::mod_list::state::{SortColumn, SortState},
 };
 use barnacle_lib::{
     Repository,
@@ -38,24 +38,36 @@ pub enum State {
 
 #[derive(Debug, Clone)]
 pub struct ModList {
-    repo: Repository,
     cfg: Cfg,
     state: State,
     sort: SortState,
 }
 
 impl ModList {
-    pub fn new(repo: Repository, cfg: Cfg) -> Self {
-        Self {
-            repo: repo.clone(),
-            cfg,
-            state: State::Loading,
-            sort: SortState::default(),
-        }
+    pub fn new(cfg: Cfg, profile: Profile) -> (Self, Task<Message>) {
+        (
+            Self {
+                cfg,
+                state: State::Loading,
+                sort: SortState::default(),
+            },
+            Task::perform(
+                async move {
+                    let mut rows = Vec::new();
+                    for mod_entry in profile.mod_entries().await.unwrap() {
+                        let name = mod_entry.name().await.unwrap();
+                        let enabled = mod_entry.enabled().await.unwrap();
+                        rows.push(ModEntryRow::new(mod_entry, name, enabled));
+                    }
+
+                    rows
+                },
+                |rows| Message::StateChanged(State::Loaded(rows)),
+            ),
+        )
     }
 
-    pub fn refresh(&self, profile: &Profile) -> Task<Message> {
-        let profile = profile.clone();
+    pub fn refresh(&self, profile: Profile) -> Task<Message> {
         Task::perform(
             async move {
                 let mut rows = Vec::new();
@@ -65,9 +77,9 @@ impl ModList {
                     rows.push(ModEntryRow::new(mod_entry, name, enabled));
                 }
 
-                State::Loaded(rows)
+                rows
             },
-            Message::StateChanged,
+            |rows| Message::StateChanged(State::Loaded(rows)),
         )
     }
 
