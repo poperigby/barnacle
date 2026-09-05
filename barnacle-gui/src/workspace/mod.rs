@@ -44,12 +44,15 @@ pub enum Message {
 pub enum Action {
     None,
     Run(Task<Message>),
-    Refresh,
+    ReloadData,
 }
 
-/// The user facing working area that exists once the app is loaded
+/// The user facing working area. Workspace only exists when there is loaded [`AppData`] and a
+/// [`Repository`], so it can live in blissful ignorance of there being the possiblity of no data.
 #[derive(Debug, Clone)]
 pub struct Workspace {
+    repo: Repository,
+
     profile_selector: ProfileSelector,
     show_library_manager: bool,
     show_add_mod_dialog: bool,
@@ -61,7 +64,7 @@ pub struct Workspace {
 
 impl Workspace {
     pub fn init(
-        repo: &Repository,
+        repo: Repository,
         data: &AppData,
         ui_state: &UiStateStore,
     ) -> (Self, Task<Message>) {
@@ -79,6 +82,8 @@ impl Workspace {
 
         (
             Self {
+                repo,
+
                 show_library_manager: false,
                 show_add_mod_dialog: false,
 
@@ -99,7 +104,7 @@ impl Workspace {
         )
     }
 
-    /// Synchronize the workspace UI with the newly refreshed application data
+    /// Synchronize the workspace UI with the newly reloaded application data
     pub fn sync(&mut self, data: &AppData) -> Task<Message> {
         self.profile_selector = ProfileSelector {
             state: combo_box::State::new(data.profile_options.clone()),
@@ -113,21 +118,22 @@ impl Workspace {
             _ => Task::none(),
         };
 
-        // We want to let [`App`] know that it needs to refresh these children as well
+        // We want to let [`App`] know that it needs to reload these children as well
         Task::batch([
-            self.library_manager.refresh().map(Message::LibraryManager),
+            self.library_manager.reload().map(Message::LibraryManager),
             mod_list_task,
         ])
     }
 
-    pub fn update(&mut self, repo: &Repository, message: Message) -> Action {
+    pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::AddModDialog(message) => match self.add_mod_dialog.update(message) {
                 add_mod_dialog::Action::None => Action::None,
                 add_mod_dialog::Action::Run(task) => Action::Run(task.map(Message::AddModDialog)),
                 add_mod_dialog::Action::AddMod { name, path } => {
                     self.show_add_mod_dialog = false;
-                    let repo = repo.clone();
+
+                    let repo = self.repo.clone();
                     Action::Run(Task::perform(
                         async move {
                             if let Some(active_game) = repo.active_game().await.unwrap() {
@@ -159,25 +165,26 @@ impl Workspace {
                 match mod_list.update(message) {
                     mod_list::Action::None => Action::None,
                     mod_list::Action::Run(task) => Action::Run(task.map(Message::ModList)),
-                    mod_list::Action::Refresh => Action::Refresh,
+                    mod_list::Action::Refresh => Action::ReloadData,
                 }
             }
             Message::LibraryManager(message) => {
-                let repo = repo.clone();
-
                 match self.library_manager.update(message) {
                     library_manager::Action::None => Action::None,
                     library_manager::Action::Run(task) => {
                         Action::Run(task.map(Message::LibraryManager))
                     }
-                    library_manager::Action::CreateGame(new_game) => Action::Run(Task::perform(
-                        async move {
-                            repo.add_game(&new_game.name, new_game.deploy_kind)
-                                .await
-                                .unwrap();
-                        },
-                        |_| Message::GameAdded,
-                    )),
+                    library_manager::Action::CreateGame(new_game) => {
+                        let repo = self.repo.clone();
+                        Action::Run(Task::perform(
+                            async move {
+                                repo.add_game(&new_game.name, new_game.deploy_kind)
+                                    .await
+                                    .unwrap();
+                            },
+                            |_| Message::GameAdded,
+                        ))
+                    }
                     library_manager::Action::DeleteGame(game) => Action::Run(Task::perform(
                         async move { game.remove().await.unwrap() },
                         |_| Message::GameDeleted,
@@ -251,12 +258,12 @@ impl Workspace {
             }
             // TODO: Update the mod list too. If the profile it's referring to is deleted, it needs
             // to know.
-            Message::ProfileAdded | Message::ProfileDeleted => Action::Refresh,
-            Message::ProfileActivated(_) => Action::Refresh,
+            Message::ProfileAdded | Message::ProfileDeleted => Action::ReloadData,
+            Message::ProfileActivated(_) => Action::ReloadData,
             Message::GameAdded | Message::GameEdited | Message::GameDeleted => {
-                Action::Run(self.library_manager.refresh().map(Message::LibraryManager))
+                Action::Run(self.library_manager.reload().map(Message::LibraryManager))
             }
-            Message::GameActivated => Action::Refresh,
+            Message::GameActivated => Action::ReloadData,
         }
     }
 

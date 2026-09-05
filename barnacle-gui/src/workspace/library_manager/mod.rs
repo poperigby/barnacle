@@ -20,6 +20,7 @@ pub mod profiles_tab;
 #[derive(Debug, Clone)]
 pub enum Message {
     StateChanged(State),
+
     TabSelected(TabId),
     CloseButtonPressed,
     NewGameButtonPressed,
@@ -96,7 +97,7 @@ impl LibraryManager {
         )
     }
 
-    pub fn refresh(&self) -> Task<Message> {
+    pub fn reload(&self) -> Task<Message> {
         load_state(self.repo.clone())
     }
 

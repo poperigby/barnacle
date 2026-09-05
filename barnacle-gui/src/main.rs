@@ -50,7 +50,7 @@ enum Message {
     Initialized { repo: Repository, data: AppData },
     IntializeFailed(String),
 
-    Refreshed(AppData),
+    DataReloaded(AppData),
     RefreshFailed(String),
 
     Workspace(workspace::Message),
@@ -110,17 +110,19 @@ impl App {
         )
     }
 
-    fn refresh(repo: Repository) -> Task<Message> {
+    /// Query backing data again
+    fn reload_data(repo: Repository) -> Task<Message> {
         Task::perform(
             async move { AppData::load(&repo).await },
-            Message::Refreshed,
+            Message::DataReloaded,
         )
     }
 
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Initialized { data, repo } => {
-                let (workspace, workspace_task) = Workspace::init(&repo, &data, &self.ui_state);
+                let (workspace, workspace_task) =
+                    Workspace::init(repo.clone(), &data, &self.ui_state);
 
                 self.state = State::Ready {
                     repo,
@@ -134,7 +136,7 @@ impl App {
                 self.state = State::Error(e);
                 Task::none()
             }
-            Message::Refreshed(new_data) => {
+            Message::DataReloaded(new_data) => {
                 let State::Ready {
                     data: current_data,
                     workspace,
@@ -156,10 +158,10 @@ impl App {
             Message::Workspace(message) => match &mut self.state {
                 State::Ready {
                     repo, workspace, ..
-                } => match workspace.update(&repo.clone(), message) {
+                } => match workspace.update(message) {
                     workspace::Action::None => Task::none(),
                     workspace::Action::Run(task) => task.map(Message::Workspace),
-                    workspace::Action::Refresh => Self::refresh(repo.clone()),
+                    workspace::Action::ReloadData => Self::reload_data(repo.clone()),
                 },
                 _ => panic!("FUCK"),
             },
