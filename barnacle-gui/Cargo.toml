@@ -10,7 +10,9 @@ workspace = true
 [dependencies]
 barnacle-lib = { path = "../barnacle-lib" }
 derive_more = { version = "2.1.1", features = ["deref", "deref_mut"] }
+deunicode = "1.6.2"
 fluent-i18n = "0.1.0"
+heck = "0.5.0"
 human-panic = "2.0.4"
 iced = { version = "0.14.0", features = ["tokio", "svg", "advanced"] }
 iced_aw = { version = "0.13.0", features = ["spinner"], default-features = false }

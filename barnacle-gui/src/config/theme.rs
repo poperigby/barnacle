@@ -1,58 +1,50 @@
-use serde::{Deserialize, Serialize};
+use deunicode::deunicode;
+use heck::ToUpperCamelCase;
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
-#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Theme {
-    Light,
-    #[default]
-    Dark,
-    Dracula,
-    Nord,
-    SolarizedLight,
-    SolarizedDark,
-    GruvboxLight,
-    GruvboxDark,
-    CatppuccinLatte,
-    CatppuccinFrappe,
-    CatppuccinMacchiato,
-    CatppuccinMocha,
-    TokyoNight,
-    TokyoNightStorm,
-    TokyoNightLight,
-    KanagawaWave,
-    KanagawaDragon,
-    KanagawaLotus,
-    Moonfly,
-    Nightfly,
-    Oxocarbon,
-    Ferra,
+#[derive(Debug, Clone, PartialEq)]
+pub struct Theme(iced::Theme);
+
+impl Default for Theme {
+    fn default() -> Self {
+        Self(iced::Theme::Dark)
+    }
 }
 
 impl From<&Theme> for iced::Theme {
-    fn from(cfg: &Theme) -> Self {
-        match cfg {
-            Theme::Light => iced::Theme::Light,
-            Theme::Dark => iced::Theme::Dark,
-            Theme::Dracula => iced::Theme::Dracula,
-            Theme::Nord => iced::Theme::Nord,
-            Theme::SolarizedLight => iced::Theme::SolarizedLight,
-            Theme::SolarizedDark => iced::Theme::SolarizedDark,
-            Theme::GruvboxLight => iced::Theme::GruvboxLight,
-            Theme::GruvboxDark => iced::Theme::GruvboxDark,
-            Theme::CatppuccinLatte => iced::Theme::CatppuccinLatte,
-            Theme::CatppuccinFrappe => iced::Theme::CatppuccinFrappe,
-            Theme::CatppuccinMacchiato => iced::Theme::CatppuccinMacchiato,
-            Theme::CatppuccinMocha => iced::Theme::CatppuccinMocha,
-            Theme::TokyoNight => iced::Theme::TokyoNight,
-            Theme::TokyoNightStorm => iced::Theme::TokyoNightStorm,
-            Theme::TokyoNightLight => iced::Theme::TokyoNightLight,
-            Theme::KanagawaWave => iced::Theme::KanagawaWave,
-            Theme::KanagawaDragon => iced::Theme::KanagawaDragon,
-            Theme::KanagawaLotus => iced::Theme::KanagawaLotus,
-            Theme::Moonfly => iced::Theme::Moonfly,
-            Theme::Nightfly => iced::Theme::Nightfly,
-            Theme::Oxocarbon => iced::Theme::Oxocarbon,
-            Theme::Ferra => iced::Theme::Ferra,
-        }
+    fn from(theme: &Theme) -> Self {
+        theme.0.clone()
     }
+}
+
+impl Serialize for Theme {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&key(&self.0))
+    }
+}
+
+impl<'de> Deserialize<'de> for Theme {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+
+        iced::Theme::ALL
+            .iter()
+            .find(|theme| key(theme) == value)
+            .cloned()
+            .map(Self)
+            .ok_or_else(|| de::Error::custom(format!("unknown theme `{value}`")))
+    }
+}
+
+fn key(theme: &iced::Theme) -> String {
+    let key = theme.to_string().to_upper_camel_case();
+
+    // The string representations can have Unicode characters, such as diacritics. We'll strip those.
+    deunicode(&key)
 }
