@@ -1,11 +1,8 @@
 use crate::{
-    config::Cfg,
+    persistence::state::UiStateStore,
     workspace::mod_list::state::{SortColumn, SortState},
 };
-use barnacle_lib::{
-    Repository,
-    repository::{Profile, handles::ModEntry},
-};
+use barnacle_lib::repository::{Profile, handles::ModEntry};
 use iced::{
     Element, Length, Task,
     widget::{button, checkbox, column, row, scrollable, table, text},
@@ -33,41 +30,30 @@ pub enum Action {
 pub enum State {
     Loading,
     Error(String),
-    Loaded(Vec<ModEntryRow>),
+    Ready(Vec<ModEntryRow>),
 }
 
 #[derive(Debug, Clone)]
 pub struct ModList {
-    cfg: Cfg,
+    ui_state: UiStateStore,
     state: State,
     sort: SortState,
 }
 
 impl ModList {
-    pub fn new(cfg: Cfg, profile: Profile) -> (Self, Task<Message>) {
-        (
-            Self {
-                cfg,
-                state: State::Loading,
-                sort: SortState::default(),
-            },
-            Task::perform(
-                async move {
-                    let mut rows = Vec::new();
-                    for mod_entry in profile.mod_entries().await.unwrap() {
-                        let name = mod_entry.name().await.unwrap();
-                        let enabled = mod_entry.enabled().await.unwrap();
-                        rows.push(ModEntryRow::new(mod_entry, name, enabled));
-                    }
+    pub fn new(ui_state: UiStateStore, profile: Profile) -> (Self, Task<Message>) {
+        let initial_sort_state = ui_state.mod_list_sort_state();
+        let list = Self {
+            ui_state,
+            state: State::Loading,
+            sort: initial_sort_state,
+        };
+        let task = list.load(profile);
 
-                    rows
-                },
-                |rows| Message::StateChanged(State::Loaded(rows)),
-            ),
-        )
+        (list, task)
     }
 
-    pub fn refresh(&self, profile: Profile) -> Task<Message> {
+    pub fn load(&self, profile: Profile) -> Task<Message> {
         Task::perform(
             async move {
                 let mut rows = Vec::new();
@@ -79,7 +65,7 @@ impl ModList {
 
                 rows
             },
-            |rows| Message::StateChanged(State::Loaded(rows)),
+            |rows| Message::StateChanged(State::Ready(rows)),
         )
     }
 
@@ -91,7 +77,7 @@ impl ModList {
             }
             Message::SortChanged(column) => {
                 self.sort = self.sort.toggle(column);
-                self.cfg.write().mod_list.sort_state = self.sort;
+                self.ui_state.set_mod_list_sort_state(self.sort);
                 Action::None
             }
             Message::ToggleModEntry(entry_row, state) => {
@@ -117,7 +103,7 @@ impl ModList {
         match &self.state {
             State::Loading => Spinner::new().into(),
             State::Error(e) => text(e).into(),
-            State::Loaded(mod_entries_rows) => {
+            State::Ready(mod_entries_rows) => {
                 let columns = [
                     table::column(
                         column_header("Name", &self.sort, SortColumn::Name),

@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
 
 use barnacle_lib::{Repository, repository::Profile};
 use fluent_i18n::t;
@@ -6,14 +6,13 @@ use iced::{
     Element, Length, Task,
     widget::{button, column, combo_box, row, space, text},
 };
-use parking_lot::RwLock;
 
 use crate::{
     AppData,
-    config::GuiConfig,
     data::ProfileOption,
     icons::Icon,
     modal,
+    persistence::{config::ConfigStore, state::UiStateStore},
     workspace::{add_mod_dialog::AddModDialog, library_manager::LibraryManager, mod_list::ModList},
 };
 
@@ -64,14 +63,15 @@ impl Workspace {
     pub fn init(
         repo: &Repository,
         data: &AppData,
-        cfg: Arc<RwLock<GuiConfig>>,
+        ui_state: &UiStateStore,
     ) -> (Self, Task<Message>) {
         let (add_mod_dialog, add_mod_dialog_task) = AddModDialog::new(repo.clone());
         let (mod_list, mod_list_task) = data
             .active_profile
             .as_ref()
             .map(|active_profile| {
-                let (mod_list, task) = ModList::new(cfg.clone(), active_profile.handle.clone());
+                let (mod_list, task) =
+                    ModList::new(ui_state.clone(), active_profile.handle.clone());
                 (Some(mod_list), task)
             })
             .unwrap_or_else(|| (None, Task::none()));
@@ -108,7 +108,7 @@ impl Workspace {
 
         let mod_list_task = match (&self.mod_list, &data.active_profile) {
             (Some(mod_list), Some(active_profile)) => mod_list
-                .refresh(active_profile.handle.clone())
+                .load(active_profile.handle.clone())
                 .map(Message::ModList),
             _ => Task::none(),
         };
@@ -231,7 +231,7 @@ impl Workspace {
                 {
                     Action::Run(
                         mod_list
-                            .refresh(active_profile.handle.clone())
+                            .load(active_profile.handle.clone())
                             .map(Message::ModList),
                     )
                 } else {

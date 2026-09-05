@@ -17,6 +17,12 @@ impl From<&Theme> for iced::Theme {
     }
 }
 
+impl From<iced::Theme> for Theme {
+    fn from(value: iced::Theme) -> Self {
+        Self(value)
+    }
+}
+
 impl Serialize for Theme {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

@@ -1,8 +1,6 @@
 //! Entrypoint of the application. This is reponsible for loading the application data and passing
 //! it to the UI that lives in [`Workspace`].
 
-use std::sync::Arc;
-
 use barnacle_lib::Repository;
 use fluent_i18n::i18n;
 use iced::{
@@ -12,15 +10,18 @@ use iced::{
     widget::{center, container, mouse_area, opaque, stack, text},
     window::Settings,
 };
-use parking_lot::RwLock;
 use tracing::Level;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
-use crate::{config::GuiConfig, data::AppData, workspace::Workspace};
+use crate::{
+    data::AppData,
+    persistence::{config::ConfigStore, state::UiStateStore},
+    workspace::Workspace,
+};
 
-pub mod config;
 pub mod data;
 pub mod icons;
+pub mod persistence;
 pub mod workspace;
 
 i18n!("locales", fallback = "en-US");
@@ -68,10 +69,10 @@ enum State {
 
 pub struct App {
     state: State,
-    cfg: Arc<RwLock<GuiConfig>>,
+    cfg: ConfigStore,
+    ui_state: UiStateStore,
 
     title: String,
-    theme: Theme,
 }
 
 impl App {
@@ -79,16 +80,18 @@ impl App {
 
     fn new() -> (Self, Task<Message>) {
         let state = State::Loading;
-        let cfg = Arc::new(RwLock::new(GuiConfig::load()));
-        let theme = cfg.read().theme();
+
+        let cfg = ConfigStore::new();
+        let ui_state = UiStateStore::new();
 
         (
             Self {
-                state: state.clone(),
-                cfg: cfg.clone(),
+                state,
+
+                cfg,
+                ui_state,
 
                 title: Self::TITLE.to_string(),
-                theme,
             },
             Self::load(),
         )
@@ -117,7 +120,7 @@ impl App {
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Initialized { data, repo } => {
-                let (workspace, workspace_task) = Workspace::init(&repo, &data, self.cfg.clone());
+                let (workspace, workspace_task) = Workspace::init(&repo, &data, &self.ui_state);
 
                 self.state = State::Ready {
                     repo,
@@ -176,7 +179,7 @@ impl App {
     }
 
     fn theme(&self) -> Theme {
-        self.theme.clone()
+        self.cfg.theme()
     }
 }
 
