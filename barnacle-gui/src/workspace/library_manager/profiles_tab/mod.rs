@@ -1,4 +1,4 @@
-use crate::{icons::icon, modal, workspace::library_manager::profiles_tab::new_dialog::NewProfile};
+use crate::{icons::Icon, modal, workspace::library_manager::profiles_tab::new_dialog::NewProfile};
 use barnacle_lib::{
     Repository,
     repository::{Game, Profile},
@@ -185,8 +185,8 @@ impl ProfileRow {
             row![
                 text(self.name.clone()),
                 space::horizontal(),
-                button(icon("edit")),
-                button(icon("delete")).on_press(Message::DeleteButtonPressed(self.profile.clone()))
+                button(Icon::Edit),
+                button(Icon::Delete).on_press(Message::DeleteButtonPressed(self.profile.clone()))
             ]
             .padding(12),
         )

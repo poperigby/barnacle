@@ -8,7 +8,7 @@ use iced::{
 };
 use rfd::AsyncFileDialog;
 
-use crate::icons::icon;
+use crate::icons::Icon;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -112,8 +112,8 @@ impl AddModDialog {
             row![
                 text(t!("path")),
                 text_input("...", &self.path).on_input(Message::PathChanged),
-                button(icon("archive")).on_press(Message::PickPath(PickPathKind::Archive)),
-                button(icon("directory")).on_press(Message::PickPath(PickPathKind::Directory))
+                button(Icon::Archive).on_press(Message::PickPath(PickPathKind::Archive)),
+                button(Icon::Directory).on_press(Message::PickPath(PickPathKind::Directory))
             ],
             space::vertical(),
             row![

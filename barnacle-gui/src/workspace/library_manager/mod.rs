@@ -1,5 +1,5 @@
 use crate::{
-    icons::icon,
+    icons::Icon,
     modal,
     workspace::library_manager::{new_game_dialog::NewGame, profiles_tab::new_dialog::NewProfile},
 };
@@ -179,11 +179,11 @@ impl LibraryManager {
         let title_bar = row![
             text(t!("library-manager_title")),
             space::horizontal(),
-            button(icon("close")).on_press(Message::CloseButtonPressed)
+            button(Icon::Close).on_press(Message::CloseButtonPressed)
         ];
 
         let new_game_button = button(row![
-            icon("plus"),
+            Icon::Plus,
             text(t!("library-manager_new-game", { "count" => 1 }))
         ])
         .on_press(Message::NewGameButtonPressed);
@@ -314,7 +314,7 @@ impl GameRow {
         let mut content = row![text(self.name.clone()), space::horizontal()];
 
         if &self.game == active_game {
-            content = content.push(icon("check"));
+            content = content.push(Icon::Check);
         }
 
         let style = if Some(&self.game) == selected_game.as_ref() {

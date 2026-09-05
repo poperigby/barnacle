@@ -109,10 +109,7 @@ impl App {
 
     fn refresh(repo: Repository) -> Task<Message> {
         Task::perform(
-            async move {
-                let data = AppData::load(&repo).await;
-                data
-            },
+            async move { AppData::load(&repo).await },
             Message::Refreshed,
         )
     }

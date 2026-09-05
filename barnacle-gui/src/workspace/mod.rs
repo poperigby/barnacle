@@ -12,7 +12,7 @@ use crate::{
     AppData,
     config::GuiConfig,
     data::ProfileOption,
-    icons::icon,
+    icons::Icon,
     modal,
     workspace::{add_mod_dialog::AddModDialog, library_manager::LibraryManager, mod_list::ModList},
 };
@@ -262,7 +262,7 @@ impl Workspace {
     pub fn view(&self) -> Element<'_, Message> {
         let top_bar = row![
             button(text(t!("main_top-bar_launch-game", { "count" => 1 }))),
-            button(icon("wrench")),
+            button(Icon::Wrench),
             text(t!("profile", { "count" => 1 })),
             combo_box(
                 &self.profile_selector.state,
@@ -271,9 +271,9 @@ impl Workspace {
                 Message::ProfileSelected
             ),
             space::horizontal(),
-            button(icon("library")).on_press(Message::LibraryManagerButtonPressed),
-            button(icon("settings")),
-            button(icon("notifications"))
+            button(Icon::Library).on_press(Message::LibraryManagerButtonPressed),
+            button(Icon::Settings),
+            button(Icon::Notifications)
         ];
 
         let action_bar = row![

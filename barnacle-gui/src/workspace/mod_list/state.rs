@@ -1,7 +1,7 @@
-use iced::widget::Svg;
+use iced::Element;
 use serde::{Deserialize, Serialize};
 
-use crate::icons::icon;
+use crate::{icons::Icon, workspace::mod_list::Message};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum SortDirection {
@@ -42,12 +42,15 @@ impl SortState {
         }
     }
 
-    pub fn icon(&'_ self, column: SortColumn) -> Option<Svg<'_>> {
+    pub fn icon(&'_ self, column: SortColumn) -> Option<Element<'_, Message>> {
         if self.column == column {
-            Some(match self.direction {
-                SortDirection::Ascending => icon("arrow_up"),
-                SortDirection::Descending => icon("arrow_down"),
-            })
+            Some(
+                match self.direction {
+                    SortDirection::Ascending => Icon::ArrowUp,
+                    SortDirection::Descending => Icon::ArrowDown,
+                }
+                .into(),
+            )
         } else {
             None
         }
