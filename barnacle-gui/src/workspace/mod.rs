@@ -12,7 +12,7 @@ use crate::{
     data::ProfileOption,
     icons::Icon,
     modal,
-    persistence::{config::ConfigStore, state::UiStateStore},
+    persistence::state::UiStateStore,
     workspace::{add_mod_dialog::AddModDialog, library_manager::LibraryManager, mod_list::ModList},
 };
 
@@ -159,6 +159,7 @@ impl Workspace {
                 match mod_list.update(message) {
                     mod_list::Action::None => Action::None,
                     mod_list::Action::Run(task) => Action::Run(task.map(Message::ModList)),
+                    mod_list::Action::Refresh => Action::Refresh,
                 }
             }
             Message::LibraryManager(message) => {

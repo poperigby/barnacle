@@ -24,6 +24,7 @@ pub enum Message {
 pub enum Action {
     None,
     Run(Task<Message>),
+    Refresh,
 }
 
 #[derive(Debug, Clone)]
@@ -95,7 +96,7 @@ impl ModList {
                 // entry.remove().unwrap();
                 Action::None
             }
-            Message::ModEntryToggled => Action::None,
+            Message::ModEntryToggled => Action::Refresh,
         }
     }
 

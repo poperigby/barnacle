@@ -93,11 +93,11 @@ impl App {
 
                 title: Self::TITLE.to_string(),
             },
-            Self::load(),
+            Self::init(),
         )
     }
 
-    fn load() -> Task<Message> {
+    fn init() -> Task<Message> {
         Task::perform(
             {
                 async {
