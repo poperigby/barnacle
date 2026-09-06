@@ -1,7 +1,7 @@
 use iced::Element;
 use serde::{Deserialize, Serialize};
 
-use crate::{icons::Icon, workspace::mod_list::Message};
+use crate::{icons::Icon, ui::mod_list::Message};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum SortDirection {

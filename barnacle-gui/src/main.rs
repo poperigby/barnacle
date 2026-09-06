@@ -1,5 +1,5 @@
 //! Entrypoint of the application. This is reponsible for loading the application data and passing
-//! it to the UI that lives in [`Workspace`].
+//! it to the main UI that lives in [`Ui`].
 
 use barnacle_lib::Repository;
 use fluent_i18n::i18n;
@@ -16,13 +16,13 @@ use tracing_subscriber::{EnvFilter, FmtSubscriber};
 use crate::{
     data::AppData,
     persistence::{config::ConfigStore, state::UiStateStore},
-    workspace::Workspace,
+    ui::Ui,
 };
 
 pub mod data;
 pub mod icons;
 pub mod persistence;
-pub mod workspace;
+pub mod ui;
 
 i18n!("locales", fallback = "en-US");
 
@@ -48,12 +48,8 @@ fn main() -> iced::Result {
 #[derive(Debug, Clone)]
 enum Message {
     Initialized { repo: Repository, data: AppData },
-    IntializeFailed(String),
 
-    DataReloaded(AppData),
-    RefreshFailed(String),
-
-    Workspace(workspace::Message),
+    Ui(ui::Message),
 }
 
 #[derive(Debug, Clone)]
@@ -63,7 +59,7 @@ enum State {
     Ready {
         repo: Repository,
         data: AppData,
-        workspace: Workspace,
+        ui: Ui,
     },
 }
 
@@ -110,58 +106,19 @@ impl App {
         )
     }
 
-    /// Query backing data again
-    fn reload_data(repo: Repository) -> Task<Message> {
-        Task::perform(
-            async move { AppData::load(&repo).await },
-            Message::DataReloaded,
-        )
-    }
-
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Initialized { data, repo } => {
-                let (workspace, workspace_task) =
-                    Workspace::init(repo.clone(), &data, &self.ui_state);
+                let (ui, ui_task) = Ui::init(repo.clone(), &data, &self.ui_state);
 
-                self.state = State::Ready {
-                    repo,
-                    data,
-                    workspace,
-                };
+                self.state = State::Ready { repo, data, ui };
 
-                workspace_task.map(Message::Workspace)
+                ui_task.map(Message::Ui)
             }
-            Message::IntializeFailed(e) => {
-                self.state = State::Error(e);
-                Task::none()
-            }
-            Message::DataReloaded(new_data) => {
-                let State::Ready {
-                    data: current_data,
-                    workspace,
-                    ..
-                } = &mut self.state
-                else {
-                    return Task::none();
-                };
-
-                let task = workspace.sync(&new_data);
-                *current_data = new_data;
-
-                task.map(Message::Workspace)
-            }
-            Message::RefreshFailed(e) => {
-                self.state = State::Error(e);
-                Task::none()
-            }
-            Message::Workspace(message) => match &mut self.state {
-                State::Ready {
-                    repo, workspace, ..
-                } => match workspace.update(message) {
-                    workspace::Action::None => Task::none(),
-                    workspace::Action::Run(task) => task.map(Message::Workspace),
-                    workspace::Action::ReloadData => Self::reload_data(repo.clone()),
+            Message::Ui(message) => match &mut self.state {
+                State::Ready { repo, ui, .. } => match ui.update(message) {
+                    ui::Action::None => Task::none(),
+                    ui::Action::Run(task) => task.map(Message::Ui),
                 },
                 _ => panic!("FUCK"),
             },
@@ -172,7 +129,7 @@ impl App {
         match &self.state {
             State::Loading => text!("LOADING").into(),
             State::Error(_) => panic!("ERROR"),
-            State::Ready { workspace, .. } => workspace.view().map(Message::Workspace),
+            State::Ready { ui, .. } => ui.view().map(Message::Ui),
         }
     }
 

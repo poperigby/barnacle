@@ -1,6 +1,6 @@
 use crate::{
     persistence::state::UiStateStore,
-    workspace::mod_list::state::{SortColumn, SortState},
+    ui::mod_list::state::{SortColumn, SortState},
 };
 use barnacle_lib::repository::{Profile, handles::ModEntry};
 use iced::{
@@ -24,7 +24,6 @@ pub enum Message {
 pub enum Action {
     None,
     Run(Task<Message>),
-    Refresh,
 }
 
 #[derive(Debug, Clone)]
@@ -96,7 +95,7 @@ impl ModList {
                 // entry.remove().unwrap();
                 Action::None
             }
-            Message::ModEntryToggled => Action::Refresh,
+            Message::ModEntryToggled => Action::None,
         }
     }
 

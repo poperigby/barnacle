@@ -4,7 +4,7 @@ use barnacle_lib::fs::state_dir;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 
-use crate::workspace::mod_list::state::SortState;
+use crate::ui::mod_list::state::SortState;
 
 const FILE_NAME: &str = "gui.toml";
 

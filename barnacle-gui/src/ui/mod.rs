@@ -13,7 +13,7 @@ use crate::{
     icons::Icon,
     modal,
     persistence::state::UiStateStore,
-    workspace::{add_mod_dialog::AddModDialog, library_manager::LibraryManager, mod_list::ModList},
+    ui::{add_mod_dialog::AddModDialog, library_manager::LibraryManager, mod_list::ModList},
 };
 
 pub mod add_mod_dialog;
@@ -44,13 +44,12 @@ pub enum Message {
 pub enum Action {
     None,
     Run(Task<Message>),
-    ReloadData,
 }
 
-/// The user facing working area. Workspace only exists when there is loaded [`AppData`] and a
+/// The main user interface. [`Ui`] only exists when there is loaded [`AppData`] and a
 /// [`Repository`], so it can live in blissful ignorance of there being the possiblity of no data.
 #[derive(Debug, Clone)]
-pub struct Workspace {
+pub struct Ui {
     repo: Repository,
 
     profile_selector: ProfileSelector,
@@ -62,7 +61,7 @@ pub struct Workspace {
     library_manager: LibraryManager,
 }
 
-impl Workspace {
+impl Ui {
     pub fn init(
         repo: Repository,
         data: &AppData,
@@ -104,7 +103,7 @@ impl Workspace {
         )
     }
 
-    /// Synchronize the workspace UI with the newly reloaded application data
+    /// Synchronize the UI with the newly reloaded application data
     pub fn sync(&mut self, data: &AppData) -> Task<Message> {
         self.profile_selector = ProfileSelector {
             state: combo_box::State::new(data.profile_options.clone()),
@@ -165,7 +164,6 @@ impl Workspace {
                 match mod_list.update(message) {
                     mod_list::Action::None => Action::None,
                     mod_list::Action::Run(task) => Action::Run(task.map(Message::ModList)),
-                    mod_list::Action::Refresh => Action::ReloadData,
                 }
             }
             Message::LibraryManager(message) => {
@@ -258,12 +256,10 @@ impl Workspace {
             }
             // TODO: Update the mod list too. If the profile it's referring to is deleted, it needs
             // to know.
-            Message::ProfileAdded | Message::ProfileDeleted => Action::ReloadData,
-            Message::ProfileActivated(_) => Action::ReloadData,
-            Message::GameAdded | Message::GameEdited | Message::GameDeleted => {
-                Action::Run(self.library_manager.reload().map(Message::LibraryManager))
-            }
-            Message::GameActivated => Action::ReloadData,
+            Message::ProfileAdded | Message::ProfileDeleted => Action::None,
+            Message::ProfileActivated(_) => Action::None,
+            Message::GameAdded | Message::GameEdited | Message::GameDeleted => Action::None,
+            Message::GameActivated => Action::None,
         }
     }
 
