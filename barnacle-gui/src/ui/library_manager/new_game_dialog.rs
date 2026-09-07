@@ -6,6 +6,8 @@ use iced::{
 };
 use strum::IntoEnumIterator;
 
+use crate::model::Mutation;
+
 pub const ID: &str = "new_game_dialog";
 
 #[derive(Debug, Clone)]
@@ -26,7 +28,7 @@ pub struct NewGame {
 pub enum Action {
     None,
     Run(Task<Message>),
-    CreateGame(NewGame),
+    Mutate(Mutation),
     Cancel,
 }
 
@@ -38,15 +40,12 @@ pub struct Dialog {
 }
 
 impl Dialog {
-    pub fn new() -> (Self, Task<Message>) {
-        (
-            Self {
-                name: "".into(),
-                deploy_kind: None,
-                deploy_kind_state: combo_box::State::new(DeployKind::iter().collect()),
-            },
-            Task::none(),
-        )
+    pub fn new() -> Self {
+        Self {
+            name: "".into(),
+            deploy_kind: None,
+            deploy_kind_state: combo_box::State::new(DeployKind::iter().collect()),
+        }
     }
 
     /// Reset the dialog state
@@ -75,7 +74,7 @@ impl Dialog {
 
                 self.clear();
 
-                Action::CreateGame(NewGame { name, deploy_kind })
+                Action::Mutate(Mutation::CreateGame { name, deploy_kind })
             }
         }
     }

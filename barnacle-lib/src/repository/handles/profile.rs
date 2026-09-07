@@ -87,6 +87,7 @@ impl Profile {
     }
 
     pub(crate) async fn active(db: Db, cfg: Cfg) -> Result<Option<Profile>> {
+        state::reconcile(db.conn()).await?;
         Ok(state::active_profile_id(db.conn())
             .await?
             .map(|id| Profile::from_id(id, db.clone(), cfg.clone())))

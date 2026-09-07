@@ -186,6 +186,7 @@ impl Game {
     }
 
     pub(crate) async fn active(db: Db, cfg: Cfg) -> Result<Option<Game>> {
+        state::reconcile(db.conn()).await?;
         Ok(state::active_game_id(db.conn())
             .await?
             .map(|id| Game::from_id(id, db.clone(), cfg.clone())))

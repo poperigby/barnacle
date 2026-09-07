@@ -14,7 +14,7 @@ pub enum Message {
 pub enum Action {
     None,
     Run(Task<Message>),
-    Create(NewProfile),
+    Create { name: String },
     Cancel,
 }
 
@@ -23,14 +23,9 @@ pub struct NewDialog {
     name: String,
 }
 
-#[derive(Debug, Clone)]
-pub struct NewProfile {
-    pub name: String,
-}
-
 impl NewDialog {
-    pub fn new() -> (Self, Task<Message>) {
-        (Self { name: "".into() }, Task::none())
+    pub fn new() -> Self {
+        Self { name: "".into() }
     }
 
     /// Reset the dialog state
@@ -53,7 +48,7 @@ impl NewDialog {
 
                 self.clear();
 
-                Action::Create(NewProfile { name })
+                Action::Create { name }
             }
         }
     }

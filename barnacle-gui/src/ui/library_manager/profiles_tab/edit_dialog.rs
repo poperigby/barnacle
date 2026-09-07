@@ -5,6 +5,8 @@ use iced::{
     widget::{button, column, container, row, space, text, text_input},
 };
 
+use crate::model::Mutation;
+
 #[derive(Debug, Clone)]
 pub enum Message {
     NameInput(String),
@@ -15,8 +17,8 @@ pub enum Message {
 pub enum Action {
     None,
     Run(Task<Message>),
+    Mutate(Mutation),
     Cancel,
-    Edit { profile: Profile, name: String },
 }
 
 #[derive(Debug, Clone)]
@@ -26,20 +28,17 @@ pub struct EditDialog {
 }
 
 impl EditDialog {
-    pub fn new() -> (Self, Task<Message>) {
-        (
-            Self {
-                profile: None,
-                name: "".into(),
-            },
-            Task::none(),
-        )
+    pub fn new() -> Self {
+        Self {
+            profile: None,
+            name: "".into(),
+        }
     }
 
     /// Load a new [`Profile`] for editing.
-    pub fn load(&mut self, profile: Profile, name: String) {
+    pub fn open(&mut self, profile: Profile, initial_name: String) {
         self.profile = Some(profile.clone());
-        self.name = name;
+        self.name = initial_name;
     }
 
     /// Reset the dialog state
@@ -54,18 +53,20 @@ impl EditDialog {
                 Action::None
             }
             Message::CancelPressed => Action::Cancel,
-            Message::ConfirmPressed => {
-                let profile = self.profile.clone();
-                let name = self.name.clone();
+            Message::ConfirmPressed => match &self.profile {
+                Some(profile) => {
+                    let profile = profile.clone();
+                    let name = self.name.clone();
 
-                self.clear();
+                    self.clear();
 
-                Action::Edit {
-                    // TODO: BAD
-                    profile: profile.unwrap(),
-                    name,
+                    Action::Mutate(Mutation::EditProfile {
+                        profile,
+                        new_name: name,
+                    })
                 }
-            }
+                None => Action::None,
+            },
         }
     }
 

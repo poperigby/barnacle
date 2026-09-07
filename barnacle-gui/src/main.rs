@@ -3,24 +3,18 @@
 
 use barnacle_lib::Repository;
 use fluent_i18n::i18n;
-use iced::{
-    Color, Element,
-    Length::{self},
-    Task, Theme, application,
-    widget::{center, container, mouse_area, opaque, stack, text},
-    window::Settings,
-};
+use iced::{Element, Task, Theme, application, widget::text, window::Settings};
 use tracing::Level;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 use crate::{
-    data::AppData,
+    model::{Model, Mutation},
     persistence::{config::ConfigStore, state::UiStateStore},
     ui::Ui,
 };
 
-pub mod data;
 pub mod icons;
+pub mod model;
 pub mod persistence;
 pub mod ui;
 
@@ -47,9 +41,9 @@ fn main() -> iced::Result {
 
 #[derive(Debug, Clone)]
 enum Message {
-    Initialized { repo: Repository, data: AppData },
-
+    Initialized(Result<(Repository, Model), String>),
     Ui(ui::Message),
+    Mutated(Result<Model, String>),
 }
 
 #[derive(Debug, Clone)]
@@ -58,7 +52,7 @@ enum State {
     Error(String),
     Ready {
         repo: Repository,
-        data: AppData,
+        model: Model,
         ui: Ui,
     },
 }
@@ -89,38 +83,65 @@ impl App {
 
                 title: Self::TITLE.to_string(),
             },
-            Self::init(),
-        )
-    }
-
-    fn init() -> Task<Message> {
-        Task::perform(
-            {
+            Task::perform(
                 async {
                     let repo = Repository::new().await;
-                    let data = AppData::load(&repo).await;
-                    (repo, data)
-                }
-            },
-            |(repo, data)| Message::Initialized { repo, data },
+                    let model = Model::load(&repo).await.map_err(|e| e.to_string())?;
+                    Ok((repo, model))
+                },
+                Message::Initialized,
+            ),
         )
     }
 
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::Initialized { data, repo } => {
-                let (ui, ui_task) = Ui::init(repo.clone(), &data, &self.ui_state);
+            Message::Initialized(result) => match result {
+                Ok((repo, model)) => {
+                    let ui = Ui::init(&self.ui_state);
 
-                self.state = State::Ready { repo, data, ui };
+                    self.state = State::Ready { repo, model, ui };
 
-                ui_task.map(Message::Ui)
-            }
+                    Task::none()
+                }
+                Err(msg) => {
+                    self.state = State::Error(msg);
+
+                    Task::none()
+                }
+            },
+            Message::Mutated(result) => match (&mut self.state, result) {
+                (State::Ready { model, .. }, Ok(new_model)) => {
+                    // Reload the model with the fresh data
+                    *model = new_model;
+
+                    Task::none()
+                }
+                (State::Ready { .. }, Err(error)) => {
+                    // TODO: Store this in app/ui error state
+                    eprintln!("{error}");
+
+                    Task::none()
+                }
+                _ => Task::none(),
+            },
             Message::Ui(message) => match &mut self.state {
                 State::Ready { repo, ui, .. } => match ui.update(message) {
                     ui::Action::None => Task::none(),
                     ui::Action::Run(task) => task.map(Message::Ui),
+                    ui::Action::Mutate(mutation) => {
+                        let repo = repo.clone();
+
+                        Task::perform(
+                            async move {
+                                mutation.run(&repo).await;
+                                Model::load(&repo).await.map_err(|e| e.to_string())
+                            },
+                            Message::Mutated,
+                        )
+                    }
                 },
-                _ => panic!("FUCK"),
+                _ => Task::none(),
             },
         }
     }
@@ -129,7 +150,7 @@ impl App {
         match &self.state {
             State::Loading => text!("LOADING").into(),
             State::Error(_) => panic!("ERROR"),
-            State::Ready { ui, .. } => ui.view().map(Message::Ui),
+            State::Ready { model, ui, .. } => ui.view(model).map(Message::Ui),
         }
     }
 
@@ -140,38 +161,4 @@ impl App {
     fn theme(&self) -> Theme {
         self.cfg.theme()
     }
-}
-
-pub fn modal<'a, Message>(
-    base: impl Into<Element<'a, Message>>,
-    content: impl Into<Element<'a, Message>>,
-    on_click_outside: Option<Message>,
-) -> Element<'a, Message>
-where
-    Message: Clone + 'a,
-{
-    let mouse_area = mouse_area(center(opaque(content)).style(|_theme| {
-        container::Style {
-            background: Some(
-                Color {
-                    a: 0.8,
-                    ..Color::BLACK
-                }
-                .into(),
-            ),
-            ..container::Style::default()
-        }
-    }));
-
-    stack![
-        base.into(),
-        opaque(if let Some(msg) = on_click_outside {
-            mouse_area.on_press(msg)
-        } else {
-            mouse_area
-        })
-    ]
-    .width(Length::Fill)
-    .height(Length::Fill)
-    .into()
 }

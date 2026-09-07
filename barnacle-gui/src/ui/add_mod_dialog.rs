@@ -1,6 +1,5 @@
-use std::env;
+use std::{env, path::PathBuf};
 
-use barnacle_lib::Repository;
 use fluent_i18n::t;
 use iced::{
     Element, Task,
@@ -15,7 +14,7 @@ pub enum Message {
     NameChanged(String),
     PathChanged(String),
     PickPath(PickPathKind),
-    PathPicked(Option<String>),
+    PathPicked(Option<PathBuf>),
     CancelButtonPressed,
     AddButtonPressed,
 }
@@ -24,7 +23,7 @@ pub enum Message {
 pub enum Action {
     None,
     Run(Task<Message>),
-    AddMod { name: String, path: String },
+    Submit { name: String, path: Option<PathBuf> },
     Cancel,
 }
 
@@ -36,26 +35,21 @@ pub enum PickPathKind {
 
 #[derive(Debug, Clone)]
 pub struct AddModDialog {
-    repo: Repository,
     name: String,
-    path: String,
+    path: Option<PathBuf>,
 }
 
 impl AddModDialog {
-    pub fn new(repo: Repository) -> (Self, Task<Message>) {
-        (
-            Self {
-                repo: repo.clone(),
-                name: "".into(),
-                path: "".into(),
-            },
-            Task::none(),
-        )
+    pub fn new() -> Self {
+        Self {
+            name: "".into(),
+            path: None,
+        }
     }
 
     fn clear(&mut self) {
         self.name.clear();
-        self.path.clear();
+        self.path = None;
     }
 
     pub fn update(&mut self, message: Message) -> Action {
@@ -65,7 +59,7 @@ impl AddModDialog {
                 Action::None
             }
             Message::PathChanged(path) => {
-                self.path = path;
+                self.path = Some(PathBuf::from(path));
                 Action::None
             }
             Message::PickPath(kind) => Action::Run(Task::perform(
@@ -82,28 +76,36 @@ impl AddModDialog {
                         }
                         PickPathKind::Directory => picker.pick_folder().await,
                     }
-                    .map(|f| f.path().display().to_string())
+                    .map(|f| f.path().to_path_buf())
                 },
                 Message::PathPicked,
             )),
             Message::PathPicked(path) => {
-                if let Some(path) = path {
-                    self.path = path;
-                }
+                self.path = path;
                 Action::None
             }
             Message::CancelButtonPressed => {
                 self.clear();
+
                 Action::Cancel
             }
-            Message::AddButtonPressed => Action::AddMod {
-                name: self.name.clone(),
-                path: self.path.clone(),
-            },
+            Message::AddButtonPressed => {
+                let name = self.name.clone();
+                let path = self.path.clone();
+
+                self.clear();
+
+                Action::Submit { name, path }
+            }
         }
     }
 
     pub fn view(&self) -> Element<'_, Message> {
+        let path_str = &self
+            .path
+            .as_ref()
+            .map_or_else(String::new, |path| path.display().to_string());
+
         container(column![
             row![
                 text(t!("name")),
@@ -111,7 +113,7 @@ impl AddModDialog {
             ],
             row![
                 text(t!("path")),
-                text_input("...", &self.path).on_input(Message::PathChanged),
+                text_input("...", path_str).on_input(Message::PathChanged),
                 button(Icon::Archive).on_press(Message::PickPath(PickPathKind::Archive)),
                 button(Icon::Directory).on_press(Message::PickPath(PickPathKind::Directory))
             ],
@@ -131,6 +133,12 @@ impl AddModDialog {
     }
 
     fn validate(&self) -> bool {
-        !self.name.is_empty() && !self.path.is_empty()
+        !self.name.is_empty()
+    }
+}
+
+impl Default for AddModDialog {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -1,6 +1,4 @@
-use std::path::PathBuf;
-
-use barnacle_lib::{Repository, repository::Profile};
+use barnacle_gui::modal;
 use fluent_i18n::t;
 use iced::{
     Element, Length, Task,
@@ -8,10 +6,8 @@ use iced::{
 };
 
 use crate::{
-    AppData,
-    data::ProfileOption,
     icons::Icon,
-    modal,
+    model::{Model, Mutation, ProfileRow},
     persistence::state::UiStateStore,
     ui::{add_mod_dialog::AddModDialog, library_manager::LibraryManager, mod_list::ModList},
 };
@@ -24,15 +20,7 @@ pub mod mod_list;
 pub enum Message {
     AddModButtonPressed,
     LibraryManagerButtonPressed,
-    ModAdded,
-    GameAdded,
-    GameEdited,
-    GameDeleted,
-    GameActivated,
-    ProfileAdded,
-    ProfileDeleted,
-    ProfileSelected(ProfileOption),
-    ProfileActivated(Profile),
+    ProfileSelected(ProfileRow),
 
     // Children
     AddModDialog(add_mod_dialog::Message),
@@ -44,234 +32,91 @@ pub enum Message {
 pub enum Action {
     None,
     Run(Task<Message>),
+    Mutate(Mutation),
 }
 
-/// The main user interface. [`Ui`] only exists when there is loaded [`AppData`] and a
-/// [`Repository`], so it can live in blissful ignorance of there being the possiblity of no data.
 #[derive(Debug, Clone)]
 pub struct Ui {
-    repo: Repository,
-
-    profile_selector: ProfileSelector,
     show_library_manager: bool,
     show_add_mod_dialog: bool,
 
     add_mod_dialog: AddModDialog,
-    mod_list: Option<ModList>,
+    mod_list: ModList,
     library_manager: LibraryManager,
 }
 
 impl Ui {
-    pub fn init(
-        repo: Repository,
-        data: &AppData,
-        ui_state: &UiStateStore,
-    ) -> (Self, Task<Message>) {
-        let (add_mod_dialog, add_mod_dialog_task) = AddModDialog::new(repo.clone());
-        let (mod_list, mod_list_task) = data
-            .active_profile
-            .as_ref()
-            .map(|active_profile| {
-                let (mod_list, task) =
-                    ModList::new(ui_state.clone(), active_profile.handle.clone());
-                (Some(mod_list), task)
-            })
-            .unwrap_or_else(|| (None, Task::none()));
-        let (library_manager, library_manager_task) = LibraryManager::new(repo.clone());
+    pub fn init(ui_state: &UiStateStore) -> Self {
+        Self {
+            show_library_manager: false,
+            show_add_mod_dialog: false,
 
-        (
-            Self {
-                repo,
-
-                show_library_manager: false,
-                show_add_mod_dialog: false,
-
-                profile_selector: ProfileSelector {
-                    state: combo_box::State::new(data.profile_options.clone()),
-                    selected: data.active_profile.clone(),
-                },
-
-                add_mod_dialog,
-                mod_list,
-                library_manager,
-            },
-            Task::batch([
-                add_mod_dialog_task.map(Message::AddModDialog),
-                mod_list_task.map(Message::ModList),
-                library_manager_task.map(Message::LibraryManager),
-            ]),
-        )
-    }
-
-    /// Synchronize the UI with the newly reloaded application data
-    pub fn sync(&mut self, data: &AppData) -> Task<Message> {
-        self.profile_selector = ProfileSelector {
-            state: combo_box::State::new(data.profile_options.clone()),
-            selected: data.active_profile.clone(),
-        };
-
-        let mod_list_task = match (&self.mod_list, &data.active_profile) {
-            (Some(mod_list), Some(active_profile)) => mod_list
-                .load(active_profile.handle.clone())
-                .map(Message::ModList),
-            _ => Task::none(),
-        };
-
-        // We want to let [`App`] know that it needs to reload these children as well
-        Task::batch([
-            self.library_manager.reload().map(Message::LibraryManager),
-            mod_list_task,
-        ])
+            add_mod_dialog: AddModDialog::new(),
+            mod_list: ModList::new(ui_state.clone()),
+            library_manager: LibraryManager::new(),
+        }
     }
 
     pub fn update(&mut self, message: Message) -> Action {
         match message {
-            Message::AddModDialog(message) => match self.add_mod_dialog.update(message) {
-                add_mod_dialog::Action::None => Action::None,
-                add_mod_dialog::Action::Run(task) => Action::Run(task.map(Message::AddModDialog)),
-                add_mod_dialog::Action::AddMod { name, path } => {
-                    self.show_add_mod_dialog = false;
-
-                    let repo = self.repo.clone();
-                    Action::Run(Task::perform(
-                        async move {
-                            if let Some(active_game) = repo.active_game().await.unwrap() {
-                                let mod_ = active_game
-                                    .add_mod(&name, Some(&PathBuf::from(path)))
-                                    .await
-                                    .unwrap();
-
-                                if let Some(active_profile) =
-                                    active_game.active_profile().await.unwrap()
-                                {
-                                    active_profile.add_mod_entry(mod_).await.unwrap();
-                                }
-                            }
-                        },
-                        |_| Message::ModAdded,
-                    ))
-                }
-                add_mod_dialog::Action::Cancel => {
-                    self.show_add_mod_dialog = false;
-                    Action::None
-                }
-            },
-            Message::ModList(message) => {
-                let Some(mod_list) = &mut self.mod_list else {
-                    return Action::None;
-                };
-
-                match mod_list.update(message) {
-                    mod_list::Action::None => Action::None,
-                    mod_list::Action::Run(task) => Action::Run(task.map(Message::ModList)),
-                }
-            }
-            Message::LibraryManager(message) => {
-                match self.library_manager.update(message) {
-                    library_manager::Action::None => Action::None,
-                    library_manager::Action::Run(task) => {
-                        Action::Run(task.map(Message::LibraryManager))
-                    }
-                    library_manager::Action::CreateGame(new_game) => {
-                        let repo = self.repo.clone();
-                        Action::Run(Task::perform(
-                            async move {
-                                repo.add_game(&new_game.name, new_game.deploy_kind)
-                                    .await
-                                    .unwrap();
-                            },
-                            |_| Message::GameAdded,
-                        ))
-                    }
-                    library_manager::Action::DeleteGame(game) => Action::Run(Task::perform(
-                        async move { game.remove().await.unwrap() },
-                        |_| Message::GameDeleted,
-                    )),
-                    library_manager::Action::ActivateGame(game) => Action::Run(Task::perform(
-                        async move { game.activate().await.unwrap() },
-                        |_| Message::GameActivated,
-                    )),
-                    library_manager::Action::CreateProfile { game, new_profile } => {
-                        Action::Run(Task::perform(
-                            {
-                                let game = game.clone();
-                                async move { game.add_profile(&new_profile.name).await.unwrap() }
-                            },
-                            |_| Message::ProfileAdded,
-                        ))
-                    }
-                    // library_manager::Action::EditGame(edit) => Task::perform(
-                    //     async move {
-                    //         spawn_blocking(move || {
-                    //             edit.game.set_name(&edit.name).unwrap();
-                    //             edit.game.set_deploy_kind(edit.deploy_kind).unwrap();
-                    //         })
-                    //         .await
-                    //         .unwrap()
-                    //     },
-                    //     |_| ReadyMessage::GameEdited,
-                    // ),
-                    library_manager::Action::DeleteProfile(profile) => Action::Run(Task::perform(
-                        async {
-                            profile.remove().await.unwrap();
-                        },
-                        |_| Message::ProfileDeleted,
-                    )),
-                    library_manager::Action::Close => {
-                        self.show_library_manager = false;
-                        Action::None
-                    }
-                }
-            }
             Message::AddModButtonPressed => {
                 self.show_add_mod_dialog = true;
+
                 Action::None
             }
             Message::LibraryManagerButtonPressed => {
                 self.show_library_manager = true;
+
                 Action::None
             }
-            Message::ModAdded => {
-                if let (Some(active_profile), Some(mod_list)) =
-                    (&self.profile_selector.selected, &self.mod_list)
-                {
-                    Action::Run(
-                        mod_list
-                            .load(active_profile.handle.clone())
-                            .map(Message::ModList),
-                    )
-                } else {
+            Message::ProfileSelected(row) => {
+                Action::Mutate(Mutation::ActivateProfile(row.handle()))
+            }
+
+            // Children
+            Message::AddModDialog(message) => match self.add_mod_dialog.update(message) {
+                add_mod_dialog::Action::None => Action::None,
+                add_mod_dialog::Action::Run(task) => Action::Run(task.map(Message::AddModDialog)),
+                add_mod_dialog::Action::Submit { name, path } => {
+                    self.show_add_mod_dialog = false;
+
+                    Action::Mutate(Mutation::AddMod { name, path })
+                }
+                add_mod_dialog::Action::Cancel => {
+                    self.show_add_mod_dialog = false;
+
                     Action::None
                 }
-            }
-            Message::ProfileSelected(profile) => {
-                self.profile_selector.selected = Some(profile.clone());
-                Action::Run(Task::perform(
-                    async {
-                        profile.handle.activate().await.unwrap();
-                        profile.handle
-                    },
-                    Message::ProfileActivated,
-                ))
-            }
-            // TODO: Update the mod list too. If the profile it's referring to is deleted, it needs
-            // to know.
-            Message::ProfileAdded | Message::ProfileDeleted => Action::None,
-            Message::ProfileActivated(_) => Action::None,
-            Message::GameAdded | Message::GameEdited | Message::GameDeleted => Action::None,
-            Message::GameActivated => Action::None,
+            },
+            Message::ModList(message) => match self.mod_list.update(message) {
+                mod_list::Action::None => Action::None,
+                mod_list::Action::Run(task) => Action::Run(task.map(Message::ModList)),
+                mod_list::Action::Mutate(mutation) => Action::Mutate(mutation),
+            },
+            Message::LibraryManager(message) => match self.library_manager.update(message) {
+                library_manager::Action::None => Action::None,
+                library_manager::Action::Run(task) => {
+                    Action::Run(task.map(Message::LibraryManager))
+                }
+                library_manager::Action::Mutate(mutation) => Action::Mutate(mutation),
+                library_manager::Action::Close => {
+                    self.show_library_manager = false;
+
+                    Action::None
+                }
+            },
         }
     }
 
-    pub fn view(&self) -> Element<'_, Message> {
+    pub fn view<'a>(&'a self, model: &'a Model) -> Element<'a, Message> {
         let top_bar = row![
             button(text(t!("main_top-bar_launch-game", { "count" => 1 }))),
             button(Icon::Wrench),
             text(t!("profile", { "count" => 1 })),
             combo_box(
-                &self.profile_selector.state,
+                model.profile_selector_state(),
                 "...",
-                self.profile_selector.selected.as_ref(),
+                model.active_profile().as_ref(),
                 Message::ProfileSelected
             ),
             space::horizontal(),
@@ -282,23 +127,24 @@ impl Ui {
 
         let action_bar = row![
             button(text(t!("main_action-bar_add-mod", { "count" => 1 }))).on_press_maybe(
-                self.profile_selector
-                    .selected
+                model
+                    .active_profile()
                     .is_some()
                     .then_some(Message::AddModButtonPressed)
             )
         ];
 
-        let main_pane: Element<'_, Message> = match &self.mod_list {
-            Some(list) => list.view().map(Message::ModList),
-            None => text("No active profile").into(),
-        };
+        let main_pane: Element<'_, Message> =
+            column![self.mod_list.view(model).map(Message::ModList)].into();
 
         let content = column![top_bar, action_bar, main_pane].height(Length::Fill);
+
         if self.show_library_manager {
             modal(
                 content,
-                self.library_manager.view().map(Message::LibraryManager),
+                self.library_manager
+                    .view(&model)
+                    .map(Message::LibraryManager),
                 None,
             )
         } else if self.show_add_mod_dialog {
@@ -311,10 +157,4 @@ impl Ui {
             content.into()
         }
     }
-}
-
-#[derive(Debug, Clone)]
-struct ProfileSelector {
-    state: combo_box::State<ProfileOption>,
-    selected: Option<ProfileOption>,
 }
