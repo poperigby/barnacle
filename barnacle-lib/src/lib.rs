@@ -1,23 +1,28 @@
-use std::io;
-
-use thiserror::Error;
-
-use crate::repository::handles;
-
-// mod deployers;
 pub mod fs;
 pub mod repository;
 
-pub use repository::Repository;
+pub use repository::{DeployKind, Game, Mod, ModEntry, Profile, Repository, Tool};
 
-pub type Result<T> = std::result::Result<T, Error>;
+pub mod error {
+    pub use crate::repository::handles::error::{GetFieldError, LoadModelError, ModelKind};
+}
 
-#[derive(Debug, Error)]
-pub enum Error {
-    #[error("Archive error: {0}")]
-    Archive(#[from] compress_tools::Error),
-    #[error("I/O error: {0}")]
-    Io(#[from] io::Error),
-    #[error("Entity error: {0}")]
-    Entity(#[from] handles::Error),
+pub mod game {
+    pub use crate::repository::handles::game::*;
+}
+
+pub mod profile {
+    pub use crate::repository::handles::profile::*;
+}
+
+pub mod mod_ {
+    pub use crate::repository::handles::mod_::*;
+}
+
+pub mod mod_entry {
+    pub use crate::repository::handles::mod_entry::*;
+}
+
+pub mod tool {
+    pub use crate::repository::handles::tool::*;
 }

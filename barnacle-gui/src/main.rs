@@ -8,7 +8,7 @@ use tracing::Level;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 use crate::{
-    model::{Model, Mutation},
+    model::Model,
     persistence::{config::ConfigStore, state::UiStateStore},
     ui::Ui,
 };

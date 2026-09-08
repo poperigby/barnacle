@@ -4,10 +4,14 @@ use std::{
     path::{Path, PathBuf},
 };
 
+mod error;
+
 use compress_tools::{Ownership, uncompress_archive};
 use heck::ToSnakeCase;
-use sea_orm::{ActiveValue::Set, EntityTrait, QueryFilter};
+use sea_orm::{ActiveValue::Set, ConnectionTrait, EntityTrait, QueryFilter};
 use tracing::info;
+
+pub use error::*;
 
 use crate::{
     fs::{Permissions, change_dir_permissions},
@@ -17,7 +21,10 @@ use crate::{
             Db,
             models::mods::{ActiveModel, COLUMN, Entity, Model},
         },
-        handles::{Error, Result, game::Game, map_insert_error},
+        handles::{
+            error::{GetFieldError, LoadModelError, ModelKind, is_unique_violation},
+            game::Game,
+        },
     },
 };
 
@@ -37,36 +44,43 @@ impl Mod {
         Self { id, db, cfg }
     }
 
-    async fn model(&self) -> Result<Model> {
-        Entity::find_by_id(self.id)
-            .one(self.db.conn())
-            .await?
-            .ok_or(Error::StaleHandle)
-    }
-
-    async fn active_model(&self) -> Result<ActiveModel> {
-        Ok(self.model().await?.into())
+    async fn model(&self, conn: &impl ConnectionTrait) -> Result<Model, LoadModelError> {
+        Ok(Entity::find_by_id(self.id)
+            .one(conn)
+            .await
+            .map_err(|source| LoadModelError::query(ModelKind::Mod, self.id, source))?
+            .ok_or_else(|| LoadModelError::stale(ModelKind::Mod, self.id))?)
     }
 
     // Fields
 
-    pub async fn name(&self) -> Result<String> {
-        Ok(self.model().await?.name)
+    pub async fn name(&self) -> Result<String, GetFieldError> {
+        Ok(self
+            .model(self.db.conn())
+            .await
+            .map_err(|source| self.field_error("name", source))?
+            .name)
     }
 
-    pub async fn dir(&self) -> Result<PathBuf> {
+    pub async fn dir(&self) -> Result<PathBuf, DirError> {
         Ok(self
             .parent()
-            .await?
+            .await
+            .map_err(DirError::Parent)?
             .dir()
-            .await?
+            .await
+            .map_err(DirError::ParentDir)?
             .join("mods")
-            .join(self.name().await?.to_snake_case()))
+            .join(self.name().await.map_err(DirError::Name)?.to_snake_case()))
     }
 
     /// Returns the parent [`Game`] of this [`Mod`]
-    pub async fn parent(&self) -> Result<Game> {
-        let parent_game_id = self.model().await?.game_id;
+    pub async fn parent(&self) -> Result<Game, ParentError> {
+        let parent_game_id = self
+            .model(self.db.conn())
+            .await
+            .map_err(ParentError::Load)?
+            .game_id;
         Ok(Game::from_id(
             parent_game_id,
             self.db.clone(),
@@ -80,7 +94,7 @@ impl Mod {
         game: &Game,
         name: &str,
         input_path: Option<&Path>,
-    ) -> Result<Self> {
+    ) -> Result<Self, AddError> {
         let model = ActiveModel {
             name: Set(name.to_string()),
             game_id: Set(game.id),
@@ -90,44 +104,61 @@ impl Mod {
         let id = Entity::insert(model)
             .exec(db.conn())
             .await
-            .map_err(|e| map_insert_error(e, Error::DuplicateModName(name.into())))?
+            .map_err(|source| {
+                if is_unique_violation(&source) {
+                    AddError::DuplicateName {
+                        name: name.to_string(),
+                    }
+                } else {
+                    AddError::Insert(source)
+                }
+            })?
             .last_insert_id;
         let mod_ = Mod::from_id(id, db.clone(), cfg.clone());
 
         // TODO: Only attempt to open the archive if the input_path is an archive
         if let Some(path) = input_path {
-            let archive = File::open(path).unwrap();
-            uncompress_archive(archive, &mod_.dir().await?, Ownership::Preserve).unwrap();
-            change_dir_permissions(&mod_.dir().await?, Permissions::ReadOnly);
+            let archive = File::open(path).map_err(|source| AddError::OpenArchive {
+                path: path.to_path_buf(),
+                source,
+            })?;
+            let dir = mod_.dir().await.map_err(AddError::Dir)?;
+            uncompress_archive(archive, &dir, Ownership::Preserve)
+                .map_err(AddError::ExtractArchive)?;
+            change_dir_permissions(&dir, Permissions::ReadOnly);
         } else {
-            let path = mod_.dir().await?;
-            fs::create_dir_all(path).unwrap();
+            let dir = mod_.dir().await.map_err(AddError::Dir)?;
+            fs::create_dir_all(&dir).map_err(|source| AddError::CreateDir { path: dir, source })?;
         };
 
-        info!("Added profile: {name}");
+        info!("Added mod: {name}");
 
         Ok(mod_)
     }
 
-    pub(crate) async fn list(db: &Db, cfg: &Cfg, game: &Game) -> Result<Vec<Self>> {
+    pub(crate) async fn list(db: &Db, cfg: &Cfg, game: &Game) -> Result<Vec<Self>, ListError> {
         Ok(Entity::find()
             .filter(COLUMN.game_id.eq(game.id))
             .order_by_id_desc()
             .all(db.conn())
-            .await?
+            .await
+            .map_err(ListError)?
             .iter()
             .map(|model| Mod::from_id(model.id, db.clone(), cfg.clone()))
             .collect())
     }
 
-    pub async fn remove(self) -> Result<()> {
+    pub async fn remove(self) -> Result<(), RemoveError> {
         // We have to store these so we can still access them once the mod is deleted
-        let name = self.name().await?;
-        let dir = self.dir().await?;
+        let name = self.name().await.map_err(RemoveError::Name)?;
+        let dir = self.dir().await.map_err(RemoveError::Dir)?;
 
-        Entity::delete_by_id(self.id).exec(self.db.conn()).await?;
+        Entity::delete_by_id(self.id)
+            .exec(self.db.conn())
+            .await
+            .map_err(RemoveError::Delete)?;
 
-        fs::remove_dir_all(dir).unwrap();
+        fs::remove_dir_all(&dir).map_err(|source| RemoveError::RemoveDir { path: dir, source })?;
 
         info!("Removed mod: {name}");
 
@@ -144,8 +175,7 @@ impl PartialEq for Mod {
 #[cfg(test)]
 mod test {
     use crate::{
-        Repository,
-        repository::{DeployKind, handles::Error},
+        Repository, game::AddModError, mod_::AddError as ModAddError, repository::DeployKind,
     };
 
     #[tokio::test]
@@ -173,7 +203,7 @@ mod test {
 
         assert!(matches!(
             game.add_mod("Test", None).await,
-            Err(Error::DuplicateModName(_))
+            Err(AddModError(ModAddError::DuplicateName { .. }))
         ))
     }
 

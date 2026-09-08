@@ -96,5 +96,3 @@ impl Mutation {
         }
     }
 }
-
-pub enum MutationResult {}

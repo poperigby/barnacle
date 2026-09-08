@@ -1,9 +1,12 @@
 use std::{fmt::Debug, fs, path::PathBuf};
 
-use super::Error;
+mod error;
+
 use heck::ToSnakeCase;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, EntityTrait, QueryFilter};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, ConnectionTrait, EntityTrait, QueryFilter};
 use tracing::info;
+
+pub use error::*;
 
 use crate::repository::{
     Cfg, Game, Mod, ModEntry,
@@ -11,7 +14,10 @@ use crate::repository::{
         Db,
         models::profiles::{ActiveModel, COLUMN, Entity, Model},
     },
-    handles::{Result, map_insert_error},
+    handles::{
+        error::{GetFieldError, LoadModelError, ModelKind, is_unique_violation},
+        mod_entry,
+    },
     state,
 };
 
@@ -31,71 +37,116 @@ impl Profile {
         Self { id, db, cfg }
     }
 
-    async fn model(&self) -> Result<Model> {
+    async fn model(&self, conn: &impl ConnectionTrait) -> Result<Model, LoadModelError> {
         Entity::find_by_id(self.id)
-            .one(self.db.conn())
-            .await?
-            .ok_or(Error::StaleHandle)
+            .one(conn)
+            .await
+            .map_err(|source| LoadModelError::query(ModelKind::Profile, self.id, source))?
+            .ok_or_else(|| LoadModelError::stale(ModelKind::Profile, self.id))
     }
 
-    async fn active_model(&self) -> Result<ActiveModel> {
-        Ok(self.model().await?.into())
+    async fn active_model(
+        &self,
+        conn: &impl ConnectionTrait,
+    ) -> Result<ActiveModel, LoadModelError> {
+        Ok(self.model(conn).await?.into())
     }
 
     // Fields
 
-    pub async fn name(&self) -> Result<String> {
-        Ok(self.model().await?.name)
+    pub async fn name(&self) -> Result<String, GetFieldError> {
+        Ok(self
+            .model(self.db.conn())
+            .await
+            .map_err(|source| self.field_error("name", source))?
+            .name)
     }
 
-    pub async fn set_name(&self, new_name: &str) -> Result<()> {
-        let old_dir = self.dir().await?;
+    pub async fn set_name(&self, new_name: &str) -> Result<(), SetNameError> {
+        let old_dir = self.dir().await.map_err(SetNameError::CurrentDir)?;
 
-        let mut active_model = self.active_model().await?;
+        let mut active_model = self
+            .active_model(self.db.conn())
+            .await
+            .map_err(SetNameError::Load)?;
         active_model.name.set_if_not_equals(new_name.to_string());
-        active_model.update(self.db.conn()).await?;
+        active_model
+            .update(self.db.conn())
+            .await
+            .map_err(|source| {
+                if is_unique_violation(&source) {
+                    SetNameError::Duplicate {
+                        name: new_name.to_string(),
+                    }
+                } else {
+                    SetNameError::Update(source)
+                }
+            })?;
 
-        let new_dir = self.dir().await?;
-        fs::rename(old_dir, new_dir).unwrap();
+        let new_dir = self.dir().await.map_err(SetNameError::CurrentDir)?;
+        fs::rename(&old_dir, &new_dir).map_err(|source| SetNameError::RenameDir {
+            from: old_dir,
+            to: new_dir,
+            source,
+        })?;
 
         Ok(())
     }
 
-    pub async fn dir(&self) -> Result<PathBuf> {
+    pub async fn dir(&self) -> Result<PathBuf, DirError> {
         Ok(self
             .parent()
-            .await?
+            .await
+            .map_err(DirError::Parent)?
             .dir()
-            .await?
+            .await
+            .map_err(DirError::ParentDir)?
             .join("profiles")
-            .join(self.name().await?.to_snake_case()))
+            .join(self.name().await.map_err(DirError::Name)?.to_snake_case()))
     }
 
     /// Make this profile the active one
-    pub async fn activate(&self) -> Result<()> {
+    pub async fn activate(&self) -> Result<(), ActivateError> {
         let conn = self.db.conn();
 
-        if state::active_game_id(conn).await? == Some(self.model().await?.game_id) {
-            return state::set_active_profile_id(conn, Some(self.id)).await;
+        let active_game_id = state::active_game_id(conn)
+            .await
+            .map_err(ActivateError::ActiveGameId)?;
+        let profile_game_id = self.model(conn).await.map_err(ActivateError::Load)?.game_id;
+
+        if active_game_id == Some(profile_game_id) {
+            state::set_active_profile_id(conn, Some(self.id))
+                .await
+                .map_err(ActivateError::SetActiveProfile)
         } else {
-            Err(Error::ProfileNotInActiveGame)
+            Err(ActivateError::ProfileNotInActiveGame)
         }
     }
 
-    pub async fn is_active(&self) -> Result<bool> {
-        Ok(state::active_profile_id(self.db.conn()).await? == Some(self.id))
+    pub async fn is_active(&self) -> Result<bool, IsActiveError> {
+        Ok(state::active_profile_id(self.db.conn())
+            .await
+            .map_err(IsActiveError::ActiveProfileId)?
+            == Some(self.id))
     }
 
-    pub(crate) async fn active(db: Db, cfg: Cfg) -> Result<Option<Profile>> {
-        state::reconcile(db.conn()).await?;
+    pub(crate) async fn active(db: Db, cfg: Cfg) -> Result<Option<Profile>, ActiveError> {
+        state::reconcile(db.conn())
+            .await
+            .map_err(ActiveError::Reconcile)?;
         Ok(state::active_profile_id(db.conn())
-            .await?
+            .await
+            .map_err(ActiveError::ActiveProfileId)?
             .map(|id| Profile::from_id(id, db.clone(), cfg.clone())))
     }
 
     /// Returns the parent [`Game`] of this [`Profile`]
-    pub async fn parent(&self) -> Result<Game> {
-        let parent_game_id = self.model().await?.game_id;
+    pub async fn parent(&self) -> Result<Game, ParentError> {
+        let parent_game_id = self
+            .model(self.db.conn())
+            .await
+            .map_err(ParentError::Load)?
+            .game_id;
         Ok(Game::from_id(
             parent_game_id,
             self.db.clone(),
@@ -105,32 +156,28 @@ impl Profile {
 
     // Operations
 
-    /// Add a new [`ModEntry`] to a [`Profile`] that points to the [`Mod`] given by ID.
-    pub async fn add_mod_entry(&self, mod_: Mod) -> Result<ModEntry> {
-        ModEntry::add(&self.db, &self.cfg, self, mod_).await
-    }
-
-    pub async fn mod_entries(&self) -> Result<Vec<ModEntry>> {
-        ModEntry::list(&self.db, &self.cfg, self).await
-    }
-
-    pub async fn remove(self) -> Result<()> {
+    pub async fn remove(self) -> Result<(), RemoveError> {
         // We have to store these so we can still access them once the profile is deleted
-        let name = self.name().await?;
-        let dir = self.dir().await?;
+        let name = self.name().await.map_err(RemoveError::Name)?;
+        let dir = self.dir().await.map_err(RemoveError::Dir)?;
 
-        Entity::delete_by_id(self.id).exec(self.db.conn()).await?;
+        Entity::delete_by_id(self.id)
+            .exec(self.db.conn())
+            .await
+            .map_err(RemoveError::Delete)?;
 
-        fs::remove_dir_all(dir).unwrap();
+        fs::remove_dir_all(&dir).map_err(|source| RemoveError::RemoveDir { path: dir, source })?;
 
-        state::reconcile(self.db.conn()).await?;
+        state::reconcile(self.db.conn())
+            .await
+            .map_err(RemoveError::Reconcile)?;
 
         info!("Removed profile: {name}");
 
         Ok(())
     }
 
-    pub(crate) async fn add(db: &Db, cfg: &Cfg, game: &Game, name: &str) -> Result<Self> {
+    pub(crate) async fn add(db: &Db, cfg: &Cfg, game: &Game, name: &str) -> Result<Self, AddError> {
         let model = ActiveModel {
             name: Set(name.to_string()),
             game_id: Set(game.id),
@@ -140,27 +187,37 @@ impl Profile {
         let id = Entity::insert(model)
             .exec(db.conn())
             .await
-            .map_err(|e| map_insert_error(e, Error::DuplicateProfileName(name.into())))?
+            .map_err(|source| {
+                if is_unique_violation(&source) {
+                    AddError::DuplicateName {
+                        name: name.to_string(),
+                    }
+                } else {
+                    AddError::Insert(source)
+                }
+            })?
             .last_insert_id;
 
         let profile = Profile::from_id(id, db.clone(), cfg.clone());
+        let dir = profile.dir().await.map_err(AddError::Dir)?;
+        fs::create_dir_all(&dir).map_err(|source| AddError::CreateDir { path: dir, source })?;
 
-        // TODO: Try to recover from this based on the problem
-        fs::create_dir_all(profile.dir().await?).unwrap();
-
-        state::reconcile(db.conn()).await?;
+        state::reconcile(db.conn())
+            .await
+            .map_err(AddError::Reconcile)?;
 
         info!("Added profile: {name}");
 
         Ok(profile)
     }
 
-    pub(crate) async fn list(db: &Db, cfg: &Cfg, game: &Game) -> Result<Vec<Self>> {
+    pub(crate) async fn list(db: &Db, cfg: &Cfg, game: &Game) -> Result<Vec<Self>, ListError> {
         Ok(Entity::find()
             .filter(COLUMN.game_id.eq(game.id))
             .order_by_id_desc()
             .all(db.conn())
-            .await?
+            .await
+            .map_err(ListError)?
             .iter()
             .map(|model| Profile::from_id(model.id, db.clone(), cfg.clone()))
             .collect())
@@ -172,13 +229,28 @@ impl Profile {
         cfg: Cfg,
         game: &Game,
         name: &str,
-    ) -> Result<Option<Profile>> {
+    ) -> Result<Option<Profile>, SearchError> {
         Ok(
             Entity::find_by_profile_name_per_game((name.to_string(), game.id))
                 .one(db.conn())
-                .await?
+                .await
+                .map_err(|source| SearchError {
+                    name: name.to_string(),
+                    source,
+                })?
                 .map(|model| Profile::from_id(model.id, db.clone(), cfg.clone())),
         )
+    }
+
+    // Children
+
+    /// Add a new [`ModEntry`] to a [`Profile`] that points to the [`Mod`] given by ID.
+    pub async fn add_mod_entry(&self, mod_: Mod) -> Result<ModEntry, mod_entry::AddError> {
+        ModEntry::add(&self.db, &self.cfg, self, mod_).await
+    }
+
+    pub async fn mod_entries(&self) -> Result<Vec<ModEntry>, mod_entry::ListError> {
+        ModEntry::list(&self.db, &self.cfg, self).await
     }
 }
 
@@ -191,8 +263,8 @@ impl PartialEq for Profile {
 #[cfg(test)]
 mod test {
     use crate::{
-        Repository,
-        repository::{DeployKind, handles::Error},
+        Repository, game::AddProfileError, profile::AddError as ProfileAddError,
+        repository::DeployKind,
     };
 
     #[tokio::test]
@@ -220,7 +292,7 @@ mod test {
 
         assert!(matches!(
             game.add_profile("Test").await,
-            Err(Error::DuplicateProfileName(_))
+            Err(AddProfileError(ProfileAddError::DuplicateName { .. }))
         ))
     }
 
@@ -242,7 +314,7 @@ mod test {
 
         profile.remove().await.unwrap();
 
-        assert!(matches!(mod_entry.remove().await, Err(Error::StaleHandle)));
+        assert!(matches!(mod_entry.remove().await, Err(_)));
         assert!(!dir.exists());
         assert_eq!(game.profiles().await.unwrap().len(), 0);
     }

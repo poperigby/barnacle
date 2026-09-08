@@ -1,3 +1,5 @@
+//! Filesystem helpers
+
 use std::{
     fs::{create_dir_all, set_permissions},
     path::{Path, PathBuf},

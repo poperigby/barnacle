@@ -1,11 +1,9 @@
 use barnacle_lib::{
     Repository,
-    repository::{Game, Mod, ModEntry, Profile, handles::Result},
+    repository::{Game, Mod, ModEntry, Profile},
 };
 use derive_more::Display;
 use iced::widget::combo_box;
-
-use crate::model::mutation::MutationResult;
 
 pub use mutation::Mutation;
 
@@ -30,7 +28,7 @@ pub struct Model {
 }
 
 impl Model {
-    pub async fn load(repo: &Repository) -> Result<Self> {
+    pub async fn load(repo: &Repository) -> anyhow::Result<Self> {
         // We barely have anything to load if there's no active game (which means there aren't any games).
         let active_game_handle = match repo.active_game().await? {
             Some(game) => game,
@@ -98,10 +96,6 @@ impl Model {
         }
     }
 
-    pub fn apply(result: MutationResult) {
-        todo!()
-    }
-
     pub fn active_game(&self) -> &Option<GameRow> {
         &self.active_game
     }
@@ -142,14 +136,14 @@ impl GameRow {
         self.handle.clone()
     }
 
-    async fn load(game: Game) -> Result<Self> {
+    async fn load(game: Game) -> anyhow::Result<Self> {
         Ok(Self {
             name: game.name().await?,
             handle: game,
         })
     }
 
-    async fn load_all(games: Vec<Game>) -> Result<Vec<Self>> {
+    async fn load_all(games: Vec<Game>) -> anyhow::Result<Vec<Self>> {
         let mut rows = Vec::with_capacity(games.len());
 
         for game in games {
@@ -172,14 +166,14 @@ impl ProfileRow {
         self.handle.clone()
     }
 
-    async fn load(profile: Profile) -> Result<Self> {
+    async fn load(profile: Profile) -> anyhow::Result<Self> {
         Ok(Self {
             name: profile.name().await?,
             handle: profile,
         })
     }
 
-    async fn load_all(profiles: Vec<Profile>) -> Result<Vec<Self>> {
+    async fn load_all(profiles: Vec<Profile>) -> anyhow::Result<Vec<Self>> {
         let mut rows = Vec::with_capacity(profiles.len());
 
         for profile in profiles {
@@ -197,14 +191,14 @@ pub struct ModRow {
 }
 
 impl ModRow {
-    async fn load(mod_: Mod) -> Result<Self> {
+    async fn load(mod_: Mod) -> anyhow::Result<Self> {
         Ok(Self {
             name: mod_.name().await?,
             handle: mod_,
         })
     }
 
-    async fn load_all(mods: Vec<Mod>) -> Result<Vec<Self>> {
+    async fn load_all(mods: Vec<Mod>) -> anyhow::Result<Vec<Self>> {
         let mut rows = Vec::with_capacity(mods.len());
 
         for mod_ in mods {
@@ -227,7 +221,7 @@ impl ModEntryRow {
         self.handle.clone()
     }
 
-    async fn load(mod_entry: ModEntry) -> Result<Self> {
+    async fn load(mod_entry: ModEntry) -> anyhow::Result<Self> {
         Ok(Self {
             name: mod_entry.name().await?,
             enabled: mod_entry.enabled().await?,
@@ -235,7 +229,7 @@ impl ModEntryRow {
         })
     }
 
-    async fn load_all(mod_entries: Vec<ModEntry>) -> Result<Vec<Self>> {
+    async fn load_all(mod_entries: Vec<ModEntry>) -> anyhow::Result<Vec<Self>> {
         let mut rows = Vec::with_capacity(mod_entries.len());
 
         for mod_entry in mod_entries {

@@ -35,19 +35,26 @@ impl Repository {
         }
     }
 
-    pub async fn add_game(&self, name: &str, deploy_kind: DeployKind) -> handles::Result<Game> {
-        Game::add(&self.db.clone(), self.cfg.clone(), name, deploy_kind).await
+    pub async fn add_game(
+        &self,
+        name: &str,
+        deploy_kind: DeployKind,
+    ) -> Result<Game, handles::game::AddError> {
+        Game::add(&self.db, &self.cfg, name, deploy_kind).await
     }
 
-    pub async fn games(&self) -> handles::Result<Vec<Game>> {
+    pub async fn games(&self) -> Result<Vec<Game>, handles::game::ListError> {
         Game::list(self.db.clone(), self.cfg.clone()).await
     }
 
-    pub async fn search_game(&self, name: &str) -> handles::Result<Option<Game>> {
+    pub async fn search_game(
+        &self,
+        name: &str,
+    ) -> Result<Option<Game>, handles::game::SearchError> {
         Game::search(self.db.clone(), self.cfg.clone(), name).await
     }
 
-    pub async fn active_game(&self) -> handles::Result<Option<Game>> {
+    pub async fn active_game(&self) -> Result<Option<Game>, handles::game::ActiveError> {
         Game::active(self.db.clone(), self.cfg.clone()).await
     }
 
