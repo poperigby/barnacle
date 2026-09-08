@@ -12,8 +12,12 @@
 
 Barnacle is a fast, powerful mod manager for Linux.
 
-## AI Acknowledgement
+## AI Disclosure/Policy 🤖 
 
-For full transparency, AI was used for initial architecture brainstorming (until I realized it wasn't actually that useful).
+In my development process, I find AI useful for brainstorming, planning, and carrying out tedious grunt work (e.g., calling ".await" on everything that needed it after a library refactor to make it asynchronous). It can be a helpful coding buddy if you know what you're doing.
 
-It currently assists us in reviewing PRs with Copilot, there is also a [DeepWiki](https://deepwiki.com/poperigby/barnacle) page. None of the code in Barnacle was vibecoded, and clearly vibecoded PRs will not be accepted.
+That said, this is first and foremost a labor of love and a learning opportunity for me (and hopefully for you!), so I wanted to write the vast majority of code myself. I find little pleasure in the clanker vomiting out a bunch of code that I don't understand. I'd like to keep the amount of AI generated code below 1%, and the amount of extensively human reviewed code at 100%.
+
+In addition to the above, I have Copilot set up to assist with reviewing PRs, and there is a [DeepWiki](https://deepwiki.com/poperigby/barnacle) page.
+
+I ask that, if you wish to contribute, you attempt to maintain that goal of ≥99% handwritten code, so that we can uphold the ethos of human collaboration and community.
