@@ -12,6 +12,7 @@ pub mod mod_entries;
 pub mod mods;
 pub mod profiles;
 pub mod state;
+pub mod targets;
 pub mod tools;
 
 pub use games::DeployKind;

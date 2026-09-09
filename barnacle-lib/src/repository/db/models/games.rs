@@ -40,6 +40,8 @@ pub struct Model {
     pub mods: HasMany<super::mods::Entity>,
     #[sea_orm(has_many)]
     pub tools: HasMany<super::tools::Entity>,
+    #[sea_orm(has_many)]
+    pub targets: HasMany<super::targets::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

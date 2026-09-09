@@ -26,6 +26,10 @@ pub struct Model {
     pub mod_id: i32,
     #[sea_orm(belongs_to, from = "mod_id", to = "id", on_delete = "Cascade")]
     pub mod_: BelongsTo<super::mods::Entity>,
+
+    pub target_id: Option<i32>,
+    #[sea_orm(belongs_to, from = "target_id", to = "id", on_delete = "SetNull")]
+    pub target: BelongsTo<Option<super::targets::Entity>>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
