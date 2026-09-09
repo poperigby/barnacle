@@ -4,8 +4,6 @@
 use barnacle_lib::Repository;
 use fluent_i18n::i18n;
 use iced::{Element, Task, Theme, application, widget::text, window::Settings};
-use tracing::Level;
-use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 use crate::{
     model::Model,
@@ -14,6 +12,7 @@ use crate::{
 };
 
 pub mod icons;
+pub mod log;
 pub mod model;
 pub mod persistence;
 pub mod ui;
@@ -22,12 +21,7 @@ i18n!("locales", fallback = "en-US");
 
 fn main() -> iced::Result {
     human_panic::setup_panic!();
-
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::TRACE)
-        .with_env_filter(EnvFilter::from_default_env())
-        .finish();
-    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+    let _guard = log::setup();
 
     let mut settings = Settings::default();
     settings.platform_specific.application_id = App::TITLE.to_string();
