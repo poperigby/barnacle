@@ -277,6 +277,8 @@ impl PartialEq for Profile {
 
 #[cfg(test)]
 mod test {
+    use std::assert_matches;
+
     use crate::{
         Repository, game::AddProfileError, profile::AddError as ProfileAddError,
         repository::DeployKind,
@@ -329,7 +331,9 @@ mod test {
 
         profile.remove().await.unwrap();
 
-        assert!(matches!(mod_entry.remove().await, Err(_)));
+        // Check the child mod entries were also removed
+        assert!(mod_entry.remove().await.is_err());
+
         assert!(!dir.exists());
         assert_eq!(game.profiles().await.unwrap().len(), 0);
     }

@@ -379,6 +379,8 @@ impl PartialEq for Game {
 
 #[cfg(test)]
 mod test {
+    use std::assert_matches;
+
     use crate::Repository;
 
     use super::*;
@@ -415,10 +417,10 @@ mod test {
             .await
             .unwrap();
 
-        assert!(matches!(
+        assert_matches!(
             repo.add_game("Morrowind", DeployKind::OpenMW).await,
             Err(AddError::DuplicateName { .. }),
-        ))
+        )
     }
 
     #[tokio::test]
@@ -430,7 +432,7 @@ mod test {
             .await
             .unwrap();
         let profile = game.add_profile("test_profile_1").await.unwrap();
-        let _mod = game.add_mod("test_mod", None).await.unwrap();
+        let mod_ = game.add_mod("test_mod", None).await.unwrap();
 
         assert_eq!(repo.games().await.unwrap().len(), 1);
 
@@ -439,8 +441,8 @@ mod test {
         game.remove().await.unwrap();
 
         // Attempt to remove already removed profile and mod entries
-        assert!(matches!(profile.remove().await, Err(_)));
-        assert!(matches!(_mod.remove().await, Err(_)));
+        assert!(profile.remove().await.is_err());
+        assert!(mod_.remove().await.is_err());
 
         assert!(!dir.exists());
         assert_eq!(repo.games().await.unwrap().len(), 0);

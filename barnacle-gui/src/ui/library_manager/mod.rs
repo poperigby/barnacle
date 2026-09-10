@@ -1,6 +1,6 @@
 use crate::{
     icons::Icon,
-    model::{GameRow, Model, Mutation},
+    model::{GameItem, Model, Mutation},
 };
 use barnacle_gui::modal;
 use barnacle_lib::repository::Game;
@@ -10,19 +10,18 @@ use iced::{
     widget::{Column, button, column, container, row, rule, scrollable, space, text},
 };
 
+pub mod game_details;
 pub mod new_game_dialog;
-pub mod profiles_tab;
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    TabSelected(TabId),
     CloseButtonPressed,
     NewGameButtonPressed,
     ActivateButtonPressed(Game),
-    GameRowSelected(Game),
+    GameRowSelected(GameItem),
     // Components
     NewGameDialog(new_game_dialog::Message),
-    ProfilesTab(profiles_tab::Message),
+    GameDetails(game_details::Message),
 }
 
 /// Action used for communicating with the parent component
@@ -34,44 +33,35 @@ pub enum Action {
     Close,
 }
 
-#[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
-pub enum TabId {
-    Overview,
-    #[default]
-    Profiles,
-}
-
 #[derive(Debug, Clone)]
 pub struct LibraryManager {
-    active_tab: TabId,
-    selected_game: Option<Game>,
+    selected_game: Option<GameItem>,
     show_new_game_dialog: bool,
     // Components
     new_game_dialog: new_game_dialog::Dialog,
-    profiles_tab: profiles_tab::Tab,
+    game_details: game_details::Tab,
 }
 
 impl LibraryManager {
     pub fn new() -> Self {
         let new_game_dialog = new_game_dialog::Dialog::new();
-        let profiles_tab = profiles_tab::Tab::new();
+        let game_details = game_details::Tab::new();
 
         Self {
-            active_tab: TabId::default(),
             selected_game: None,
             show_new_game_dialog: false,
             new_game_dialog,
-            profiles_tab,
+            game_details,
         }
+    }
+
+    pub fn sync(&mut self, model: &Model) {
+        // TODO: Reconcile this so we don't wipe on reload.
+        self.selected_game = model.active_game().clone();
     }
 
     pub fn update(&mut self, message: Message) -> Action {
         match message {
-            Message::TabSelected(id) => {
-                self.active_tab = id;
-
-                Action::None
-            }
             Message::CloseButtonPressed => Action::Close,
             Message::NewGameButtonPressed => {
                 self.show_new_game_dialog = true;
@@ -100,17 +90,17 @@ impl LibraryManager {
                     Action::None
                 }
             },
-            Message::ProfilesTab(message) => match self.profiles_tab.update(message) {
-                profiles_tab::Action::None => Action::None,
-                profiles_tab::Action::Run(task) => Action::Run(task.map(Message::ProfilesTab)),
-                profiles_tab::Action::Create { name } => match &self.selected_game {
+            Message::GameDetails(message) => match self.game_details.update(message) {
+                game_details::Action::None => Action::None,
+                game_details::Action::Run(task) => Action::Run(task.map(Message::GameDetails)),
+                game_details::Action::Create { name } => match &self.selected_game {
                     Some(game) => Action::Mutate(Mutation::CreateProfile {
-                        game: game.clone(),
+                        game: game.handle().clone(),
                         name,
                     }),
                     None => Action::None,
                 },
-                profiles_tab::Action::Mutate(mutation) => Action::Mutate(mutation),
+                game_details::Action::Mutate(mutation) => Action::Mutate(mutation),
             },
         }
     }
@@ -128,41 +118,27 @@ impl LibraryManager {
         ])
         .on_press(Message::NewGameButtonPressed);
 
-        let body = {
-            let games_sidebar = column![
-                text(t!("game", { "count" => 2 })),
-                rule::horizontal(1),
-                scrollable(Column::with_children(model.games().iter().map(game_row))),
-                space::vertical(),
-                new_game_button
-            ];
+        let games_list = column![
+            text(t!("game", { "count" => 2 })),
+            rule::horizontal(1),
+            scrollable(Column::with_children(
+                model.games().iter().map(|g| self.game_row(g))
+            )),
+            space::vertical(),
+            new_game_button
+        ];
 
-            let content_pane = if self.selected_game.is_some() {
-                let tab_bar = row![
-                    self.tab_button(TabId::Overview),
-                    self.tab_button(TabId::Profiles),
-                ];
-                let tab_view: Element<'_, Message> = match self.active_tab {
-                    TabId::Overview => column![button(text(t!("activate"))).on_press(
-                        Message::ActivateButtonPressed(self.selected_game.clone().unwrap())
-                    )]
-                    .into(),
-                    TabId::Profiles => self.profiles_tab.view(model).map(Message::ProfilesTab),
-                };
-
-                column![tab_bar, tab_view]
-            } else {
-                column![text("No selected game")]
-            };
-
+        let content = column![
+            title_bar,
             row![
-                games_sidebar.width(Length::FillPortion(1)),
-                content_pane.width(Length::FillPortion(2))
+                games_list.width(Length::FillPortion(1)),
+                self.game_details
+                    .view(model, &self.selected_game)
+                    .map(Message::GameDetails)
             ]
             .padding(20)
-        };
-
-        let content = column![title_bar, body].into();
+        ]
+        .into();
 
         container(if self.show_new_game_dialog {
             modal(
@@ -179,40 +155,23 @@ impl LibraryManager {
         .into()
     }
 
-    fn tab_button(&self, tab: TabId) -> Element<'_, Message> {
-        let label = match tab {
-            TabId::Overview => t!("library-manager_overview"),
-            TabId::Profiles => t!("profile", { "count" => 2 }),
-        };
-        let style = if self.active_tab == tab {
+    pub fn game_row<'a>(&self, item: &GameItem) -> Element<'a, Message> {
+        let mut content = row![text(item.name.clone()), space::horizontal()];
+
+        if item.active {
+            content = content.push(Icon::Check);
+        }
+
+        let style = if Some(item) == self.selected_game.as_ref() {
             button::primary
         } else {
             button::subtle
         };
 
-        button(text(label))
-            .on_press(Message::TabSelected(tab))
+        button(content)
+            .width(Length::Fill)
             .style(style)
+            .on_press(Message::GameRowSelected(item.clone()))
             .into()
     }
-}
-
-pub fn game_row<'a>(row: &GameRow) -> Element<'a, Message> {
-    let content = row![text(row.name.clone()), space::horizontal()];
-
-    // if game == active_game {
-    //     content = content.push(Icon::Check);
-    // }
-    //
-    // let style = if Some(&self.game) == selected_game.as_ref() {
-    //     button::primary
-    // } else {
-    //     button::subtle
-    // };
-
-    button(content)
-        .width(Length::Fill)
-        // .style(style)
-        .on_press(Message::GameRowSelected(row.handle().clone()))
-        .into()
 }

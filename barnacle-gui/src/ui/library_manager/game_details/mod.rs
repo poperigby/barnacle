@@ -1,22 +1,22 @@
 use crate::{
     icons::Icon,
-    model::{Model, Mutation, ProfileRow},
+    model::{GameItem, Model, Mutation, ProfileItem},
 };
 use barnacle_gui::modal;
-use barnacle_lib::repository::Profile;
-use fluent_i18n::t;
+use barnacle_lib::{Game, repository::Profile};
 use iced::{
     Element, Length, Task,
-    widget::{Column, button, column, container, row, scrollable, space, text},
+    widget::{button, column, container, row, space, text},
 };
 
-use crate::ui::library_manager::profiles_tab::{edit_dialog::EditDialog, new_dialog::NewDialog};
+use crate::ui::library_manager::game_details::{edit_dialog::EditDialog, new_dialog::NewDialog};
 
 pub mod edit_dialog;
 pub mod new_dialog;
 
 #[derive(Debug, Clone)]
 pub enum Message {
+    SwitchGameButtonPressed(Game),
     NewButtonPressed,
     EditButtonPressed {
         profile: Profile,
@@ -62,6 +62,7 @@ impl Tab {
 
     pub fn update(&mut self, message: Message) -> Action {
         match message {
+            Message::SwitchGameButtonPressed(game) => Action::Mutate(Mutation::ActivateGame(game)),
             Message::NewButtonPressed => {
                 self.show_new_dialog = true;
 
@@ -102,14 +103,23 @@ impl Tab {
             },
         }
     }
-    pub fn view(&self, model: &Model) -> Element<'_, Message> {
-        let content = column![
-            button(text(t!("new"))).on_press(Message::NewButtonPressed),
-            scrollable(Column::with_children(
-                model.profiles().iter().map(profile_row)
-            ))
-        ]
-        .into();
+    pub fn view(&self, model: &Model, selected_game: &Option<GameItem>) -> Element<'_, Message> {
+        let game = match selected_game {
+            Some(game) => game,
+            None => return column![text("No game selected")].into(),
+        };
+
+        let active_control: Element<'_, Message> = if game.active {
+            text("Current").into()
+        } else {
+            button("Switch")
+                .on_press(Message::SwitchGameButtonPressed(game.handle()))
+                .into()
+        };
+
+        let top_row = row![text(game.name.clone()), space::horizontal(), active_control];
+
+        let content = column![top_row].width(Length::FillPortion(2)).into();
 
         if self.show_new_dialog {
             modal(
@@ -123,7 +133,7 @@ impl Tab {
     }
 }
 
-fn profile_row<'a>(row: &ProfileRow) -> Element<'a, Message> {
+fn profile_item<'a>(row: &ProfileItem) -> Element<'a, Message> {
     container(
         row![
             text(row.name.clone()),

@@ -7,7 +7,7 @@ use iced::{
 
 use crate::{
     icons::Icon,
-    model::{Model, Mutation, ProfileRow},
+    model::{Model, Mutation, ProfileItem},
     persistence::state::UiStateStore,
     ui::{add_mod_dialog::AddModDialog, library_manager::LibraryManager, mod_list::ModList},
 };
@@ -20,7 +20,7 @@ pub mod mod_list;
 pub enum Message {
     AddModButtonPressed,
     LibraryManagerButtonPressed,
-    ProfileSelected(ProfileRow),
+    ProfileSelected(ProfileItem),
 
     // Children
     AddModDialog(add_mod_dialog::Message),
@@ -40,21 +40,40 @@ pub struct Ui {
     show_library_manager: bool,
     show_add_mod_dialog: bool,
 
+    profile_selector_state: Option<combo_box::State<ProfileItem>>,
+
     add_mod_dialog: AddModDialog,
     mod_list: ModList,
     library_manager: LibraryManager,
 }
 
 impl Ui {
-    pub fn init(ui_state: &UiStateStore) -> Self {
-        Self {
+    pub fn init(model: &Model, ui_state: &UiStateStore) -> Self {
+        let mut ui = Self {
             show_library_manager: false,
             show_add_mod_dialog: false,
+
+            profile_selector_state: None,
 
             add_mod_dialog: AddModDialog::new(),
             mod_list: ModList::new(ui_state.clone()),
             library_manager: LibraryManager::new(),
-        }
+        };
+
+        ui.sync(model);
+
+        ui
+    }
+
+    /// Synchronize runtime state with the given [`Model`]
+    pub fn sync(&mut self, model: &Model) {
+        self.profile_selector_state = match model.active_game().as_ref().map(|g| g.profiles.clone())
+        {
+            Some(profiles) if !profiles.is_empty() => Some(combo_box::State::new(profiles)),
+            Some(_) | None => None,
+        };
+
+        self.library_manager.sync(model);
     }
 
     pub fn update(&mut self, message: Message) -> Action {
@@ -109,16 +128,22 @@ impl Ui {
     }
 
     pub fn view<'a>(&'a self, model: &'a Model) -> Element<'a, Message> {
+        let profile_selector: Element<'a, Message> = match &self.profile_selector_state {
+            Some(state) => combo_box(
+                &state,
+                "...",
+                model.active_profile().as_ref(),
+                Message::ProfileSelected,
+            )
+            .into(),
+            None => space::horizontal().into(),
+        };
+
         let top_bar = row![
             button(text(t!("main_top-bar_launch-game", { "count" => 1 }))),
             button(Icon::Wrench),
             text(t!("profile", { "count" => 1 })),
-            combo_box(
-                model.profile_selector_state(),
-                "...",
-                model.active_profile().as_ref(),
-                Message::ProfileSelected
-            ),
+            profile_selector,
             space::horizontal(),
             button(Icon::Library).on_press(Message::LibraryManagerButtonPressed),
             button(Icon::Settings),

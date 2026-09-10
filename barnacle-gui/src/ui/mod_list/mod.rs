@@ -1,5 +1,5 @@
 use crate::{
-    model::{ModEntryRow, Model, Mutation},
+    model::{ModEntryItem, Model, Mutation},
     persistence::state::UiStateStore,
     ui::mod_list::state::{SortColumn, SortState},
 };
@@ -14,11 +14,11 @@ pub mod state;
 pub enum Message {
     SortChanged(SortColumn),
     ToggleModEntry {
-        entry_row: ModEntryRow,
+        entry_item: ModEntryItem,
         enabled: bool,
     },
     ModEntryToggled,
-    ModEntryDeleted(ModEntryRow),
+    ModEntryDeleted(ModEntryItem),
 }
 
 #[derive(Debug)]
@@ -56,12 +56,13 @@ impl ModList {
                 Action::None
             }
             Message::ModEntryToggled => Action::None,
-            Message::ToggleModEntry { entry_row, enabled } => {
-                Action::Mutate(Mutation::SetModEntryEnabled {
-                    entry: entry_row.handle(),
-                    enabled,
-                })
-            }
+            Message::ToggleModEntry {
+                entry_item,
+                enabled,
+            } => Action::Mutate(Mutation::SetModEntryEnabled {
+                entry: entry_item.handle(),
+                enabled,
+            }),
         }
     }
 
@@ -69,15 +70,15 @@ impl ModList {
         let columns = [
             table::column(
                 column_header("Name", &self.sort, SortColumn::Name),
-                |entry_row: &ModEntryRow| text(entry_row.name.clone()),
+                |entry_item: &ModEntryItem| text(entry_item.name.clone()),
             ),
             table::column(
                 column_header("Cateogry", &self.sort, SortColumn::Category),
-                |_entry_row: &ModEntryRow| text("Category"),
+                |_entry_item: &ModEntryItem| text("Category"),
             ),
-            table::column(text("Status"), |entry_row: &ModEntryRow| {
-                checkbox(entry_row.enabled).on_toggle(move |state| Message::ToggleModEntry {
-                    entry_row: entry_row.clone(),
+            table::column(text("Status"), |entry_item: &ModEntryItem| {
+                checkbox(entry_item.enabled).on_toggle(move |state| Message::ToggleModEntry {
+                    entry_item: entry_item.clone(),
                     enabled: state,
                 })
             }),

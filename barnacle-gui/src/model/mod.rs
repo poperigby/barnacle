@@ -3,7 +3,7 @@ use barnacle_lib::{
     repository::{Game, Mod, ModEntry, Profile},
 };
 use derive_more::Display;
-use iced::widget::combo_box;
+use futures::future::try_join_all;
 
 pub use mutation::Mutation;
 
@@ -11,20 +11,17 @@ mod mutation;
 
 /// Runtime data used to render the loaded GUI.
 ///
-/// Contains the in-memory projection of [`Repository`] state plus derived render
-/// adapters. Component `view()` functions can read from this cheaply.
-/// [`Repository`] data is updated only from successful [`MutationResult`]s.
+/// Contains the in-memory projection of [`Repository`] state. Component `view()` functions can read from
+/// this cheaply. [`Repository`] data is updated only from successful mutations.
 #[derive(Debug, Clone)]
 pub struct Model {
-    active_game: Option<GameRow>,
-    games: Vec<GameRow>,
+    active_game: Option<GameItem>,
+    games: Vec<GameItem>,
 
-    active_profile: Option<ProfileRow>,
-    profile_selector_state: combo_box::State<ProfileRow>,
-    profiles: Vec<ProfileRow>,
+    active_profile: Option<ProfileItem>,
 
-    mods: Vec<ModRow>,
-    mod_entries: Vec<ModEntryRow>,
+    mods: Vec<ModItem>,
+    mod_entries: Vec<ModEntryItem>,
 }
 
 impl Model {
@@ -33,105 +30,87 @@ impl Model {
         let active_game_handle = match repo.active_game().await? {
             Some(game) => game,
             None => {
-                return Ok(Self::new(
-                    None,
-                    Vec::new(),
-                    None,
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                ));
+                return Ok(Self::new(None, Vec::new(), None, Vec::new(), Vec::new()));
             }
         };
 
-        let active_game = GameRow::load(active_game_handle.clone()).await?;
-        let games = GameRow::load_all(repo.games().await?).await?;
+        let active_game = GameItem::load_active(repo).await?;
+
+        let games = GameItem::load_all(repo).await?;
 
         let active_profile_handle = match active_game_handle.active_profile().await? {
             Some(profile) => profile,
             None => {
-                return Ok(Self::new(
-                    Some(active_game),
-                    games,
-                    None,
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                ));
+                return Ok(Self::new(active_game, games, None, Vec::new(), Vec::new()));
             }
         };
 
-        let active_profile = ProfileRow::load(active_profile_handle.clone()).await?;
-        let profiles = ProfileRow::load_all(active_game_handle.profiles().await?).await?;
+        let active_profile = ProfileItem::load(active_profile_handle.clone()).await?;
 
-        let mods = ModRow::load_all(active_game_handle.mods().await?).await?;
-        let mod_entries = ModEntryRow::load_all(active_profile_handle.mod_entries().await?).await?;
+        let mods = ModItem::load_all(&active_game_handle).await?;
+        let mod_entries = ModEntryItem::load_all(&active_profile_handle).await?;
 
         Ok(Self::new(
-            Some(active_game),
+            active_game,
             games,
             Some(active_profile),
-            profiles,
             mods,
             mod_entries,
         ))
     }
 
     fn new(
-        active_game: Option<GameRow>,
-        games: Vec<GameRow>,
-        active_profile: Option<ProfileRow>,
-        profiles: Vec<ProfileRow>,
-        mods: Vec<ModRow>,
-        mod_entries: Vec<ModEntryRow>,
+        active_game: Option<GameItem>,
+        games: Vec<GameItem>,
+        active_profile: Option<ProfileItem>,
+        mods: Vec<ModItem>,
+        mod_entries: Vec<ModEntryItem>,
     ) -> Self {
         Self {
             active_game,
             games,
             active_profile,
-            profile_selector_state: combo_box::State::new(profiles.clone()),
-            profiles,
             mods,
             mod_entries,
         }
     }
 
-    pub fn active_game(&self) -> &Option<GameRow> {
+    pub fn active_game(&self) -> &Option<GameItem> {
         &self.active_game
     }
 
-    pub fn games(&self) -> &Vec<GameRow> {
+    pub fn games(&self) -> &Vec<GameItem> {
         &self.games
     }
 
-    pub fn active_profile(&self) -> &Option<ProfileRow> {
+    pub fn active_profile(&self) -> &Option<ProfileItem> {
         &self.active_profile
     }
 
-    pub fn profile_selector_state(&self) -> &combo_box::State<ProfileRow> {
-        &self.profile_selector_state
-    }
-
-    pub fn profiles(&self) -> &Vec<ProfileRow> {
-        &self.profiles
-    }
-
-    pub fn mods(&self) -> &Vec<ModRow> {
+    pub fn mods(&self) -> &Vec<ModItem> {
         &self.mods
     }
 
-    pub fn mod_entries(&self) -> &Vec<ModEntryRow> {
+    pub fn mod_entries(&self) -> &Vec<ModEntryItem> {
         &self.mod_entries
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct GameRow {
+pub struct GameItem {
     handle: Game,
     pub name: String,
+    pub active: bool,
+    pub profiles: Vec<ProfileItem>,
 }
 
-impl GameRow {
+impl PartialEq for GameItem {
+    fn eq(&self, other: &Self) -> bool {
+        self.handle == other.handle
+    }
+}
+
+impl GameItem {
     pub fn handle(&self) -> Game {
         self.handle.clone()
     }
@@ -139,29 +118,37 @@ impl GameRow {
     async fn load(game: Game) -> anyhow::Result<Self> {
         Ok(Self {
             name: game.name().await?,
+            active: game.is_active().await?,
+            profiles: ProfileItem::load_all(&game).await?,
             handle: game,
         })
     }
 
-    async fn load_all(games: Vec<Game>) -> anyhow::Result<Vec<Self>> {
-        let mut rows = Vec::with_capacity(games.len());
+    async fn load_active(repo: &Repository) -> anyhow::Result<Option<GameItem>> {
+        let active_game = repo.active_game().await?;
 
-        for game in games {
-            rows.push(Self::load(game).await?);
+        if let Some(game) = active_game {
+            Ok(Some(GameItem::load(game).await?))
+        } else {
+            Ok(None)
         }
+    }
 
-        Ok(rows)
+    async fn load_all(repo: &Repository) -> anyhow::Result<Vec<Self>> {
+        let games = repo.games().await?;
+
+        Ok(try_join_all(games.into_iter().map(|g| GameItem::load(g))).await?)
     }
 }
 
 #[derive(Debug, Clone, Display)]
 #[display("{name}")]
-pub struct ProfileRow {
+pub struct ProfileItem {
     handle: Profile,
     pub name: String,
 }
 
-impl ProfileRow {
+impl ProfileItem {
     pub fn handle(&self) -> Profile {
         self.handle.clone()
     }
@@ -173,24 +160,30 @@ impl ProfileRow {
         })
     }
 
-    async fn load_all(profiles: Vec<Profile>) -> anyhow::Result<Vec<Self>> {
-        let mut rows = Vec::with_capacity(profiles.len());
+    async fn load_active(game: &Game) -> anyhow::Result<Option<ProfileItem>> {
+        let active_profile = game.active_profile().await?;
 
-        for profile in profiles {
-            rows.push(Self::load(profile).await?);
+        if let Some(profile) = active_profile {
+            Ok(Some(ProfileItem::load(profile).await?))
+        } else {
+            Ok(None)
         }
+    }
 
-        Ok(rows)
+    async fn load_all(game: &Game) -> anyhow::Result<Vec<Self>> {
+        let profiles = game.profiles().await?;
+
+        Ok(try_join_all(profiles.into_iter().map(|p| ProfileItem::load(p))).await?)
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct ModRow {
+pub struct ModItem {
     handle: Mod,
     pub name: String,
 }
 
-impl ModRow {
+impl ModItem {
     async fn load(mod_: Mod) -> anyhow::Result<Self> {
         Ok(Self {
             name: mod_.name().await?,
@@ -198,25 +191,21 @@ impl ModRow {
         })
     }
 
-    async fn load_all(mods: Vec<Mod>) -> anyhow::Result<Vec<Self>> {
-        let mut rows = Vec::with_capacity(mods.len());
+    async fn load_all(game: &Game) -> anyhow::Result<Vec<Self>> {
+        let mods = game.mods().await?;
 
-        for mod_ in mods {
-            rows.push(Self::load(mod_).await?);
-        }
-
-        Ok(rows)
+        Ok(try_join_all(mods.into_iter().map(|p| ModItem::load(p))).await?)
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct ModEntryRow {
+pub struct ModEntryItem {
     handle: ModEntry,
     pub name: String,
     pub enabled: bool,
 }
 
-impl ModEntryRow {
+impl ModEntryItem {
     pub fn handle(&self) -> ModEntry {
         self.handle.clone()
     }
@@ -229,13 +218,9 @@ impl ModEntryRow {
         })
     }
 
-    async fn load_all(mod_entries: Vec<ModEntry>) -> anyhow::Result<Vec<Self>> {
-        let mut rows = Vec::with_capacity(mod_entries.len());
+    async fn load_all(profile: &Profile) -> anyhow::Result<Vec<Self>> {
+        let mod_entries = profile.mod_entries().await?;
 
-        for mod_entry in mod_entries {
-            rows.push(Self::load(mod_entry).await?);
-        }
-
-        Ok(rows)
+        Ok(try_join_all(mod_entries.into_iter().map(|p| ModEntryItem::load(p))).await?)
     }
 }

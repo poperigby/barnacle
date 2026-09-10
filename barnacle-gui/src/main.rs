@@ -92,7 +92,7 @@ impl App {
         match message {
             Message::Initialized(result) => match result {
                 Ok((repo, model)) => {
-                    let ui = Ui::init(&self.ui_state);
+                    let ui = Ui::init(&model, &self.ui_state);
 
                     self.state = State::Ready { repo, model, ui };
 
@@ -105,7 +105,9 @@ impl App {
                 }
             },
             Message::Mutated(result) => match (&mut self.state, result) {
-                (State::Ready { model, .. }, Ok(new_model)) => {
+                (State::Ready { model, ui, .. }, Ok(new_model)) => {
+                    ui.sync(&new_model);
+
                     // Reload the model with the fresh data
                     *model = new_model;
 

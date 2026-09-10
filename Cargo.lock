@@ -586,6 +586,7 @@ dependencies = [
  "derive_more",
  "deunicode",
  "fluent-i18n",
+ "futures",
  "heck 0.5.0",
  "human-panic",
  "iced",
