@@ -55,7 +55,7 @@ impl Repository {
     }
 
     pub async fn active_game(&self) -> Result<Option<Game>, handles::game::ActiveError> {
-        Game::active(self.db.clone(), self.cfg.clone()).await
+        Game::active(&self.db, &self.cfg).await
     }
 
     #[cfg(test)]

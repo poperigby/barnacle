@@ -34,6 +34,16 @@ pub struct Model {
     pub name: String,
     pub deploy_kind: DeployKind,
 
+    pub active_profile_id: Option<i32>,
+    #[sea_orm(
+        belongs_to,
+        relation_enum = "ActiveProfile",
+        from = "active_profile_id",
+        to = "id",
+        on_delete = "SetNull"
+    )]
+    pub active_profile: BelongsTo<Option<super::profiles::Entity>>,
+
     #[sea_orm(has_many)]
     pub profiles: HasMany<super::profiles::Entity>,
     #[sea_orm(has_many)]

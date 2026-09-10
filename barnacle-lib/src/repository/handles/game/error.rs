@@ -7,7 +7,7 @@ use crate::repository::{
         error::{GetFieldError, LoadModelError, ModelKind},
         mod_ as mod_handle, profile,
     },
-    state::{self, error::ReconcileError},
+    state,
 };
 
 impl super::Game {
@@ -60,8 +60,6 @@ pub enum RemoveError {
     Dir(#[source] DirError),
     #[error("could not delete game")]
     Delete(#[source] sea_orm::DbErr),
-    #[error("could not reconcile active state after removing game")]
-    Reconcile(#[source] ReconcileError),
     #[error("could not complete game removal transaction")]
     Transaction(#[source] sea_orm::DbErr),
     #[error("could not remove game directory")]
@@ -77,8 +75,6 @@ pub enum AddError {
     DuplicateName { name: String },
     #[error("could not insert game")]
     Insert(#[source] sea_orm::DbErr),
-    #[error("could not reconcile active state after adding game")]
-    Reconcile(#[source] ReconcileError),
     #[error("could not complete game creation transaction")]
     Transaction(#[source] sea_orm::DbErr),
     #[error("could not create directory")]
@@ -104,23 +100,38 @@ pub struct SearchError {
 
 #[derive(Debug, Error)]
 pub enum ActivateError {
-    #[error("could not set active game")]
-    SetActiveGame(#[source] state::error::SetActiveGameIdError),
+    #[error("could not set active game ID")]
+    SetActiveGameId(#[source] state::error::SetActiveGameIdError),
 }
 
 #[derive(Debug, Error)]
 pub enum IsActiveError {
-    #[error("could not load active game ID")]
-    ActiveGameId(#[source] state::error::LoadStateError),
+    #[error("could not retrieve active game")]
+    Active(#[source] ActiveError),
 }
 
 #[derive(Debug, Error)]
 pub enum ActiveError {
-    #[error("could not reconcile active state before loading active game")]
-    Reconcile(#[source] state::error::ReconcileError),
+    #[error("could not resolve active game ID")]
+    Resolve(#[source] ResolveActiveIdError),
+}
 
+#[derive(Debug, Error)]
+pub enum ResolveActiveIdError {
     #[error("could not load active game ID")]
     ActiveGameId(#[source] state::error::LoadStateError),
+    #[error("could not find fallback game")]
+    FindFallbackGame(#[source] sea_orm::DbErr),
+    #[error("could not set active game ID")]
+    SetActiveGameId(#[source] state::error::SetActiveGameIdError),
+}
+
+#[derive(Debug, Error)]
+pub enum SetActiveProfileIdError {
+    #[error("could not load game")]
+    Load(#[source] LoadModelError),
+    #[error("could not update active profile ID")]
+    Update(#[source] sea_orm::DbErr),
 }
 
 #[derive(Debug, Error)]

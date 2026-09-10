@@ -2,12 +2,9 @@ use std::{io, path::PathBuf};
 
 use thiserror::Error;
 
-use crate::repository::{
-    handles::{
-        error::{GetFieldError, LoadModelError, ModelKind},
-        game,
-    },
-    state,
+use crate::repository::handles::{
+    error::{GetFieldError, LoadModelError, ModelKind},
+    game,
 };
 
 impl super::Profile {
@@ -47,28 +44,34 @@ pub enum DirError {
 
 #[derive(Debug, Error)]
 pub enum ActivateError {
-    #[error("could not load active game ID")]
-    ActiveGameId(#[source] state::error::LoadStateError),
-    #[error("could not load profile")]
-    Load(#[source] LoadModelError),
-    #[error("profile does not belong to the active game")]
-    ProfileNotInActiveGame,
+    #[error("could not load parent game")]
+    Parent(#[source] ParentError),
     #[error("could not set active profile")]
-    SetActiveProfile(#[source] state::error::SetActiveProfileIdError),
+    SetActiveProfile(#[source] game::SetActiveProfileIdError),
 }
 
 #[derive(Debug, Error)]
 pub enum IsActiveError {
-    #[error("could not load active profile ID")]
-    ActiveProfileId(#[source] state::error::LoadStateError),
+    #[error("could not load parent game")]
+    Parent(#[source] ParentError),
+    #[error("could not load active profile")]
+    Active(#[source] ActiveError),
 }
 
 #[derive(Debug, Error)]
 pub enum ActiveError {
-    #[error("could not reconcile active state before loading active profile")]
-    Reconcile(#[source] state::error::ReconcileError),
-    #[error("could not load active profile ID")]
-    ActiveProfileId(#[source] state::error::LoadStateError),
+    #[error("could not reconcile active state")]
+    Resolve(#[source] ResolveActiveIdError),
+}
+
+#[derive(Debug, Error)]
+pub enum ResolveActiveIdError {
+    #[error("could not query active profile ID")]
+    ActiveProfileId(#[source] LoadModelError),
+    #[error("could not find fallback profile")]
+    FindFallbackProfile(#[source] sea_orm::DbErr),
+    #[error("could not set active profile ID")]
+    SetActiveProfile(#[source] game::SetActiveProfileIdError),
 }
 
 #[derive(Debug, Error)]
@@ -91,8 +94,6 @@ pub enum RemoveError {
         #[source]
         source: io::Error,
     },
-    #[error("could not reconcile active state after removing profile")]
-    Reconcile(#[source] state::error::ReconcileError),
 }
 
 #[derive(Debug, Error)]
@@ -109,8 +110,6 @@ pub enum AddError {
         #[source]
         source: io::Error,
     },
-    #[error("could not reconcile active state after adding profile")]
-    Reconcile(#[source] state::error::ReconcileError),
 }
 
 #[derive(Debug, Error)]

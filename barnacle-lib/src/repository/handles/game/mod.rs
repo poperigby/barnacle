@@ -42,8 +42,12 @@ pub struct Game {
 
 impl Game {
     /// Load some existing [`Game`] from the database
-    pub(crate) fn from_id(id: i32, db: Db, cfg: Cfg) -> Self {
-        Self { id, db, cfg }
+    pub(crate) fn from_id(id: i32, db: &Db, cfg: &Cfg) -> Self {
+        Self {
+            id,
+            db: db.clone(),
+            cfg: cfg.clone(),
+        }
     }
 
     async fn model(&self, conn: &impl ConnectionTrait) -> Result<Model, LoadModelError> {
@@ -165,10 +169,6 @@ impl Game {
                         .await
                         .map_err(RemoveError::Delete)?;
 
-                    state::reconcile(txn)
-                        .await
-                        .map_err(RemoveError::Reconcile)?;
-
                     fs::remove_dir_all(dir).map_err(|source| RemoveError::RemoveDir { source })?;
 
                     Ok::<(), RemoveError>(())
@@ -219,12 +219,10 @@ impl Game {
                         })?
                         .last_insert_id;
 
-                    state::reconcile(txn).await.map_err(AddError::Reconcile)?;
-
                     fs::create_dir_all(&dir)
                         .map_err(|source| AddError::CreateDir { path: dir, source })?;
 
-                    Ok(Game::from_id(id, db, cfg))
+                    Ok(Game::from_id(id, &db, &cfg))
                 })
             })
             .await
@@ -242,7 +240,7 @@ impl Game {
             .await
             .map_err(ListError)?
             .iter()
-            .map(|model| Game::from_id(model.id, db.clone(), cfg.clone()))
+            .map(|model| Game::from_id(model.id, &db, &cfg))
             .collect())
     }
 
@@ -257,43 +255,91 @@ impl Game {
                 name: name.to_string(),
                 source,
             })?
-            .map(|model| Game::from_id(model.id, db.clone(), cfg.clone())))
+            .map(|model| Game::from_id(model.id, &db, &cfg)))
     }
 
     /// Make this game the active one
     pub async fn activate(&self) -> Result<(), ActivateError> {
         state::set_active_game_id(self.db.conn(), Some(self.id))
             .await
-            .map_err(ActivateError::SetActiveGame)
+            .map_err(ActivateError::SetActiveGameId)
     }
 
     pub async fn is_active(&self) -> Result<bool, IsActiveError> {
-        Ok(state::active_game_id(self.db.conn())
+        let active_game = Self::active(&self.db, &self.cfg)
             .await
-            .map_err(IsActiveError::ActiveGameId)?
-            == Some(self.id))
+            .map_err(IsActiveError::Active)?;
+
+        Ok(active_game.as_ref() == Some(self))
     }
 
-    pub(crate) async fn active(db: Db, cfg: Cfg) -> Result<Option<Game>, ActiveError> {
-        state::reconcile(db.conn())
+    pub(crate) async fn active(db: &Db, cfg: &Cfg) -> Result<Option<Game>, ActiveError> {
+        Ok(Self::resolve_active_id(db.conn())
             .await
-            .map_err(ActiveError::Reconcile)?;
+            .map_err(ActiveError::Resolve)?
+            .map(|id| Game::from_id(id, db, cfg)))
+    }
 
-        Ok(state::active_game_id(db.conn())
+    // Returns the active game ID, selecting a fallback if none is set.
+    async fn resolve_active_id(
+        conn: &impl ConnectionTrait,
+    ) -> Result<Option<i32>, ResolveActiveIdError> {
+        if let Some(id) = state::active_game_id(conn)
             .await
-            .map_err(ActiveError::ActiveGameId)?
-            .map(|id| Game::from_id(id, db.clone(), cfg.clone())))
+            .map_err(ResolveActiveIdError::ActiveGameId)?
+        {
+            // We already have an active game set
+            return Ok(Some(id));
+        }
+
+        // Pick the oldest game as the fallback
+        let fallback_id = Entity::find()
+            .order_by_id_asc()
+            .one(conn)
+            .await
+            .map_err(ResolveActiveIdError::FindFallbackGame)?
+            .map(|game| game.id);
+
+        state::set_active_game_id(conn, fallback_id)
+            .await
+            .map_err(ResolveActiveIdError::SetActiveGameId)?;
+
+        Ok(fallback_id)
     }
 
     // Child operations
 
+    pub(crate) async fn active_profile_id(&self) -> Result<Option<i32>, LoadModelError> {
+        Ok(self.model(self.db.conn()).await?.active_profile_id)
+    }
+
+    pub(crate) async fn set_active_profile_id(
+        &self,
+        profile_id: Option<i32>,
+    ) -> Result<(), SetActiveProfileIdError> {
+        let conn = self.db.conn();
+
+        let mut active_model = self
+            .active_model(conn)
+            .await
+            .map_err(SetActiveProfileIdError::Load)?;
+
+        active_model.active_profile_id.set_if_not_equals(profile_id);
+
+        active_model
+            .update(conn)
+            .await
+            .map_err(SetActiveProfileIdError::Update)?;
+
+        Ok(())
+    }
+
     pub async fn active_profile(&self) -> Result<Option<Profile>, ActiveProfileError> {
-        Profile::active(self.db.clone(), self.cfg.clone())
+        Profile::active(&self.db, &self.cfg, &self)
             .await
             .map_err(ActiveProfileError)
     }
 
-    /// Search for the given profile by name
     pub async fn search_profile(&self, name: &str) -> Result<Option<Profile>, SearchProfileError> {
         Profile::search(self.db.clone(), self.cfg.clone(), self, name)
             .await

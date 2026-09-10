@@ -18,7 +18,6 @@ use crate::repository::{
         error::{GetFieldError, LoadModelError, ModelKind, is_unique_violation},
         mod_entry,
     },
-    state,
 };
 
 /// Represents a profile entity in the Barnacle system.
@@ -105,39 +104,66 @@ impl Profile {
             .join(self.name().await.map_err(DirError::Name)?.to_snake_case()))
     }
 
-    /// Make this profile the active one
+    /// Activate this profile
     pub async fn activate(&self) -> Result<(), ActivateError> {
-        let conn = self.db.conn();
+        let parent_game = self.parent().await.map_err(ActivateError::Parent)?;
 
-        let active_game_id = state::active_game_id(conn)
+        parent_game
+            .set_active_profile_id(Some(self.id))
             .await
-            .map_err(ActivateError::ActiveGameId)?;
-        let profile_game_id = self.model(conn).await.map_err(ActivateError::Load)?.game_id;
+            .map_err(ActivateError::SetActiveProfile)?;
 
-        if active_game_id == Some(profile_game_id) {
-            state::set_active_profile_id(conn, Some(self.id))
-                .await
-                .map_err(ActivateError::SetActiveProfile)
-        } else {
-            Err(ActivateError::ProfileNotInActiveGame)
-        }
+        Ok(())
     }
 
     pub async fn is_active(&self) -> Result<bool, IsActiveError> {
-        Ok(state::active_profile_id(self.db.conn())
+        let parent_game = self.parent().await.map_err(IsActiveError::Parent)?;
+
+        let active_profile = Self::active(&self.db, &self.cfg, &parent_game)
             .await
-            .map_err(IsActiveError::ActiveProfileId)?
-            == Some(self.id))
+            .map_err(IsActiveError::Active)?;
+
+        Ok(active_profile.as_ref() == Some(self))
     }
 
-    pub(crate) async fn active(db: Db, cfg: Cfg) -> Result<Option<Profile>, ActiveError> {
-        state::reconcile(db.conn())
+    pub(crate) async fn active(
+        db: &Db,
+        cfg: &Cfg,
+        game: &Game,
+    ) -> Result<Option<Profile>, ActiveError> {
+        Ok(Self::resolve_active_id(db, game)
             .await
-            .map_err(ActiveError::Reconcile)?;
-        Ok(state::active_profile_id(db.conn())
-            .await
-            .map_err(ActiveError::ActiveProfileId)?
+            .map_err(ActiveError::Resolve)?
             .map(|id| Profile::from_id(id, db.clone(), cfg.clone())))
+    }
+
+    // Returns the active profile ID, selecting a fallback if none is set.
+    async fn resolve_active_id(db: &Db, game: &Game) -> Result<Option<i32>, ResolveActiveIdError> {
+        if let Some(id) = game
+            .active_profile_id()
+            .await
+            .map_err(ResolveActiveIdError::ActiveProfileId)?
+        {
+            // We already have an active profile
+            return Ok(Some(id));
+        }
+
+        let conn = db.conn();
+
+        // Make the oldest profile the fallback
+        let fallback_id = Entity::find()
+            .filter(COLUMN.game_id.eq(game.id))
+            .order_by_id_asc()
+            .one(conn)
+            .await
+            .map_err(ResolveActiveIdError::FindFallbackProfile)?
+            .map(|game| game.id);
+
+        game.set_active_profile_id(fallback_id)
+            .await
+            .map_err(ResolveActiveIdError::SetActiveProfile)?;
+
+        Ok(fallback_id)
     }
 
     /// Returns the parent [`Game`] of this [`Profile`]
@@ -147,11 +173,8 @@ impl Profile {
             .await
             .map_err(ParentError::Load)?
             .game_id;
-        Ok(Game::from_id(
-            parent_game_id,
-            self.db.clone(),
-            self.cfg.clone(),
-        ))
+
+        Ok(Game::from_id(parent_game_id, &self.db, &self.cfg))
     }
 
     // Operations
@@ -167,10 +190,6 @@ impl Profile {
             .map_err(RemoveError::Delete)?;
 
         fs::remove_dir_all(&dir).map_err(|source| RemoveError::RemoveDir { path: dir, source })?;
-
-        state::reconcile(self.db.conn())
-            .await
-            .map_err(RemoveError::Reconcile)?;
 
         info!("Removed profile: {name}");
 
@@ -201,10 +220,6 @@ impl Profile {
         let profile = Profile::from_id(id, db.clone(), cfg.clone());
         let dir = profile.dir().await.map_err(AddError::Dir)?;
         fs::create_dir_all(&dir).map_err(|source| AddError::CreateDir { path: dir, source })?;
-
-        state::reconcile(db.conn())
-            .await
-            .map_err(AddError::Reconcile)?;
 
         info!("Added profile: {name}");
 
@@ -383,5 +398,34 @@ mod test {
 
         profile1.remove().await.unwrap();
         assert!(profile2.is_active().await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_switching_games_preserves_each_games_active_profile() {
+        let repo = Repository::mock().await;
+
+        let game1 = repo
+            .add_game("Skyrim", DeployKind::CreationEngine)
+            .await
+            .unwrap();
+        game1.activate().await.unwrap();
+
+        let profile1 = game1.add_profile("Test1").await.unwrap();
+        profile1.activate().await.unwrap();
+        game1.add_profile("Test2").await.unwrap();
+
+        let game2 = repo
+            .add_game("Morrowind", DeployKind::OpenMW)
+            .await
+            .unwrap();
+        let profile2 = game2.add_profile("Test2").await.unwrap();
+
+        game2.activate().await.unwrap();
+
+        assert!(profile2.is_active().await.unwrap());
+
+        game1.activate().await.unwrap();
+
+        assert!(profile1.is_active().await.unwrap());
     }
 }

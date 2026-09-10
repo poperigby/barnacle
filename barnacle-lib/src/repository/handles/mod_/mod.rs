@@ -81,11 +81,8 @@ impl Mod {
             .await
             .map_err(ParentError::Load)?
             .game_id;
-        Ok(Game::from_id(
-            parent_game_id,
-            self.db.clone(),
-            self.cfg.clone(),
-        ))
+
+        Ok(Game::from_id(parent_game_id, &self.db, &self.cfg))
     }
 
     pub(crate) async fn add(
