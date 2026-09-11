@@ -75,24 +75,39 @@ impl Model {
         }
     }
 
-    pub fn active_game(&self) -> &Option<GameItem> {
-        &self.active_game
+    pub fn active_game(&self) -> Option<GameItem> {
+        self.active_game.clone()
     }
 
-    pub fn games(&self) -> &Vec<GameItem> {
-        &self.games
+    pub fn games(&self) -> Vec<GameItem> {
+        self.games.clone()
     }
 
-    pub fn active_profile(&self) -> &Option<ProfileItem> {
-        &self.active_profile
+    pub fn game(&self, game: &Game) -> Option<GameItem> {
+        self.games()
+            .iter()
+            .find(|item| item.handle() == *game)
+            .cloned()
     }
 
-    pub fn mods(&self) -> &Vec<ModItem> {
-        &self.mods
+    pub fn active_profile(&self) -> Option<ProfileItem> {
+        self.active_profile.clone()
     }
 
-    pub fn mod_entries(&self) -> &Vec<ModEntryItem> {
-        &self.mod_entries
+    pub fn profile(&self, profile: &Profile) -> Option<ProfileItem> {
+        self.active_game()?
+            .profiles
+            .iter()
+            .find(|item| item.handle() == *profile)
+            .cloned()
+    }
+
+    pub fn mods(&self) -> Vec<ModItem> {
+        self.mods.clone()
+    }
+
+    pub fn mod_entries(&self) -> Vec<ModEntryItem> {
+        self.mod_entries.clone()
     }
 }
 

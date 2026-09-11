@@ -38,28 +38,31 @@ pub struct LibraryManager {
     selected_game: Option<GameItem>,
     show_new_game_dialog: bool,
     // Components
+    game_details: game_details::GameDetails,
     new_game_dialog: new_game_dialog::Dialog,
-    game_details: game_details::Tab,
 }
 
 impl LibraryManager {
     pub fn new() -> Self {
         let new_game_dialog = new_game_dialog::Dialog::new();
-        let game_details = game_details::Tab::new();
+        let game_details = game_details::GameDetails::new();
 
         Self {
             selected_game: None,
             show_new_game_dialog: false,
-            new_game_dialog,
             game_details,
+            new_game_dialog,
         }
     }
 
     pub fn sync(&mut self, model: &Model) {
-        self.selected_game = match &self.selected_game {
-            Some(game) if model.games().contains(game) => Some(game.clone()),
-            Some(_) | None => model.active_game().clone(),
-        }
+        // Select the active game if there isn't one already selected. If there is, we can refresh
+        // the data from the model.
+        self.selected_game = self
+            .selected_game
+            .as_ref()
+            .and_then(|item| model.game(&item.handle()))
+            .or_else(|| model.active_game().clone());
     }
 
     pub fn update(&mut self, message: Message) -> Action {
@@ -175,5 +178,11 @@ impl LibraryManager {
             .style(style)
             .on_press(Message::GameRowSelected(item.clone()))
             .into()
+    }
+}
+
+impl Default for LibraryManager {
+    fn default() -> Self {
+        Self::new()
     }
 }

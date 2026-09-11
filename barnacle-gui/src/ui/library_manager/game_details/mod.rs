@@ -6,7 +6,7 @@ use barnacle_gui::modal;
 use barnacle_lib::{Game, repository::Profile};
 use iced::{
     Element, Length, Task,
-    widget::{button, column, container, row, space, text},
+    widget::{button, column, container, row, scrollable, space, text},
 };
 
 use crate::ui::library_manager::game_details::{edit_dialog::EditDialog, new_dialog::NewDialog};
@@ -16,7 +16,7 @@ pub mod new_dialog;
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    SwitchGameButtonPressed(Game),
+    ActivateGameButtonPressed(Game),
     NewButtonPressed,
     EditButtonPressed {
         profile: Profile,
@@ -61,7 +61,9 @@ impl GameDetails {
 
     pub fn update(&mut self, message: Message) -> Action {
         match message {
-            Message::SwitchGameButtonPressed(game) => Action::Mutate(Mutation::ActivateGame(game)),
+            Message::ActivateGameButtonPressed(game) => {
+                Action::Mutate(Mutation::ActivateGame(game))
+            }
             Message::NewButtonPressed => {
                 self.show_new_dialog = true;
 
@@ -111,14 +113,19 @@ impl GameDetails {
         let active_control: Element<'_, Message> = if game.active {
             text("Current").into()
         } else {
-            button("Switch")
-                .on_press(Message::SwitchGameButtonPressed(game.handle()))
+            button("Activate")
+                .on_press(Message::ActivateGameButtonPressed(game.handle()))
                 .into()
         };
 
         let top_row = row![text(game.name.clone()), space::horizontal(), active_control];
 
-        let content = column![top_row].width(Length::FillPortion(2)).into();
+        let profile_rows: Vec<_> = game.profiles.iter().map(profile_row).collect();
+        let profiles_view = column![text("Profiles"), scrollable(column(profile_rows))];
+
+        let content = column![top_row, profiles_view]
+            .width(Length::FillPortion(2))
+            .into();
 
         if self.show_new_dialog {
             modal(
@@ -132,7 +139,7 @@ impl GameDetails {
     }
 }
 
-fn profile_item<'a>(row: &ProfileItem) -> Element<'a, Message> {
+fn profile_row<'a>(row: &ProfileItem) -> Element<'a, Message> {
     container(
         row![
             text(row.name.clone()),

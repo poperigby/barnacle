@@ -70,13 +70,13 @@ impl ModList {
         let columns = [
             table::column(
                 column_header("Name", &self.sort, SortColumn::Name),
-                |entry_item: &ModEntryItem| text(entry_item.name.clone()),
+                |entry_item: ModEntryItem| text(entry_item.name.clone()),
             ),
             table::column(
                 column_header("Cateogry", &self.sort, SortColumn::Category),
-                |_entry_item: &ModEntryItem| text("Category"),
+                |_entry_item: ModEntryItem| text("Category"),
             ),
-            table::column(text("Status"), |entry_item: &ModEntryItem| {
+            table::column(text("Status"), |entry_item: ModEntryItem| {
                 checkbox(entry_item.enabled).on_toggle(move |state| Message::ToggleModEntry {
                     entry_item: entry_item.clone(),
                     enabled: state,
