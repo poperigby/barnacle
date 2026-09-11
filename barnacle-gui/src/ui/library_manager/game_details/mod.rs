@@ -38,7 +38,7 @@ pub enum Action {
 }
 
 #[derive(Debug, Clone)]
-pub struct Tab {
+pub struct GameDetails {
     show_new_dialog: bool,
 
     // Children
@@ -46,7 +46,7 @@ pub struct Tab {
     edit_dialog: EditDialog,
 }
 
-impl Tab {
+impl GameDetails {
     pub fn new() -> Self {
         let new_dialog = NewDialog::new();
         let edit_dialog = EditDialog::new();
@@ -54,7 +54,6 @@ impl Tab {
         Self {
             show_new_dialog: false,
 
-            // Widget state
             new_dialog,
             edit_dialog,
         }

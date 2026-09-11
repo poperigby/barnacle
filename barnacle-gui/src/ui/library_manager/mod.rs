@@ -56,8 +56,10 @@ impl LibraryManager {
     }
 
     pub fn sync(&mut self, model: &Model) {
-        // TODO: Reconcile this so we don't wipe on reload.
-        self.selected_game = model.active_game().clone();
+        self.selected_game = match &self.selected_game {
+            Some(game) if model.games().contains(game) => Some(game.clone()),
+            Some(_) | None => model.active_game().clone(),
+        }
     }
 
     pub fn update(&mut self, message: Message) -> Action {
