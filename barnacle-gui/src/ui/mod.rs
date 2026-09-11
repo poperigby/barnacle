@@ -1,8 +1,8 @@
 use barnacle_gui::{
     icons::Icon,
-    modal,
     model::{Model, Mutation, ProfileItem},
     persistence::state::UiStateStore,
+    widgets::modal,
 };
 use fluent_i18n::t;
 use iced::{

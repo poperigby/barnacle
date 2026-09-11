@@ -1,7 +1,7 @@
 use barnacle_gui::{
     icons::Icon,
-    modal,
     model::{GameItem, Model, Mutation},
+    widgets::modal,
 };
 use barnacle_lib::repository::Game;
 use fluent_i18n::t;
