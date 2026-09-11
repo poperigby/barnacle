@@ -17,13 +17,13 @@ pub mod new_dialog;
 #[derive(Debug, Clone)]
 pub enum Message {
     ActivateGameButtonPressed(Game),
-    NewButtonPressed,
-    EditButtonPressed {
+    NewProfileButtonPressed,
+    EditProfileButtonPressed {
         profile: Profile,
         // The name the [`Profile`] has when the edit dialog is opened
         initial_name: String,
     },
-    DeleteButtonPressed(Profile),
+    DeleteProfileButtonPressed(Profile),
 
     // Children
     NewDialog(new_dialog::Message),
@@ -64,12 +64,12 @@ impl GameDetails {
             Message::ActivateGameButtonPressed(game) => {
                 Action::Mutate(Mutation::ActivateGame(game))
             }
-            Message::NewButtonPressed => {
+            Message::NewProfileButtonPressed => {
                 self.show_new_dialog = true;
 
                 Action::None
             }
-            Message::EditButtonPressed {
+            Message::EditProfileButtonPressed {
                 profile,
                 initial_name: name,
             } => {
@@ -77,7 +77,7 @@ impl GameDetails {
 
                 Action::None
             }
-            Message::DeleteButtonPressed(profile) => {
+            Message::DeleteProfileButtonPressed(profile) => {
                 Action::Mutate(Mutation::DeleteProfile(profile))
             }
 
@@ -121,7 +121,12 @@ impl GameDetails {
         let top_row = row![text(game.name.clone()), space::horizontal(), active_control];
 
         let profile_rows: Vec<_> = game.profiles.iter().map(profile_row).collect();
-        let profiles_view = column![text("Profiles"), scrollable(column(profile_rows))];
+        let profiles_view = column![
+            text("Profiles"),
+            scrollable(column(profile_rows)),
+            button(row![Icon::Plus, text("New Profile")])
+                .on_press(Message::NewProfileButtonPressed)
+        ];
 
         let content = column![top_row, profiles_view]
             .width(Length::FillPortion(2))
@@ -145,7 +150,8 @@ fn profile_row<'a>(row: &ProfileItem) -> Element<'a, Message> {
             text(row.name.clone()),
             space::horizontal(),
             button(Icon::Edit),
-            button(Icon::Delete).on_press(Message::DeleteButtonPressed(row.handle().clone()))
+            button(Icon::Delete)
+                .on_press(Message::DeleteProfileButtonPressed(row.handle().clone()))
         ]
         .padding(12),
     )

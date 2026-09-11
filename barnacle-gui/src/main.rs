@@ -4,6 +4,7 @@
 use barnacle_lib::Repository;
 use fluent_i18n::i18n;
 use iced::{Element, Task, Theme, application, widget::text, window::Settings};
+use tracing::error;
 
 use crate::{
     model::Model,
@@ -35,15 +36,20 @@ fn main() -> iced::Result {
 
 #[derive(Debug, Clone)]
 enum Message {
-    Initialized(Result<(Repository, Model), String>),
+    Initialized(Result<(Repository, Model), AppError>),
     Ui(ui::Message),
-    Mutated(Result<Model, String>),
+    Mutated(Result<Model, AppError>),
+}
+
+#[derive(Debug, Clone)]
+pub struct AppError {
+    message: String,
 }
 
 #[derive(Debug, Clone)]
 enum State {
     Loading,
-    Error(String),
+    Error(AppError),
     Ready {
         repo: Repository,
         model: Model,
@@ -80,8 +86,17 @@ impl App {
             Task::perform(
                 async {
                     let repo = Repository::new().await;
-                    let model = Model::load(&repo).await.map_err(|e| e.to_string())?;
-                    Ok((repo, model))
+
+                    match Model::load(&repo).await {
+                        Ok(model) => Ok((repo, model)),
+                        Err(error) => {
+                            error!(error = %format!("{error:#}"), "failed to initialize app");
+
+                            Err(AppError {
+                                message: error.to_string(),
+                            })
+                        }
+                    }
                 },
                 Message::Initialized,
             ),
@@ -115,7 +130,6 @@ impl App {
                 }
                 (State::Ready { .. }, Err(error)) => {
                     // TODO: Store this in app/ui error state
-                    eprintln!("{error}");
 
                     Task::none()
                 }
@@ -131,7 +145,17 @@ impl App {
                         Task::perform(
                             async move {
                                 mutation.run(&repo).await;
-                                Model::load(&repo).await.map_err(|e| e.to_string())
+
+                                match Model::load(&repo).await {
+                                    Ok(model) => Ok(model),
+                                    Err(error) => {
+                                        error!("failed to initialize app: {error:#}");
+
+                                        Err(AppError {
+                                            message: error.to_string(),
+                                        })
+                                    }
+                                }
                             },
                             Message::Mutated,
                         )
