@@ -129,12 +129,15 @@ impl Ui {
 
     pub fn view<'a>(&'a self, model: &'a Model) -> Element<'a, Message> {
         let profile_selector: Element<'a, Message> = match &self.profile_selector_state {
-            Some(state) => combo_box(
-                &state,
-                "...",
-                model.active_profile().as_ref(),
-                Message::ProfileSelected,
-            )
+            Some(state) => row![
+                text(t!("profile", { "count" => 1 })),
+                combo_box(
+                    state,
+                    "...",
+                    model.active_profile().as_ref(),
+                    Message::ProfileSelected,
+                )
+            ]
             .into(),
             None => space::horizontal().into(),
         };
@@ -142,7 +145,6 @@ impl Ui {
         let top_bar = row![
             button(text(t!("main_top-bar_launch-game", { "count" => 1 }))),
             button(Icon::Wrench),
-            text(t!("profile", { "count" => 1 })),
             profile_selector,
             space::horizontal(),
             button(Icon::Library).on_press(Message::LibraryManagerButtonPressed),
@@ -168,7 +170,7 @@ impl Ui {
             modal(
                 content,
                 self.library_manager
-                    .view(&model)
+                    .view(model)
                     .map(Message::LibraryManager),
                 None,
             )

@@ -1,57 +1,36 @@
-use barnacle_lib::repository::DeployKind;
 use fluent_i18n::t;
 use iced::{
     Element, Task,
-    widget::{button, column, combo_box, container, row, space, text, text_input},
+    widget::{button, column, container, row, space, text, text_input},
 };
-use strum::IntoEnumIterator;
-
-use barnacle_gui::model::Mutation;
-
-pub const ID: &str = "new_game_dialog";
 
 #[derive(Debug, Clone)]
 pub enum Message {
     NameInput(String),
-    DeployKindSelected(DeployKind),
     CancelPressed,
     CreatePressed,
 }
 
-#[derive(Debug)]
-pub struct NewGame {
-    pub name: String,
-    pub deploy_kind: DeployKind,
-}
-
-#[derive(Debug)]
 pub enum Action {
     None,
     Run(Task<Message>),
-    Mutate(Mutation),
+    Create { name: String },
     Cancel,
 }
 
 #[derive(Debug, Clone)]
-pub struct Dialog {
+pub struct Menu {
     name: String,
-    deploy_kind: Option<DeployKind>,
-    deploy_kind_state: combo_box::State<DeployKind>,
 }
 
-impl Dialog {
+impl Menu {
     pub fn new() -> Self {
-        Self {
-            name: "".into(),
-            deploy_kind: None,
-            deploy_kind_state: combo_box::State::new(DeployKind::iter().collect()),
-        }
+        Self { name: "".into() }
     }
 
     /// Reset the dialog state
     pub fn clear(&mut self) {
         self.name.clear();
-        self.deploy_kind = None;
     }
 
     pub fn update(&mut self, message: Message) -> Action {
@@ -60,21 +39,16 @@ impl Dialog {
                 self.name = content;
                 Action::None
             }
-            Message::DeployKindSelected(kind) => {
-                self.deploy_kind = Some(kind);
-                Action::None
-            }
             Message::CancelPressed => {
                 self.clear();
                 Action::Cancel
             }
             Message::CreatePressed => {
                 let name = self.name.clone();
-                let deploy_kind = self.deploy_kind.clone().unwrap();
 
                 self.clear();
 
-                Action::Mutate(Mutation::CreateGame { name, deploy_kind })
+                Action::Create { name }
             }
         }
     }
@@ -84,15 +58,6 @@ impl Dialog {
             row![
                 text(t!("name")),
                 text_input("...", &self.name).on_input(Message::NameInput),
-            ],
-            row![
-                text(t!("library-manager_new-game-dialog_deploy-kind")),
-                combo_box(
-                    &self.deploy_kind_state,
-                    "...",
-                    self.deploy_kind.as_ref(),
-                    Message::DeployKindSelected
-                ),
             ],
             space::vertical(),
             row![
@@ -110,6 +75,6 @@ impl Dialog {
     }
 
     fn validate(&self) -> bool {
-        !self.name.is_empty() && self.deploy_kind.is_some()
+        !self.name.is_empty()
     }
 }

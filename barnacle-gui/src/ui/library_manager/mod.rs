@@ -2,6 +2,7 @@ use barnacle_gui::{
     icons::Icon,
     modal,
     model::{GameItem, Model, Mutation},
+    persistence::state::mod_list::SortColumn,
 };
 use barnacle_lib::repository::Game;
 use fluent_i18n::t;
@@ -10,8 +11,10 @@ use iced::{
     widget::{Column, button, column, container, row, rule, scrollable, space, text},
 };
 
+pub mod edit_profile_menu;
 pub mod game_details;
-pub mod new_game_dialog;
+pub mod new_game_menu;
+pub mod new_profile_menu;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -19,12 +22,13 @@ pub enum Message {
     NewGameButtonPressed,
     ActivateButtonPressed(Game),
     GameRowSelected(GameItem),
-    // Components
-    NewGameDialog(new_game_dialog::Message),
+
     GameDetails(game_details::Message),
+    NewGameMenu(new_game_menu::Message),
+    NewProfileMenu(new_profile_menu::Message),
+    EditProfileMenu(edit_profile_menu::Message),
 }
 
-/// Action used for communicating with the parent component
 #[derive(Debug)]
 pub enum Action {
     None,
@@ -34,24 +38,44 @@ pub enum Action {
 }
 
 #[derive(Debug, Clone)]
+pub enum MenuVisibility {
+    NewGame,
+    NewProfile,
+    EditProfile,
+    None,
+}
+
+#[derive(Debug, Clone)]
 pub struct LibraryManager {
     selected_game: Option<GameItem>,
-    show_new_game_dialog: bool,
-    // Components
+
+    menu_visiblity: MenuVisibility,
+
     game_details: game_details::GameDetails,
-    new_game_dialog: new_game_dialog::Dialog,
+
+    new_game_menu: new_game_menu::Menu,
+    new_profile_menu: new_profile_menu::Menu,
+    edit_profile_menu: edit_profile_menu::Menu,
 }
 
 impl LibraryManager {
     pub fn new() -> Self {
-        let new_game_dialog = new_game_dialog::Dialog::new();
         let game_details = game_details::GameDetails::new();
+
+        let new_game_menu = new_game_menu::Menu::new();
+        let new_profile_menu = new_profile_menu::Menu::new();
+        let edit_profile_menu = edit_profile_menu::Menu::new();
 
         Self {
             selected_game: None,
-            show_new_game_dialog: false,
+
+            menu_visiblity: MenuVisibility::None,
+
             game_details,
-            new_game_dialog,
+
+            new_game_menu,
+            new_profile_menu,
+            edit_profile_menu,
         }
     }
 
@@ -69,7 +93,7 @@ impl LibraryManager {
         match message {
             Message::CloseButtonPressed => Action::Close,
             Message::NewGameButtonPressed => {
-                self.show_new_game_dialog = true;
+                self.menu_visiblity = MenuVisibility::NewGame;
 
                 Action::None
             }
@@ -79,33 +103,71 @@ impl LibraryManager {
 
                 Action::None
             }
-            Message::NewGameDialog(message) => match self.new_game_dialog.update(message) {
-                new_game_dialog::Action::None => Action::None,
-                new_game_dialog::Action::Run(task) => Action::Run(task.map(Message::NewGameDialog)),
-                new_game_dialog::Action::Mutate(mutation) => match mutation {
+            Message::GameDetails(message) => match self.game_details.update(message) {
+                game_details::Action::None => Action::None,
+                game_details::Action::Run(task) => Action::Run(task.map(Message::GameDetails)),
+                game_details::Action::NewProfile => {
+                    self.menu_visiblity = MenuVisibility::NewProfile;
+
+                    Action::None
+                }
+                game_details::Action::EditProfile {
+                    profile,
+                    initial_name,
+                } => {
+                    self.edit_profile_menu.load(profile, initial_name);
+                    self.menu_visiblity = MenuVisibility::EditProfile;
+
+                    Action::None
+                }
+                game_details::Action::Mutate(mutation) => Action::Mutate(mutation),
+            },
+            Message::NewGameMenu(message) => match self.new_game_menu.update(message) {
+                new_game_menu::Action::None => Action::None,
+                new_game_menu::Action::Run(task) => Action::Run(task.map(Message::NewGameMenu)),
+                new_game_menu::Action::Mutate(mutation) => match mutation {
                     Mutation::CreateGame { .. } => {
-                        self.show_new_game_dialog = false;
+                        self.menu_visiblity = MenuVisibility::None;
 
                         Action::Mutate(mutation)
                     }
                     _ => Action::Mutate(mutation),
                 },
-                new_game_dialog::Action::Cancel => {
-                    self.show_new_game_dialog = false;
+                new_game_menu::Action::Cancel => {
+                    self.menu_visiblity = MenuVisibility::None;
                     Action::None
                 }
             },
-            Message::GameDetails(message) => match self.game_details.update(message) {
-                game_details::Action::None => Action::None,
-                game_details::Action::Run(task) => Action::Run(task.map(Message::GameDetails)),
-                game_details::Action::Create { name } => match &self.selected_game {
-                    Some(game) => Action::Mutate(Mutation::CreateProfile {
-                        game: game.handle().clone(),
-                        name,
-                    }),
-                    None => Action::None,
-                },
-                game_details::Action::Mutate(mutation) => Action::Mutate(mutation),
+            Message::NewProfileMenu(message) => match self.new_profile_menu.update(message) {
+                new_profile_menu::Action::None => Action::None,
+                new_profile_menu::Action::Run(task) => {
+                    Action::Run(task.map(Message::NewProfileMenu))
+                }
+                new_profile_menu::Action::Create { name } => {
+                    self.menu_visiblity = MenuVisibility::None;
+
+                    if let Some(game) = &self.selected_game {
+                        Action::Mutate(Mutation::CreateProfile {
+                            game: game.handle(),
+                            name,
+                        })
+                    } else {
+                        Action::None
+                    }
+                }
+                new_profile_menu::Action::Cancel => {
+                    self.menu_visiblity = MenuVisibility::None;
+
+                    Action::None
+                }
+            },
+            Message::EditProfileMenu(message) => match self.edit_profile_menu.update(message) {
+                edit_profile_menu::Action::None => Action::None,
+                edit_profile_menu::Action::Run(task) => {
+                    Action::Run(task.map(Message::EditProfileMenu))
+                }
+                edit_profile_menu::Action::Mutate(mutation) => Action::Mutate(mutation),
+                edit_profile_menu::Action::Cancel => Action::None,
             },
         }
     }
@@ -145,12 +207,19 @@ impl LibraryManager {
         ]
         .into();
 
-        container(if self.show_new_game_dialog {
-            modal(
-                content,
-                self.new_game_dialog.view().map(Message::NewGameDialog),
-                None,
-            )
+        let modal_content: Option<Element<'_, Message>> = match self.menu_visiblity {
+            MenuVisibility::NewGame => Some(self.new_game_menu.view().map(Message::NewGameMenu)),
+            MenuVisibility::NewProfile => {
+                Some(self.new_profile_menu.view().map(Message::NewProfileMenu))
+            }
+            MenuVisibility::EditProfile => {
+                Some(self.edit_profile_menu.view().map(Message::EditProfileMenu))
+            }
+            MenuVisibility::None => None,
+        };
+
+        container(if let Some(modal_content) = modal_content {
+            modal(content, modal_content, None)
         } else {
             content
         })

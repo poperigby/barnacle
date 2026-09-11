@@ -22,12 +22,12 @@ pub enum Action {
 }
 
 #[derive(Debug, Clone)]
-pub struct EditDialog {
+pub struct Menu {
     profile: Option<Profile>,
     name: String,
 }
 
-impl EditDialog {
+impl Menu {
     pub fn new() -> Self {
         Self {
             profile: None,
@@ -36,7 +36,7 @@ impl EditDialog {
     }
 
     /// Load a new [`Profile`] for editing.
-    pub fn open(&mut self, profile: Profile, initial_name: String) {
+    pub fn load(&mut self, profile: Profile, initial_name: String) {
         self.profile = Some(profile.clone());
         self.name = initial_name;
     }
