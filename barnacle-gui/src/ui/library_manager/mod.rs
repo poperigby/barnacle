@@ -2,7 +2,6 @@ use barnacle_gui::{
     icons::Icon,
     modal,
     model::{GameItem, Model, Mutation},
-    persistence::state::mod_list::SortColumn,
 };
 use barnacle_lib::repository::Game;
 use fluent_i18n::t;
@@ -11,10 +10,10 @@ use iced::{
     widget::{Column, button, column, container, row, rule, scrollable, space, text},
 };
 
-pub mod edit_profile_menu;
+use crate::ui::library_manager::menus::{edit_profile, new_game, new_profile};
+
 pub mod game_details;
-pub mod new_game_menu;
-pub mod new_profile_menu;
+pub mod menus;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -24,9 +23,9 @@ pub enum Message {
     GameRowSelected(GameItem),
 
     GameDetails(game_details::Message),
-    NewGameMenu(new_game_menu::Message),
-    NewProfileMenu(new_profile_menu::Message),
-    EditProfileMenu(edit_profile_menu::Message),
+    NewGameMenu(new_game::Message),
+    NewProfileMenu(new_profile::Message),
+    EditProfileMenu(edit_profile::Message),
 }
 
 #[derive(Debug)]
@@ -53,18 +52,18 @@ pub struct LibraryManager {
 
     game_details: game_details::GameDetails,
 
-    new_game_menu: new_game_menu::Menu,
-    new_profile_menu: new_profile_menu::Menu,
-    edit_profile_menu: edit_profile_menu::Menu,
+    new_game_menu: new_game::Menu,
+    new_profile_menu: new_profile::Menu,
+    edit_profile_menu: edit_profile::Menu,
 }
 
 impl LibraryManager {
     pub fn new() -> Self {
         let game_details = game_details::GameDetails::new();
 
-        let new_game_menu = new_game_menu::Menu::new();
-        let new_profile_menu = new_profile_menu::Menu::new();
-        let edit_profile_menu = edit_profile_menu::Menu::new();
+        let new_game_menu = new_game::Menu::new();
+        let new_profile_menu = new_profile::Menu::new();
+        let edit_profile_menu = edit_profile::Menu::new();
 
         Self {
             selected_game: None,
@@ -123,9 +122,9 @@ impl LibraryManager {
                 game_details::Action::Mutate(mutation) => Action::Mutate(mutation),
             },
             Message::NewGameMenu(message) => match self.new_game_menu.update(message) {
-                new_game_menu::Action::None => Action::None,
-                new_game_menu::Action::Run(task) => Action::Run(task.map(Message::NewGameMenu)),
-                new_game_menu::Action::Mutate(mutation) => match mutation {
+                new_game::Action::None => Action::None,
+                new_game::Action::Run(task) => Action::Run(task.map(Message::NewGameMenu)),
+                new_game::Action::Mutate(mutation) => match mutation {
                     Mutation::CreateGame { .. } => {
                         self.menu_visiblity = MenuVisibility::None;
 
@@ -133,17 +132,15 @@ impl LibraryManager {
                     }
                     _ => Action::Mutate(mutation),
                 },
-                new_game_menu::Action::Cancel => {
+                new_game::Action::Cancel => {
                     self.menu_visiblity = MenuVisibility::None;
                     Action::None
                 }
             },
             Message::NewProfileMenu(message) => match self.new_profile_menu.update(message) {
-                new_profile_menu::Action::None => Action::None,
-                new_profile_menu::Action::Run(task) => {
-                    Action::Run(task.map(Message::NewProfileMenu))
-                }
-                new_profile_menu::Action::Create { name } => {
+                new_profile::Action::None => Action::None,
+                new_profile::Action::Run(task) => Action::Run(task.map(Message::NewProfileMenu)),
+                new_profile::Action::Create { name } => {
                     self.menu_visiblity = MenuVisibility::None;
 
                     if let Some(game) = &self.selected_game {
@@ -155,19 +152,17 @@ impl LibraryManager {
                         Action::None
                     }
                 }
-                new_profile_menu::Action::Cancel => {
+                new_profile::Action::Cancel => {
                     self.menu_visiblity = MenuVisibility::None;
 
                     Action::None
                 }
             },
             Message::EditProfileMenu(message) => match self.edit_profile_menu.update(message) {
-                edit_profile_menu::Action::None => Action::None,
-                edit_profile_menu::Action::Run(task) => {
-                    Action::Run(task.map(Message::EditProfileMenu))
-                }
-                edit_profile_menu::Action::Mutate(mutation) => Action::Mutate(mutation),
-                edit_profile_menu::Action::Cancel => Action::None,
+                edit_profile::Action::None => Action::None,
+                edit_profile::Action::Run(task) => Action::Run(task.map(Message::EditProfileMenu)),
+                edit_profile::Action::Mutate(mutation) => Action::Mutate(mutation),
+                edit_profile::Action::Cancel => Action::None,
             },
         }
     }
