@@ -3,6 +3,11 @@ use iced::{
     widget::{center, container, mouse_area, opaque, stack},
 };
 
+pub mod icons;
+pub mod log;
+pub mod model;
+pub mod persistence;
+
 pub fn modal<'a, Message>(
     base: impl Into<Element<'a, Message>>,
     content: impl Into<Element<'a, Message>>,
@@ -32,7 +37,7 @@ where
             mouse_area
         })
     ]
-    .width(Length::Fill)
-    .height(Length::Fill)
-    .into()
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .into()
 }

@@ -5,7 +5,7 @@ use iced::{
     widget::{button, column, container, row, space, text, text_input},
 };
 
-use crate::model::Mutation;
+use barnacle_gui::model::Mutation;
 
 #[derive(Debug, Clone)]
 pub enum Message {

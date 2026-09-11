@@ -1,21 +1,18 @@
 //! Entrypoint of the application. This is reponsible for loading the application data and passing
 //! it to the main UI that lives in [`Ui`].
 
+use barnacle_gui::{
+    log,
+    model::Model,
+    persistence::{config::ConfigStore, state::UiStateStore},
+};
 use barnacle_lib::Repository;
 use fluent_i18n::i18n;
 use iced::{Element, Task, Theme, application, widget::text, window::Settings};
 use tracing::error;
 
-use crate::{
-    model::Model,
-    persistence::{config::ConfigStore, state::UiStateStore},
-    ui::Ui,
-};
+use crate::ui::Ui;
 
-pub mod icons;
-pub mod log;
-pub mod model;
-pub mod persistence;
 pub mod ui;
 
 i18n!("locales", fallback = "en-US");

@@ -1,16 +1,16 @@
-use barnacle_gui::modal;
+use barnacle_gui::{
+    icons::Icon,
+    modal,
+    model::{Model, Mutation, ProfileItem},
+    persistence::state::UiStateStore,
+};
 use fluent_i18n::t;
 use iced::{
     Element, Length, Task,
     widget::{button, column, combo_box, row, space, text},
 };
 
-use crate::{
-    icons::Icon,
-    model::{Model, Mutation, ProfileItem},
-    persistence::state::UiStateStore,
-    ui::{add_mod_dialog::AddModDialog, library_manager::LibraryManager, mod_list::ModList},
-};
+use crate::ui::{add_mod_dialog::AddModDialog, library_manager::LibraryManager, mod_list::ModList};
 
 pub mod add_mod_dialog;
 pub mod library_manager;

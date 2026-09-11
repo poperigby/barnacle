@@ -1,8 +1,8 @@
-use crate::{
+use barnacle_gui::{
     icons::Icon,
+    modal,
     model::{GameItem, Model, Mutation},
 };
-use barnacle_gui::modal;
 use barnacle_lib::repository::Game;
 use fluent_i18n::t;
 use iced::{

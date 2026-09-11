@@ -1,13 +1,12 @@
 use std::{env, path::PathBuf};
 
+use barnacle_gui::icons::Icon;
 use fluent_i18n::t;
 use iced::{
     Element, Task,
     widget::{button, column, container, row, space, text, text_input},
 };
 use rfd::AsyncFileDialog;
-
-use crate::icons::Icon;
 
 #[derive(Debug, Clone)]
 pub enum Message {

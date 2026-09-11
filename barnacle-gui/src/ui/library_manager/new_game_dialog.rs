@@ -6,7 +6,7 @@ use iced::{
 };
 use strum::IntoEnumIterator;
 
-use crate::model::Mutation;
+use barnacle_gui::model::Mutation;
 
 pub const ID: &str = "new_game_dialog";
 

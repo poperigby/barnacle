@@ -4,7 +4,9 @@ use barnacle_lib::fs::state_dir;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 
-use crate::ui::mod_list::state::SortState;
+use crate::persistence::state::mod_list::{ModList, SortState};
+
+pub mod mod_list;
 
 const FILE_NAME: &str = "gui.toml";
 
@@ -35,15 +37,16 @@ impl UiStateStore {
     }
 }
 
-/// The GUI state, serialized to TOML.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct UiState {
-    pub mod_list: ModList,
+impl Default for UiStateStore {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
+/// The GUI state, serialized to TOML.
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
-struct ModList {
-    pub sort_state: SortState,
+struct UiState {
+    pub mod_list: ModList,
 }
 
 impl UiState {
@@ -64,13 +67,5 @@ impl UiState {
         let contents = toml::to_string_pretty(self).unwrap();
 
         fs::write(state_dir().join(FILE_NAME), contents).unwrap();
-    }
-}
-
-impl Default for UiState {
-    fn default() -> Self {
-        Self {
-            mod_list: ModList::default(),
-        }
     }
 }
