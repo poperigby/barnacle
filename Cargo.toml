@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = [ "barnacle-cli",
+members = [ "barnacle-cli", "barnacle-deployers",
     "barnacle-gui",
     "barnacle-lib",
 ]

@@ -1,0 +1,11 @@
+[package]
+name = "barnacle-deployers"
+version.workspace = true
+edition.workspace = true
+homepage.workspace = true
+
+[dependencies]
+openmw-config = "1.1.0"
+
+[lints]
+workspace = true

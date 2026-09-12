@@ -578,6 +578,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "barnacle-deployers"
+version = "0.1.0"
+dependencies = [
+ "openmw-config",
+]
+
+[[package]]
 name = "barnacle-gui"
 version = "0.1.0"
 dependencies = [
@@ -3911,6 +3918,15 @@ name = "once_cell_polyfill"
 version = "1.70.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
+
+[[package]]
+name = "openmw-config"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "016350068cba3d4d4f93c85448c1ad9d1d34934a56c11bd2813dcb57f88dd849"
+dependencies = [
+ "windows-sys 0.61.2",
+]
 
 [[package]]
 name = "orbclient"
