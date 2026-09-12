@@ -32,8 +32,12 @@ pub struct Profile {
 }
 
 impl Profile {
-    pub(crate) fn from_id(id: i32, db: Db, cfg: Cfg) -> Self {
-        Self { id, db, cfg }
+    pub(crate) fn from_id(id: i32, db: &Db, cfg: &Cfg) -> Self {
+        Self {
+            id,
+            db: db.clone(),
+            cfg: cfg.clone(),
+        }
     }
 
     async fn model(&self, conn: &impl ConnectionTrait) -> Result<Model, LoadModelError> {
@@ -134,7 +138,7 @@ impl Profile {
         Ok(Self::resolve_active_id(db, game)
             .await
             .map_err(ActiveError::Resolve)?
-            .map(|id| Profile::from_id(id, db.clone(), cfg.clone())))
+            .map(|id| Profile::from_id(id, &db, &cfg)))
     }
 
     // Returns the active profile ID, selecting a fallback if none is set.
@@ -217,7 +221,7 @@ impl Profile {
             })?
             .last_insert_id;
 
-        let profile = Profile::from_id(id, db.clone(), cfg.clone());
+        let profile = Profile::from_id(id, &db, &cfg);
         let dir = profile.dir().await.map_err(AddError::Dir)?;
         fs::create_dir_all(&dir).map_err(|source| AddError::CreateDir { path: dir, source })?;
 
@@ -234,7 +238,7 @@ impl Profile {
             .await
             .map_err(ListError)?
             .iter()
-            .map(|model| Profile::from_id(model.id, db.clone(), cfg.clone()))
+            .map(|model| Profile::from_id(model.id, &db, &cfg))
             .collect())
     }
 
@@ -253,7 +257,7 @@ impl Profile {
                     name: name.to_string(),
                     source,
                 })?
-                .map(|model| Profile::from_id(model.id, db.clone(), cfg.clone())),
+                .map(|model| Profile::from_id(model.id, &db, &cfg)),
         )
     }
 

@@ -2,7 +2,10 @@
 
 use thiserror::Error;
 
-use crate::repository::handles::error::{GetFieldError, LoadModelError, ModelKind};
+use crate::{
+    mod_,
+    repository::handles::error::{GetFieldError, LoadModelError, ModelKind},
+};
 
 impl super::ModEntry {
     pub(crate) fn field_error(&self, field: &'static str, source: LoadModelError) -> GetFieldError {
@@ -11,28 +14,26 @@ impl super::ModEntry {
 }
 
 #[derive(Debug, Error)]
-pub enum RelatedModError {
-    #[error("could not load mod entry")]
+pub enum ModError {
+    #[error("could not load mod entry to query mod_id")]
     LoadEntry(#[source] LoadModelError),
-    #[error("could not load mod for entry")]
-    LoadMod(#[source] sea_orm::DbErr),
-    #[error("mod for entry no longer exists")]
-    StaleMod,
 }
 
 #[derive(Debug, Error)]
-pub enum RelatedProfileError {
-    #[error("could not load mod entry")]
-    LoadEntry(#[source] LoadModelError),
-    #[error("could not load profile for entry")]
-    LoadProfile(#[source] sea_orm::DbErr),
-    #[error("profile for entry no longer exists")]
-    StaleProfile,
+pub enum NameError {
+    #[error("could not load related mod")]
+    Load(#[source] ModError),
+    #[error("could not query name field from mod")]
+    Name(#[source] GetFieldError),
 }
 
 #[derive(Debug, Error)]
-#[error("could not get mod entry name")]
-pub struct NameError(#[source] pub RelatedModError);
+pub enum DirError {
+    #[error("could not load related mod")]
+    Load(#[source] ModError),
+    #[error("could not query directory field from mod")]
+    Dir(#[source] mod_::DirError),
+}
 
 #[derive(Debug, Error)]
 pub enum SetEnabledError {
@@ -64,10 +65,14 @@ pub enum AddError {
 
 #[derive(Debug, Error)]
 pub enum RemoveError {
-    #[error("could not get mod name")]
-    ModName(#[source] RelatedModError),
-    #[error("could not get profile name")]
-    ProfileName(#[source] RelatedProfileError),
+    #[error("could not load related mod")]
+    Mod(#[source] ModError),
+    #[error("could not load related mod's name")]
+    ModName(#[source] GetFieldError),
+    #[error("could not load parent profile")]
+    Profile(#[source] ParentError),
+    #[error("could not get parent profile's name")]
+    ProfileName(#[source] GetFieldError),
     #[error("could not delete mod entry")]
     Delete(#[source] sea_orm::DbErr),
 }

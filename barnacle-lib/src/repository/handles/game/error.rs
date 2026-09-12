@@ -3,10 +3,7 @@ use std::{io, path::PathBuf};
 use thiserror::Error;
 
 use crate::repository::{
-    handles::{
-        error::{GetFieldError, LoadModelError, ModelKind},
-        mod_ as mod_handle, profile,
-    },
+    handles::error::{GetFieldError, LoadModelError, ModelKind},
     state,
 };
 

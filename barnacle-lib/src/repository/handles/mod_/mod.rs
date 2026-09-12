@@ -40,8 +40,12 @@ pub struct Mod {
 }
 
 impl Mod {
-    pub(crate) fn from_id(id: i32, db: Db, cfg: Cfg) -> Self {
-        Self { id, db, cfg }
+    pub(crate) fn from_id(id: i32, db: &Db, cfg: &Cfg) -> Self {
+        Self {
+            id,
+            db: db.clone(),
+            cfg: cfg.clone(),
+        }
     }
 
     async fn model(&self, conn: &impl ConnectionTrait) -> Result<Model, LoadModelError> {
@@ -111,7 +115,7 @@ impl Mod {
                 }
             })?
             .last_insert_id;
-        let mod_ = Mod::from_id(id, db.clone(), cfg.clone());
+        let mod_ = Mod::from_id(id, &db, &cfg);
 
         // TODO: Only attempt to open the archive if the input_path is an archive
         if let Some(path) = input_path {
@@ -141,7 +145,7 @@ impl Mod {
             .await
             .map_err(ListError)?
             .iter()
-            .map(|model| Mod::from_id(model.id, db.clone(), cfg.clone()))
+            .map(|model| Mod::from_id(model.id, &db, &cfg))
             .collect())
     }
 

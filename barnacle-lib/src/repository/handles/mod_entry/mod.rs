@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, path::PathBuf};
 
 mod error;
 
@@ -14,11 +14,7 @@ use crate::repository::{
     config::Cfg,
     db::{
         Db,
-        models::{
-            mod_entries::{ActiveModel, COLUMN, Entity, Model},
-            mods::{Entity as ModEntity, Model as ModModel},
-            profiles::{Entity as ProfileEntity, Model as ProfileModel},
-        },
+        models::mod_entries::{ActiveModel, COLUMN, Entity, Model},
     },
     handles::error::{GetFieldError, LoadModelError, ModelKind, is_unique_violation},
 };
@@ -54,36 +50,34 @@ impl ModEntry {
         Ok(self.model(conn).await?.into())
     }
 
-    async fn profile_model(&self) -> Result<ProfileModel, RelatedProfileError> {
-        ProfileEntity::find_by_id(
-            self.model(self.db.conn())
-                .await
-                .map_err(RelatedProfileError::LoadEntry)?
-                .profile_id,
-        )
-        .one(self.db.conn())
-        .await
-        .map_err(RelatedProfileError::LoadProfile)?
-        .ok_or(RelatedProfileError::StaleProfile)
-    }
+    async fn mod_(&self) -> Result<Mod, ModError> {
+        let id = self
+            .model(self.db.conn())
+            .await
+            .map_err(ModError::LoadEntry)?
+            .mod_id;
 
-    async fn mod_model(&self) -> Result<ModModel, RelatedModError> {
-        ModEntity::find_by_id(
-            self.model(self.db.conn())
-                .await
-                .map_err(RelatedModError::LoadEntry)?
-                .mod_id,
-        )
-        .one(self.db.conn())
-        .await
-        .map_err(RelatedModError::LoadMod)?
-        .ok_or(RelatedModError::StaleMod)
+        Ok(Mod::from_id(id, &self.db, &self.cfg))
     }
 
     // Fields
 
     pub async fn name(&self) -> Result<String, NameError> {
-        Ok(self.mod_model().await.map_err(NameError)?.name)
+        self.mod_()
+            .await
+            .map_err(NameError::Load)?
+            .name()
+            .await
+            .map_err(NameError::Name)
+    }
+
+    pub async fn dir(&self) -> Result<PathBuf, DirError> {
+        self.mod_()
+            .await
+            .map_err(DirError::Load)?
+            .dir()
+            .await
+            .map_err(DirError::Dir)
     }
 
     pub async fn enabled(&self) -> Result<bool, GetFieldError> {
@@ -123,8 +117,8 @@ impl ModEntry {
                 .await
                 .map_err(ParentError::Load)?
                 .profile_id,
-            self.db.clone(),
-            self.cfg.clone(),
+            &self.db,
+            &self.cfg,
         ))
     }
 
@@ -173,12 +167,21 @@ impl ModEntry {
 
     /// Remove the given [`ModEntry`] from the list
     pub async fn remove(self) -> Result<(), RemoveError> {
-        let mod_name = self.mod_model().await.map_err(RemoveError::ModName)?.name;
-        let profile_name = self
-            .profile_model()
+        let mod_name = self
+            .mod_()
             .await
-            .map_err(RemoveError::ProfileName)?
-            .name;
+            .map_err(RemoveError::Mod)?
+            .name()
+            .await
+            .map_err(RemoveError::ModName)?;
+
+        let profile_name = self
+            .parent()
+            .await
+            .map_err(RemoveError::Profile)?
+            .name()
+            .await
+            .map_err(RemoveError::ProfileName)?;
 
         Entity::delete_by_id(self.id)
             .exec(self.db.conn())

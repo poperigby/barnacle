@@ -1,5 +1,6 @@
 pub mod fs;
 pub mod repository;
+pub mod deployers;
 
 pub use repository::{DeployKind, Game, Mod, ModEntry, Profile, Repository, Tool};
 
