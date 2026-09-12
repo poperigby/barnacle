@@ -45,11 +45,11 @@ impl Mod {
     }
 
     async fn model(&self, conn: &impl ConnectionTrait) -> Result<Model, LoadModelError> {
-        Ok(Entity::find_by_id(self.id)
+        Entity::find_by_id(self.id)
             .one(conn)
             .await
             .map_err(|source| LoadModelError::query(ModelKind::Mod, self.id, source))?
-            .ok_or_else(|| LoadModelError::stale(ModelKind::Mod, self.id))?)
+            .ok_or_else(|| LoadModelError::stale(ModelKind::Mod, self.id))
     }
 
     // Fields
@@ -171,13 +171,11 @@ impl PartialEq for Mod {
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        Repository, game::AddModError, mod_::AddError as ModAddError, repository::DeployKind,
-    };
+    use crate::{Repository, mod_, repository::DeployKind};
 
     #[tokio::test]
     async fn test_add() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game = repo
             .add_game("Morrowind", DeployKind::OpenMW)
@@ -190,7 +188,7 @@ mod test {
 
     #[tokio::test]
     async fn test_add_duplicate() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game = repo
             .add_game("Morrowind", DeployKind::OpenMW)
@@ -200,13 +198,13 @@ mod test {
 
         assert!(matches!(
             game.add_mod("Test", None).await,
-            Err(AddModError(ModAddError::DuplicateName { .. }))
+            Err(mod_::AddError::DuplicateName { .. })
         ))
     }
 
     #[tokio::test]
     async fn test_remove() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game = repo
             .add_game("Skyrim", DeployKind::CreationEngine)
@@ -226,7 +224,7 @@ mod test {
 
     #[tokio::test]
     async fn test_list() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
         let game = repo
             .add_game("Skyrim", DeployKind::CreationEngine)
             .await
@@ -243,7 +241,7 @@ mod test {
 
     #[tokio::test]
     async fn test_parent() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game = repo
             .add_game("Morrowind", DeployKind::OpenMW)
@@ -256,7 +254,7 @@ mod test {
 
     #[tokio::test]
     async fn test_name() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         repo.add_game("Fallout: New Vegas", DeployKind::Gamebryo)
             .await

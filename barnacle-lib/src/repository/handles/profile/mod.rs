@@ -277,16 +277,11 @@ impl PartialEq for Profile {
 
 #[cfg(test)]
 mod test {
-    use std::assert_matches;
-
-    use crate::{
-        Repository, game::AddProfileError, profile::AddError as ProfileAddError,
-        repository::DeployKind,
-    };
+    use crate::{Repository, profile, repository::DeployKind};
 
     #[tokio::test]
     async fn test_add() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game = repo
             .add_game("Morrowind", DeployKind::OpenMW)
@@ -299,7 +294,7 @@ mod test {
 
     #[tokio::test]
     async fn test_add_duplicate() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game = repo
             .add_game("Morrowind", DeployKind::OpenMW)
@@ -309,13 +304,13 @@ mod test {
 
         assert!(matches!(
             game.add_profile("Test").await,
-            Err(AddProfileError(ProfileAddError::DuplicateName { .. }))
+            Err(profile::AddError::DuplicateName { .. })
         ))
     }
 
     #[tokio::test]
     async fn test_remove() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
         let game = repo
             .add_game("Skyrim", DeployKind::CreationEngine)
             .await
@@ -340,7 +335,7 @@ mod test {
 
     #[tokio::test]
     async fn test_list() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
         let game = repo
             .add_game("Skyrim", DeployKind::CreationEngine)
             .await
@@ -355,7 +350,7 @@ mod test {
 
     #[tokio::test]
     async fn test_parent() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game = repo
             .add_game("Skyrim", DeployKind::CreationEngine)
@@ -368,7 +363,7 @@ mod test {
 
     #[tokio::test]
     async fn test_activate() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game = repo
             .add_game("Morrowind", DeployKind::OpenMW)
@@ -388,7 +383,7 @@ mod test {
 
     #[tokio::test]
     async fn test_remove_made_next_profile_active() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
         let game = repo
             .add_game("Skyrim", DeployKind::CreationEngine)
             .await
@@ -406,7 +401,7 @@ mod test {
 
     #[tokio::test]
     async fn test_switching_games_preserves_each_games_active_profile() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game1 = repo
             .add_game("Skyrim", DeployKind::CreationEngine)

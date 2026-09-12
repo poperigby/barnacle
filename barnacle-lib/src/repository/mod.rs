@@ -58,10 +58,10 @@ impl Repository {
         Game::active(&self.db, &self.cfg).await
     }
 
+    /// An in-memory version of a [`Repository`] with a database and configuration
+    /// file, for use in tests.
     #[cfg(test)]
-    /// A mock version of a [`Repository`] with an in-memory database and configuration
-    /// file, for using in tests.
-    pub(crate) async fn mock() -> Self {
+    pub(crate) async fn in_memory() -> Self {
         Self {
             db: Db::in_memory().await.unwrap(),
             cfg: Arc::new(RwLock::new(CoreConfig::mock())),

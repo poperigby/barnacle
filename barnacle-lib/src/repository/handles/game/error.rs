@@ -133,27 +133,3 @@ pub enum SetActiveProfileIdError {
     #[error("could not update active profile ID")]
     Update(#[source] sea_orm::DbErr),
 }
-
-#[derive(Debug, Error)]
-#[error("could not load active profile for game")]
-pub struct ActiveProfileError(#[source] pub profile::ActiveError);
-
-#[derive(Debug, Error)]
-#[error("could not search profiles for game")]
-pub struct SearchProfileError(#[source] pub profile::SearchError);
-
-#[derive(Debug, Error)]
-#[error("could not add profile to game")]
-pub struct AddProfileError(#[source] pub profile::AddError);
-
-#[derive(Debug, Error)]
-#[error("could not list profiles for game")]
-pub struct ProfilesError(#[source] pub profile::ListError);
-
-#[derive(Debug, Error)]
-#[error("could not list mods for game")]
-pub struct ModsError(#[source] pub mod_handle::ListError);
-
-#[derive(Debug, Error)]
-#[error("could not add mod to game")]
-pub struct AddModError(#[source] pub mod_handle::AddError);

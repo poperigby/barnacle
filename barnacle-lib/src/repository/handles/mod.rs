@@ -9,10 +9,12 @@ pub mod game;
 pub mod mod_;
 pub mod mod_entry;
 pub mod profile;
+pub mod target;
 pub mod tool;
 
 pub use game::Game;
 pub use mod_::Mod;
 pub use mod_entry::ModEntry;
 pub use profile::Profile;
+pub use target::Target;
 pub use tool::Tool;

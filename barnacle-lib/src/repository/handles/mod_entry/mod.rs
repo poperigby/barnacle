@@ -222,7 +222,7 @@ mod test {
 
     #[tokio::test]
     async fn test_add() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game = repo
             .add_game("Morrowind", DeployKind::OpenMW)
@@ -241,7 +241,7 @@ mod test {
 
     #[tokio::test]
     async fn test_remove() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game = repo
             .add_game("Morrowind", DeployKind::OpenMW)
@@ -291,7 +291,7 @@ mod test {
 
     #[tokio::test]
     async fn test_parent() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game = repo
             .add_game("Skyrim", DeployKind::CreationEngine)
@@ -312,7 +312,7 @@ mod test {
 
     #[tokio::test]
     async fn test_name() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game = repo
             .add_game("Morrowind", DeployKind::OpenMW)
@@ -332,7 +332,7 @@ mod test {
 
     #[tokio::test]
     async fn test_enabled() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game = repo
             .add_game("Morrowind", DeployKind::OpenMW)

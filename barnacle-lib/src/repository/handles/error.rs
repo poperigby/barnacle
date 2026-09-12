@@ -9,6 +9,7 @@ pub enum ModelKind {
     Mod,
     ModEntry,
     Tool,
+    Target,
 }
 
 #[derive(Debug, Error)]

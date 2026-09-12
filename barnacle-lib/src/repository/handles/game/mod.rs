@@ -12,20 +12,29 @@ use tracing::info;
 
 pub use error::*;
 
-use crate::repository::{
-    Cfg, DeployKind,
-    db::{
-        Db,
-        models::games::{ActiveModel, Entity, Model},
-    },
-    handles::{
-        error::{
-            GetFieldError, LoadModelError, ModelKind, is_unique_violation, map_transaction_error,
+use crate::{
+    mod_, profile,
+    repository::{
+        Cfg, DeployKind,
+        db::{
+            Db,
+            models::{
+                games::{ActiveModel, Entity, Model},
+                mods,
+            },
         },
-        mod_::Mod,
-        profile::Profile,
+        handles::{
+            Target,
+            error::{
+                GetFieldError, LoadModelError, ModelKind, is_unique_violation,
+                map_transaction_error,
+            },
+            mod_::Mod,
+            profile::Profile,
+            target,
+        },
+        state,
     },
-    state,
 };
 
 /// Represents a game entity in the Barnacle system.
@@ -334,40 +343,39 @@ impl Game {
         Ok(())
     }
 
-    pub async fn active_profile(&self) -> Result<Option<Profile>, ActiveProfileError> {
-        Profile::active(&self.db, &self.cfg, &self)
-            .await
-            .map_err(ActiveProfileError)
+    pub async fn active_profile(&self) -> Result<Option<Profile>, profile::ActiveError> {
+        Profile::active(&self.db, &self.cfg, self).await
     }
 
-    pub async fn search_profile(&self, name: &str) -> Result<Option<Profile>, SearchProfileError> {
-        Profile::search(self.db.clone(), self.cfg.clone(), self, name)
-            .await
-            .map_err(SearchProfileError)
+    pub async fn search_profile(
+        &self,
+        name: &str,
+    ) -> Result<Option<Profile>, profile::SearchError> {
+        Profile::search(self.db.clone(), self.cfg.clone(), self, name).await
     }
 
-    pub async fn add_profile(&self, name: &str) -> Result<Profile, AddProfileError> {
-        Profile::add(&self.db, &self.cfg, self, name)
-            .await
-            .map_err(AddProfileError)
+    pub async fn add_profile(&self, name: &str) -> Result<Profile, profile::AddError> {
+        Profile::add(&self.db, &self.cfg, self, name).await
     }
 
-    pub async fn profiles(&self) -> Result<Vec<Profile>, ProfilesError> {
-        Profile::list(&self.db, &self.cfg, self)
-            .await
-            .map_err(ProfilesError)
+    pub async fn profiles(&self) -> Result<Vec<Profile>, profile::ListError> {
+        Profile::list(&self.db, &self.cfg, self).await
     }
 
-    pub async fn mods(&self) -> Result<Vec<Mod>, ModsError> {
-        Mod::list(&self.db.clone(), &self.cfg.clone(), self)
-            .await
-            .map_err(ModsError)
+    pub async fn add_target(&self, name: &str, path: &Path) -> Result<Target, target::AddError> {
+        Target::add(&self.db, &self.cfg, self, name, path).await
     }
 
-    pub async fn add_mod(&self, name: &str, path: Option<&Path>) -> Result<Mod, AddModError> {
-        Mod::add(self.db.clone(), self.cfg.clone(), self, name, path)
-            .await
-            .map_err(AddModError)
+    pub async fn targets(&self) -> Result<Vec<Target>, target::ListError> {
+        Target::list(&self.db, &self.cfg, self).await
+    }
+
+    pub async fn add_mod(&self, name: &str, path: Option<&Path>) -> Result<Mod, mod_::AddError> {
+        Mod::add(self.db.clone(), self.cfg.clone(), self, name, path).await
+    }
+
+    pub async fn mods(&self) -> Result<Vec<Mod>, mod_::ListError> {
+        Mod::list(&self.db.clone(), &self.cfg.clone(), self).await
     }
 }
 
@@ -387,7 +395,7 @@ mod test {
 
     #[tokio::test]
     async fn test_add() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game1 = repo
             .add_game("Skyrim", DeployKind::CreationEngine)
@@ -410,7 +418,7 @@ mod test {
 
     #[tokio::test]
     async fn test_add_duplicate() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let _game = repo
             .add_game("Morrowind", DeployKind::OpenMW)
@@ -425,7 +433,7 @@ mod test {
 
     #[tokio::test]
     async fn test_remove() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game = repo
             .add_game("Skyrim", DeployKind::CreationEngine)
@@ -450,7 +458,7 @@ mod test {
 
     #[tokio::test]
     async fn test_remove_made_next_game_active() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
         let game1 = repo
             .add_game("Skyrim", DeployKind::CreationEngine)
             .await
@@ -469,7 +477,7 @@ mod test {
 
     #[tokio::test]
     async fn test_list() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         assert_eq!(repo.games().await.unwrap().len(), 0);
 
@@ -482,7 +490,7 @@ mod test {
 
     #[tokio::test]
     async fn test_name() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game = repo
             .add_game("Fallout: New Vegas", DeployKind::Gamebryo)
@@ -494,7 +502,7 @@ mod test {
 
     #[tokio::test]
     async fn test_set_name() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game = repo
             .add_game("Skyrim", DeployKind::CreationEngine)
@@ -510,7 +518,7 @@ mod test {
 
     #[tokio::test]
     async fn test_deploy_kind() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game = repo
             .add_game("Fallout: New Vegas", DeployKind::Gamebryo)
@@ -522,7 +530,7 @@ mod test {
 
     #[tokio::test]
     async fn test_dir() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game = repo
             .add_game("Fallout: New Vegas", DeployKind::Gamebryo)
@@ -540,7 +548,7 @@ mod test {
 
     #[tokio::test]
     async fn test_activate() {
-        let repo = Repository::mock().await;
+        let repo = Repository::in_memory().await;
 
         let game = repo
             .add_game("Morrowind", DeployKind::OpenMW)
