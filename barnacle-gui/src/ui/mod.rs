@@ -18,6 +18,7 @@ pub mod mod_list;
 
 #[derive(Debug, Clone)]
 pub enum Message {
+    DeployButtonPressed,
     AddModButtonPressed,
     LibraryManagerButtonPressed,
     ProfileSelected(ProfileItem),
@@ -33,6 +34,7 @@ pub enum Action {
     None,
     Run(Task<Message>),
     Mutate(Mutation),
+    Deploy,
 }
 
 #[derive(Debug, Clone)]
@@ -78,6 +80,7 @@ impl Ui {
 
     pub fn update(&mut self, message: Message) -> Action {
         match message {
+            Message::DeployButtonPressed => Action::Deploy,
             Message::AddModButtonPressed => {
                 self.show_add_mod_dialog = true;
 
@@ -144,6 +147,7 @@ impl Ui {
 
         let top_bar = row![
             button(text(t!("main_top-bar_launch-game", { "count" => 1 }))),
+            button(text(t!("main_top-bar_deploy"))).on_press(Message::DeployButtonPressed),
             button(Icon::Wrench),
             profile_selector,
             space::horizontal(),
