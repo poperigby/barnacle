@@ -141,25 +141,6 @@ impl Game {
             .deploy_kind)
     }
 
-    pub async fn set_deploy_kind(
-        &self,
-        new_deploy_kind: DeployKind,
-    ) -> Result<(), SetDeployKindError> {
-        let mut active_model = self
-            .active_model(self.db.conn())
-            .await
-            .map_err(SetDeployKindError::Load)?;
-
-        active_model.deploy_kind.set_if_not_equals(new_deploy_kind);
-
-        active_model
-            .update(self.db.conn())
-            .await
-            .map_err(SetDeployKindError::Update)?;
-
-        Ok(())
-    }
-
     pub async fn dir(&self) -> Result<PathBuf, DirError> {
         let name = self.name().await.map_err(|source| DirError { source })?;
 
