@@ -12,9 +12,14 @@ impl OpenMw {
 
         Self { config }
     }
-    pub async fn deploy(&self, game: &Game) {
+    pub async fn deploy(&mut self, game: &Game) {
         let active_profile = game.active_profile().await.unwrap().unwrap();
 
-        for mod_entry in active_profile.mod_entries().await.unwrap() {}
+        for mod_entry in active_profile.mod_entries().await.unwrap() {
+            if mod_entry.enabled().await.unwrap() {
+                self.config
+                    .add_data_directory(&mod_entry.dir().await.unwrap());
+            }
+        }
     }
 }

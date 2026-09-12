@@ -13,7 +13,8 @@ use tracing::info;
 pub use error::*;
 
 use crate::{
-    mod_, profile,
+    DeployKind::OpenMW,
+    deployers, mod_, profile,
     repository::{
         Cfg, DeployKind,
         db::{
@@ -69,6 +70,16 @@ impl Game {
         conn: &impl ConnectionTrait,
     ) -> Result<ActiveModel, LoadModelError> {
         Ok(self.model(conn).await?.into())
+    }
+
+    pub async fn deploy(&self) {
+        match self.deploy_kind().await.unwrap() {
+            DeployKind::OpenMW => {
+                let mut deployer = deployers::openmw::OpenMw::load();
+                deployer.deploy(self).await;
+            }
+            _ => println!("I DON'T UNDERSTAND THIS DEPLOY TYPE :("),
+        };
     }
 
     pub async fn name(&self) -> Result<String, GetFieldError> {
