@@ -8,7 +8,7 @@ pub struct OpenMw {
 
 impl OpenMw {
     pub fn load() -> Self {
-        let config = OpenMWConfiguration::from_env().unwrap();
+        let config = OpenMWConfiguration::from_env_or_user_config().unwrap();
 
         Self { config }
     }
@@ -21,5 +21,7 @@ impl OpenMw {
                     .add_data_directory(&mod_entry.dir().await.unwrap());
             }
         }
+
+        self.config.save_user().unwrap();
     }
 }

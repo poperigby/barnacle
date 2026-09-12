@@ -138,7 +138,7 @@ impl Profile {
         Ok(Self::resolve_active_id(db, game)
             .await
             .map_err(ActiveError::Resolve)?
-            .map(|id| Profile::from_id(id, &db, &cfg)))
+            .map(|id| Profile::from_id(id, db, cfg)))
     }
 
     // Returns the active profile ID, selecting a fallback if none is set.
@@ -156,7 +156,7 @@ impl Profile {
 
         // Make the oldest profile the fallback
         let fallback_id = Entity::find()
-            .filter(COLUMN.game_id.eq(game.id))
+            .filter(COLUMN.game_id.eq(game.id()))
             .order_by_id_asc()
             .one(conn)
             .await
@@ -203,7 +203,7 @@ impl Profile {
     pub(crate) async fn add(db: &Db, cfg: &Cfg, game: &Game, name: &str) -> Result<Self, AddError> {
         let model = ActiveModel {
             name: Set(name.to_string()),
-            game_id: Set(game.id),
+            game_id: Set(game.id()),
             ..Default::default()
         };
 
@@ -221,7 +221,7 @@ impl Profile {
             })?
             .last_insert_id;
 
-        let profile = Profile::from_id(id, &db, &cfg);
+        let profile = Profile::from_id(id, db, cfg);
         let dir = profile.dir().await.map_err(AddError::Dir)?;
         fs::create_dir_all(&dir).map_err(|source| AddError::CreateDir { path: dir, source })?;
 
@@ -232,13 +232,13 @@ impl Profile {
 
     pub(crate) async fn list(db: &Db, cfg: &Cfg, game: &Game) -> Result<Vec<Self>, ListError> {
         Ok(Entity::find()
-            .filter(COLUMN.game_id.eq(game.id))
+            .filter(COLUMN.game_id.eq(game.id()))
             .order_by_id_desc()
             .all(db.conn())
             .await
             .map_err(ListError)?
             .iter()
-            .map(|model| Profile::from_id(model.id, &db, &cfg))
+            .map(|model| Profile::from_id(model.id, db, cfg))
             .collect())
     }
 
@@ -250,7 +250,7 @@ impl Profile {
         name: &str,
     ) -> Result<Option<Profile>, SearchError> {
         Ok(
-            Entity::find_by_profile_name_per_game((name.to_string(), game.id))
+            Entity::find_by_profile_name_per_game((name.to_string(), game.id()))
                 .one(db.conn())
                 .await
                 .map_err(|source| SearchError {

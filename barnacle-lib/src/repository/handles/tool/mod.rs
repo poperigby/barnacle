@@ -32,11 +32,11 @@ impl Tool {
     }
 
     async fn model(&self, conn: &impl ConnectionTrait) -> Result<Model, LoadModelError> {
-        Ok(Entity::find_by_id(self.id)
+        Entity::find_by_id(self.id)
             .one(conn)
             .await
             .map_err(|source| LoadModelError::query(ModelKind::Tool, self.id, source))?
-            .ok_or_else(|| LoadModelError::stale(ModelKind::Tool, self.id))?)
+            .ok_or_else(|| LoadModelError::stale(ModelKind::Tool, self.id))
     }
 
     async fn active_model(

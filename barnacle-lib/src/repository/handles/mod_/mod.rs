@@ -98,7 +98,7 @@ impl Mod {
     ) -> Result<Self, AddError> {
         let model = ActiveModel {
             name: Set(name.to_string()),
-            game_id: Set(game.id),
+            game_id: Set(game.id()),
             ..Default::default()
         };
 
@@ -139,13 +139,13 @@ impl Mod {
 
     pub(crate) async fn list(db: &Db, cfg: &Cfg, game: &Game) -> Result<Vec<Self>, ListError> {
         Ok(Entity::find()
-            .filter(COLUMN.game_id.eq(game.id))
+            .filter(COLUMN.game_id.eq(game.id()))
             .order_by_id_desc()
             .all(db.conn())
             .await
             .map_err(ListError)?
             .iter()
-            .map(|model| Mod::from_id(model.id, &db, &cfg))
+            .map(|model| Mod::from_id(model.id, db, cfg))
             .collect())
     }
 

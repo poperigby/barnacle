@@ -152,7 +152,7 @@ impl GameItem {
     async fn load_all(repo: &Repository) -> anyhow::Result<Vec<Self>> {
         let games = repo.games().await?;
 
-        Ok(try_join_all(games.into_iter().map(|g| GameItem::load(g))).await?)
+        try_join_all(games.into_iter().map(GameItem::load)).await
     }
 }
 
@@ -188,7 +188,7 @@ impl ProfileItem {
     async fn load_all(game: &Game) -> anyhow::Result<Vec<Self>> {
         let profiles = game.profiles().await?;
 
-        Ok(try_join_all(profiles.into_iter().map(|p| ProfileItem::load(p))).await?)
+        try_join_all(profiles.into_iter().map(ProfileItem::load)).await
     }
 }
 
@@ -209,7 +209,7 @@ impl ModItem {
     async fn load_all(game: &Game) -> anyhow::Result<Vec<Self>> {
         let mods = game.mods().await?;
 
-        Ok(try_join_all(mods.into_iter().map(|p| ModItem::load(p))).await?)
+        try_join_all(mods.into_iter().map(ModItem::load)).await
     }
 }
 
@@ -236,6 +236,6 @@ impl ModEntryItem {
     async fn load_all(profile: &Profile) -> anyhow::Result<Vec<Self>> {
         let mod_entries = profile.mod_entries().await?;
 
-        Ok(try_join_all(mod_entries.into_iter().map(|p| ModEntryItem::load(p))).await?)
+        try_join_all(mod_entries.into_iter().map(ModEntryItem::load)).await
     }
 }

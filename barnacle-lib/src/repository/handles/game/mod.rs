@@ -13,7 +13,6 @@ use tracing::info;
 pub use error::*;
 
 use crate::{
-    DeployKind::OpenMW,
     deployers, mod_, profile,
     repository::{
         Cfg, DeployKind,
@@ -41,10 +40,9 @@ use crate::{
 /// managing profiles and mods. Always reflects the current database state.
 #[derive(Debug, Clone)]
 pub struct Game {
-    // TODO: Do these need to be public now?
-    pub(crate) id: i32,
-    pub(crate) db: Db,
-    pub(crate) cfg: Cfg,
+    id: i32,
+    db: Db,
+    cfg: Cfg,
 }
 
 impl Game {
@@ -55,6 +53,10 @@ impl Game {
             db: db.clone(),
             cfg: cfg.clone(),
         }
+    }
+
+    pub(crate) fn id(&self) -> i32 {
+        self.id
     }
 
     async fn model(&self, conn: &impl ConnectionTrait) -> Result<Model, LoadModelError> {
@@ -128,10 +130,6 @@ impl Game {
             .await
             .map_err(|source| map_transaction_error(source, SetNameError::Transaction))
     }
-
-    // pub fn targets(&self) -> Result<Vec<PathBuf>> {
-    //     self.get_field("targets")
-    // }
 
     pub async fn deploy_kind(&self) -> Result<DeployKind, GetFieldError> {
         Ok(self
@@ -526,11 +524,9 @@ mod test {
             .await
             .unwrap();
 
-        let expected_dir = repo
-            .cfg
-            .read()
-            .library_dir()
-            .join(game.name().await.unwrap().to_snake_case());
+        let name = game.name().await.unwrap().to_snake_case();
+
+        let expected_dir = repo.cfg.read().library_dir().join(name);
 
         assert_eq!(game.dir().await.unwrap(), expected_dir);
     }

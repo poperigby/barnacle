@@ -49,7 +49,8 @@ impl Mutation {
         match self {
             // Games
             CreateGame { name, deploy_kind } => {
-                repo.add_game(&name, deploy_kind).await.unwrap();
+                let game = repo.add_game(&name, deploy_kind).await.unwrap();
+                game.add_profile("Default").await.unwrap();
             }
             DeleteGame(game) => {
                 game.remove().await.unwrap();
