@@ -7,7 +7,6 @@ use std::{
 mod error;
 
 use compress_tools::{Ownership, uncompress_archive};
-use heck::ToSnakeCase;
 use sea_orm::{ActiveValue::Set, ConnectionTrait, EntityTrait, QueryFilter};
 use tracing::info;
 
@@ -75,7 +74,7 @@ impl Mod {
             .await
             .map_err(DirError::ParentDir)?
             .join("mods")
-            .join(self.name().await.map_err(DirError::Name)?.to_snake_case()))
+            .join(self.id.to_string()))
     }
 
     /// Returns the parent [`Game`] of this [`Mod`]
@@ -269,5 +268,27 @@ mod test {
             .name()
             .await
             .unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_dir() {
+        let repo = Repository::in_memory().await;
+
+        let game = repo
+            .add_game("Fallout: New Vegas", DeployKind::Gamebryo)
+            .await
+            .unwrap();
+
+        let mod_ = game.add_mod("Test", None).await.unwrap();
+
+        let expected_dir = repo
+            .cfg
+            .read()
+            .library_dir()
+            .join(game.id().to_string())
+            .join("mods")
+            .join(mod_.id.to_string());
+
+        assert_eq!(mod_.dir().await.unwrap(), expected_dir);
     }
 }

@@ -21,8 +21,6 @@ pub enum DirError {
     Parent(#[source] ParentError),
     #[error("could not resolve parent game directory")]
     ParentDir(#[source] game::DirError),
-    #[error("could not get mod name")]
-    Name(#[source] GetFieldError),
 }
 
 #[derive(Debug, Error)]

@@ -6,7 +6,6 @@ use std::{
 
 mod error;
 
-use heck::ToSnakeCase;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ConnectionTrait, EntityTrait, TransactionTrait};
 use tracing::info;
 
@@ -92,42 +91,21 @@ impl Game {
     }
 
     pub async fn set_name(&self, new_name: &str) -> Result<(), SetNameError> {
-        let game = self.clone();
+        let conn = self.db.conn();
 
         let new_name = new_name.to_string();
 
-        let old_dir = self.dir().await.map_err(SetNameError::CurrentDir)?;
-        let new_dir = Self::dir_from_name(&self.cfg, &new_name);
+        let mut active_model = self.active_model(conn).await.map_err(SetNameError::Load)?;
+        active_model.name.set_if_not_equals(new_name.to_string());
+        active_model.update(conn).await.map_err(|source| {
+            if is_unique_violation(&source) {
+                SetNameError::Duplicate { name: new_name }
+            } else {
+                SetNameError::Update(source)
+            }
+        })?;
 
-        // TODO: We need to roll back the filesystem if the database commit fails
-        self.db
-            .conn()
-            .transaction(|txn| {
-                Box::pin(async move {
-                    let mut active_model =
-                        game.active_model(txn).await.map_err(SetNameError::Load)?;
-
-                    active_model.name.set_if_not_equals(new_name.to_string());
-
-                    active_model.update(txn).await.map_err(|source| {
-                        if is_unique_violation(&source) {
-                            SetNameError::Duplicate { name: new_name }
-                        } else {
-                            SetNameError::Update(source)
-                        }
-                    })?;
-
-                    fs::rename(&old_dir, &new_dir).map_err(|source| SetNameError::RenameDir {
-                        from: old_dir,
-                        to: new_dir,
-                        source,
-                    })?;
-
-                    Ok(())
-                })
-            })
-            .await
-            .map_err(|source| map_transaction_error(source, SetNameError::Transaction))
+        Ok(())
     }
 
     pub async fn deploy_kind(&self) -> Result<DeployKind, GetFieldError> {
@@ -139,14 +117,13 @@ impl Game {
     }
 
     pub async fn dir(&self) -> Result<PathBuf, DirError> {
-        let name = self.name().await.map_err(|source| DirError { source })?;
-
-        Ok(Self::dir_from_name(&self.cfg, &name))
+        Ok(Self::dir_from_id(&self.cfg, self.id))
     }
 
-    fn dir_from_name(cfg: &Cfg, name: &str) -> PathBuf {
+    fn dir_from_id(cfg: &Cfg, id: i32) -> PathBuf {
         let library_dir = cfg.read().library_dir().to_path_buf();
-        library_dir.join(name.to_snake_case())
+
+        library_dir.join(id.to_string())
     }
 
     pub async fn remove(self) -> Result<(), RemoveError> {
@@ -185,7 +162,6 @@ impl Game {
         deploy_kind: DeployKind,
     ) -> Result<Self, AddError> {
         let name = name.to_string();
-        let dir = Self::dir_from_name(cfg, &name);
 
         let model = ActiveModel {
             name: Set(name.clone()),
@@ -194,11 +170,10 @@ impl Game {
         };
 
         // We want to roll back the database mutations if the directory creation fails
-        let game = db
+        let id = db
             .conn()
             .transaction(|txn| {
                 let name = name.clone();
-                let db = db.clone();
                 let cfg = cfg.clone();
 
                 Box::pin(async move {
@@ -207,17 +182,18 @@ impl Game {
                         .await
                         .map_err(|source| {
                             if is_unique_violation(&source) {
-                                AddError::DuplicateName { name }
+                                AddError::DuplicateName { name: name.clone() }
                             } else {
                                 AddError::Insert(source)
                             }
                         })?
                         .last_insert_id;
 
+                    let dir = Self::dir_from_id(&cfg, id);
                     fs::create_dir_all(&dir)
                         .map_err(|source| AddError::CreateDir { path: dir, source })?;
 
-                    Ok(Game::from_id(id, &db, &cfg))
+                    Ok(id)
                 })
             })
             .await
@@ -225,7 +201,7 @@ impl Game {
 
         info!("Created new game: {name}");
 
-        Ok(game)
+        Ok(Game::from_id(id, db, cfg))
     }
 
     pub(crate) async fn list(db: Db, cfg: Cfg) -> Result<Vec<Game>, ListError> {
@@ -523,9 +499,7 @@ mod test {
             .await
             .unwrap();
 
-        let name = game.name().await.unwrap().to_snake_case();
-
-        let expected_dir = repo.cfg.read().library_dir().join(name);
+        let expected_dir = repo.cfg.read().library_dir().join(game.id.to_string());
 
         assert_eq!(game.dir().await.unwrap(), expected_dir);
     }

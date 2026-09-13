@@ -15,21 +15,12 @@ impl super::Profile {
 
 #[derive(Debug, Error)]
 pub enum SetNameError {
-    #[error("could not get current profile directory")]
-    CurrentDir(#[source] DirError),
     #[error("could not load profile")]
     Load(#[source] LoadModelError),
     #[error("a profile named '{name}' already exists for this game")]
     Duplicate { name: String },
     #[error("could not update profile name")]
     Update(#[source] sea_orm::DbErr),
-    #[error("could not rename directory from '{from}' to '{to}'")]
-    RenameDir {
-        from: PathBuf,
-        to: PathBuf,
-        #[source]
-        source: io::Error,
-    },
 }
 
 #[derive(Debug, Error)]
@@ -38,8 +29,6 @@ pub enum DirError {
     Parent(#[source] ParentError),
     #[error("could not resolve parent game directory")]
     ParentDir(#[source] game::DirError),
-    #[error("could not get profile name")]
-    Name(#[source] GetFieldError),
 }
 
 #[derive(Debug, Error)]

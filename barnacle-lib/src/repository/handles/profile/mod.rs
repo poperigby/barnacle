@@ -2,7 +2,6 @@ use std::{fmt::Debug, fs, path::PathBuf};
 
 mod error;
 
-use heck::ToSnakeCase;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ConnectionTrait, EntityTrait, QueryFilter};
 use tracing::info;
 
@@ -66,12 +65,11 @@ impl Profile {
     }
 
     pub async fn set_name(&self, new_name: &str) -> Result<(), SetNameError> {
-        let old_dir = self.dir().await.map_err(SetNameError::CurrentDir)?;
-
         let mut active_model = self
             .active_model(self.db.conn())
             .await
             .map_err(SetNameError::Load)?;
+
         active_model.name.set_if_not_equals(new_name.to_string());
         active_model
             .update(self.db.conn())
@@ -86,13 +84,6 @@ impl Profile {
                 }
             })?;
 
-        let new_dir = self.dir().await.map_err(SetNameError::CurrentDir)?;
-        fs::rename(&old_dir, &new_dir).map_err(|source| SetNameError::RenameDir {
-            from: old_dir,
-            to: new_dir,
-            source,
-        })?;
-
         Ok(())
     }
 
@@ -105,7 +96,7 @@ impl Profile {
             .await
             .map_err(DirError::ParentDir)?
             .join("profiles")
-            .join(self.name().await.map_err(DirError::Name)?.to_snake_case()))
+            .join(self.id.to_string()))
     }
 
     /// Activate this profile
@@ -383,6 +374,28 @@ mod test {
         profile2.activate().await.unwrap();
 
         assert!(profile2.is_active().await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_dir() {
+        let repo = Repository::in_memory().await;
+
+        let game = repo
+            .add_game("Fallout: New Vegas", DeployKind::Gamebryo)
+            .await
+            .unwrap();
+
+        let profile = game.add_profile("Test").await.unwrap();
+
+        let expected_dir = repo
+            .cfg
+            .read()
+            .library_dir()
+            .join(game.id().to_string())
+            .join("profiles")
+            .join(profile.id.to_string());
+
+        assert_eq!(profile.dir().await.unwrap(), expected_dir);
     }
 
     #[tokio::test]

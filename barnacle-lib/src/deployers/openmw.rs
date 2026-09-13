@@ -1,36 +1,14 @@
-use derive_more::{Deref, DerefMut};
 use openmw_config::OpenMWConfiguration;
-use tempfile::{TempDir, tempdir};
 use tokio::process::Command;
 
 use crate::Game;
 
-#[derive(Debug, Deref, DerefMut)]
-struct Config {
-    #[deref]
-    #[deref_mut]
-    config: OpenMWConfiguration,
-    dir: TempDir,
-}
-
-impl Config {
-    pub fn load() -> Self {
-        let dir = tempdir().unwrap();
-        let config = OpenMWConfiguration::new_empty(dir.path()).unwrap();
-
-        Self { config, dir }
-    }
-}
-
 #[derive(Debug)]
-pub struct OpenMw {
-    config: Config,
-    game_process: Command,
-}
+pub struct OpenMw {}
 
 impl OpenMw {
     pub async fn prepare(game: &Game) -> Self {
-        let mut config = Config::load();
+        let mut config = OpenMWConfiguration::from_env_or_user_config().unwrap();
 
         let active_profile = game.active_profile().await.unwrap().unwrap();
 
@@ -44,9 +22,6 @@ impl OpenMw {
 
         let game_process = Command::new("echo 'Hello'");
 
-        Self {
-            config,
-            game_process,
-        }
+        Self {}
     }
 }
