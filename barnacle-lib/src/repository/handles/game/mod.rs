@@ -74,11 +74,10 @@ impl Game {
         Ok(self.model(conn).await?.into())
     }
 
-    pub async fn deploy(&self) {
+    pub async fn launch(&self) {
         match self.deploy_kind().await.unwrap() {
             DeployKind::OpenMW => {
-                let mut deployer = deployers::openmw::OpenMw::load();
-                deployer.deploy(self).await;
+                deployers::openmw::OpenMw::prepare(self).await;
             }
             _ => println!("I DON'T UNDERSTAND THIS DEPLOY TYPE :("),
         };

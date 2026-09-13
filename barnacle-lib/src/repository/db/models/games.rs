@@ -32,6 +32,7 @@ pub struct Model {
 
     #[sea_orm(unique)]
     pub name: String,
+
     pub deploy_kind: DeployKind,
 
     pub active_profile_id: Option<i32>,

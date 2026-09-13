@@ -36,7 +36,7 @@ enum Message {
     Initialized(Result<(Repository, Model), AppError>),
     Ui(ui::Message),
     Mutated(Result<Model, AppError>),
-    Deployed,
+    Launched,
 }
 
 #[derive(Debug, Clone)]
@@ -158,23 +158,23 @@ impl App {
                             Message::Mutated,
                         )
                     }
-                    ui::Action::Deploy => {
+                    ui::Action::Launch => {
                         let repo = repo.clone();
 
                         Task::perform(
                             async move {
                                 if let Some(game) = repo.active_game().await.unwrap() {
-                                    game.deploy().await;
+                                    game.launch().await;
                                 }
                             },
-                            |_| Message::Deployed,
+                            |_| Message::Launched,
                         )
                     }
                 },
                 _ => Task::none(),
             },
-            Message::Deployed => {
-                println!("Deployed");
+            Message::Launched => {
+                println!("Launched!");
 
                 Task::none()
             }

@@ -10,21 +10,21 @@ use iced::{
     widget::{button, column, combo_box, row, space, text},
 };
 
-use crate::ui::{add_mod_dialog::AddModDialog, library_manager::LibraryManager, mod_list::ModList};
+use crate::ui::{add_mod_menu::AddModDialog, library_manager::LibraryManager, mod_list::ModList};
 
-pub mod add_mod_dialog;
+pub mod add_mod_menu;
 pub mod library_manager;
 pub mod mod_list;
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    DeployButtonPressed,
+    LaunchButtonPressed,
     AddModButtonPressed,
     LibraryManagerButtonPressed,
     ProfileSelected(ProfileItem),
 
     // Children
-    AddModDialog(add_mod_dialog::Message),
+    AddModDialog(add_mod_menu::Message),
     ModList(mod_list::Message),
     LibraryManager(library_manager::Message),
 }
@@ -34,7 +34,7 @@ pub enum Action {
     None,
     Run(Task<Message>),
     Mutate(Mutation),
-    Deploy,
+    Launch,
 }
 
 #[derive(Debug, Clone)]
@@ -80,7 +80,7 @@ impl Ui {
 
     pub fn update(&mut self, message: Message) -> Action {
         match message {
-            Message::DeployButtonPressed => Action::Deploy,
+            Message::LaunchButtonPressed => Action::Launch,
             Message::AddModButtonPressed => {
                 self.show_add_mod_dialog = true;
 
@@ -97,14 +97,14 @@ impl Ui {
 
             // Children
             Message::AddModDialog(message) => match self.add_mod_dialog.update(message) {
-                add_mod_dialog::Action::None => Action::None,
-                add_mod_dialog::Action::Run(task) => Action::Run(task.map(Message::AddModDialog)),
-                add_mod_dialog::Action::Submit { name, path } => {
+                add_mod_menu::Action::None => Action::None,
+                add_mod_menu::Action::Run(task) => Action::Run(task.map(Message::AddModDialog)),
+                add_mod_menu::Action::Submit { name, path } => {
                     self.show_add_mod_dialog = false;
 
                     Action::Mutate(Mutation::AddMod { name, path })
                 }
-                add_mod_dialog::Action::Cancel => {
+                add_mod_menu::Action::Cancel => {
                     self.show_add_mod_dialog = false;
 
                     Action::None
@@ -146,8 +146,7 @@ impl Ui {
         };
 
         let top_bar = row![
-            button(text(t!("main_top-bar_launch-game", { "count" => 1 }))),
-            button(text(t!("main_top-bar_deploy"))).on_press(Message::DeployButtonPressed),
+            button(text(t!("main_top-bar_launch"))),
             button(Icon::Wrench),
             profile_selector,
             space::horizontal(),
