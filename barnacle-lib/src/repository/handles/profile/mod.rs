@@ -329,7 +329,7 @@ mod test {
     async fn test_remove() {
         let repo = Repository::in_memory().await;
         let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
-        let _mod = game.add_mod("test_mod").await.unwrap().create().await;
+        let _mod = game.new_mod("test_mod").unwrap().empty().await;
 
         let profile = game.add_profile("Test").await.unwrap();
         let mod_entry = profile.add_mod_entry(_mod).await.unwrap();

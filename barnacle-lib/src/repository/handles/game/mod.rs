@@ -15,7 +15,7 @@ pub use error::*;
 use crate::{
     deployers,
     fs::state_dir,
-    mod_::{self, builder::ModBuilder},
+    mod_::{self, builder::NewMod},
     profile,
     repository::{
         Cfg, DeployKind,
@@ -369,8 +369,8 @@ impl Game {
         Target::list(&self.db, &self.cfg, self).await
     }
 
-    pub async fn add_mod(&self, name: &str) -> Result<ModBuilder, mod_::AddError> {
-        Mod::add(self.db.clone(), self.cfg.clone(), self, name).await
+    pub fn new_mod(&self, name: &str) -> Result<NewMod, mod_::AddError> {
+        Mod::new_mod(self.db.clone(), self.cfg.clone(), self, name)
     }
 
     pub async fn mods(&self) -> Result<Vec<Mod>, mod_::ListError> {
@@ -433,7 +433,7 @@ mod test {
 
         let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
         let profile = game.add_profile("test_profile_1").await.unwrap();
-        let mod_ = game.add_mod("test_mod").await.unwrap().create().await;
+        let mod_ = game.new_mod("test_mod").unwrap().empty().await;
 
         assert_eq!(repo.games().await.unwrap().len(), 1);
 

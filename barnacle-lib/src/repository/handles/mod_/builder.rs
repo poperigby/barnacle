@@ -25,14 +25,14 @@ use crate::{
 
 #[must_use]
 #[derive(Debug, Clone)]
-pub struct ModBuilder {
+pub struct NewMod {
     db: Db,
     cfg: Cfg,
     game: Game,
     name: String,
 }
 
-impl ModBuilder {
+impl NewMod {
     pub(crate) fn new(db: &Db, cfg: &Cfg, game: &Game, name: &str) -> Self {
         Self {
             db: db.clone(),
@@ -65,12 +65,12 @@ impl ModBuilder {
     }
 
     /// Create a new [`Mod`] with no contents
-    pub async fn create(&self) -> Mod {
+    pub async fn empty(&self) -> Mod {
         self.add().await
     }
 
     /// Create a new [`Mod`], copying the contents from the given path
-    pub async fn from_dir(
+    pub async fn import_dir(
         &self,
         path: &Path,
         progress: impl FnMut(&DirectoryCopyProgressRef),
@@ -99,22 +99,22 @@ impl ModBuilder {
         mod_
     }
 
-    pub async fn from_archive(&self, path: &Path) -> ModArchiveImport {
-        ModArchiveImport::new(self, path)
+    pub async fn import_archive(&self, path: &Path) -> ImportArchive {
+        ImportArchive::new(self, path)
     }
 }
 
 #[must_use]
-pub struct ModArchiveImport {
-    builder: ModBuilder,
+pub struct ImportArchive {
+    builder: NewMod,
     archive_path: PathBuf,
     entries: Vec<PathBuf>,
     /// A relative path to the directory that should be the root of the [`Mod`]
     root: Option<PathBuf>,
 }
 
-impl ModArchiveImport {
-    fn new(builder: &ModBuilder, path: &Path) -> Self {
+impl ImportArchive {
+    fn new(builder: &NewMod, path: &Path) -> Self {
         if !path.is_file() {
             panic!("Not a file");
         }
@@ -189,15 +189,15 @@ mod test {
     use super::*;
 
     #[tokio::test]
-    async fn create_adds_empty_mod_directory() {
+    async fn empty_adds_empty_mod_directory() {
         let repo = Repository::in_memory().await;
         let game = repo
             .add_game("Morrowind", DeployKind::OpenMW)
             .await
             .unwrap();
 
-        let builder = ModBuilder::new(&repo.db, &repo.cfg, &game, "Patch for Purists");
-        let mod_ = builder.create().await;
+        let builder = NewMod::new(&repo.db, &repo.cfg, &game, "Patch for Purists");
+        let mod_ = builder.empty().await;
         let dir = mod_.dir().await.unwrap();
 
         assert!(dir.exists());
@@ -217,8 +217,8 @@ mod test {
         fs::create_dir_all(source.path().join("meshes")).unwrap();
         fs::write(source.path().join("meshes").join("marker.nif"), "mesh").unwrap();
 
-        let builder = ModBuilder::new(&repo.db, &repo.cfg, &game, "Mesh Replacer");
-        let mod_ = builder.from_dir(source.path(), |_| {}).await;
+        let builder = NewMod::new(&repo.db, &repo.cfg, &game, "Mesh Replacer");
+        let mod_ = builder.import_dir(source.path(), |_| {}).await;
         let dir = mod_.dir().await.unwrap();
 
         assert!(dir.join("meshes").join("marker.nif").is_file());
@@ -243,8 +243,8 @@ mod test {
             ],
         );
 
-        let builder = ModBuilder::new(&repo.db, &repo.cfg, &game, "Wrapped Mod");
-        let mut import = builder.from_archive(&archive_path).await;
+        let builder = NewMod::new(&repo.db, &repo.cfg, &game, "Wrapped Mod");
+        let mut import = builder.import_archive(&archive_path).await;
 
         import.with_root(Path::new("FooMod")).await;
 

@@ -81,13 +81,12 @@ impl Mutation {
                 };
 
                 let mod_ = if let Some(path) = path {
-                    game.add_mod(&name)
-                        .await
+                    game.new_mod(&name)
                         .unwrap()
-                        .from_dir(&path, |p| println!("{}", p.bytes_total))
+                        .import_dir(&path, |p| println!("{}", p.bytes_total))
                         .await
                 } else {
-                    game.add_mod(&name).await.unwrap().create().await
+                    game.new_mod(&name).unwrap().empty().await
                 };
 
                 if let Some(profile) = game.active_profile().await.unwrap() {

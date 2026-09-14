@@ -21,7 +21,7 @@ use crate::repository::{
     handles::{
         error::{GetFieldError, LoadModelError, ModelKind},
         game::Game,
-        mod_::builder::ModBuilder,
+        mod_::builder::NewMod,
     },
 };
 
@@ -86,13 +86,8 @@ impl Mod {
         Ok(Game::from_id(parent_game_id, &self.db, &self.cfg))
     }
 
-    pub(crate) async fn add(
-        db: Db,
-        cfg: Cfg,
-        game: &Game,
-        name: &str,
-    ) -> Result<ModBuilder, AddError> {
-        Ok(ModBuilder::new(&db, &cfg, game, name))
+    pub(crate) fn new_mod(db: Db, cfg: Cfg, game: &Game, name: &str) -> Result<NewMod, AddError> {
+        Ok(NewMod::new(&db, &cfg, game, name))
     }
 
     pub(crate) async fn list(db: &Db, cfg: &Cfg, game: &Game) -> Result<Vec<Self>, ListError> {
@@ -133,7 +128,7 @@ impl PartialEq for Mod {
 
 #[cfg(test)]
 mod test {
-    use crate::{Repository, mod_, repository::DeployKind};
+    use crate::{Repository, repository::DeployKind};
 
     #[tokio::test]
     async fn test_add() {
@@ -143,7 +138,7 @@ mod test {
             .add_game("Morrowind", DeployKind::OpenMW)
             .await
             .unwrap();
-        let mod_ = game.add_mod("Test").await.unwrap().create().await;
+        let mod_ = game.new_mod("Test").unwrap().empty().await;
 
         assert!(mod_.dir().await.unwrap().exists());
     }
@@ -156,7 +151,7 @@ mod test {
             .add_game("Morrowind", DeployKind::OpenMW)
             .await
             .unwrap();
-        game.add_mod("Test").await.unwrap().create().await;
+        game.new_mod("Test").unwrap().empty().await;
 
         // assert!(matches!(
         //     game.add_mod("Test").await.unwrap(),
@@ -169,7 +164,7 @@ mod test {
         let repo = Repository::in_memory().await;
 
         let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
-        let mod_ = game.add_mod("Test").await.unwrap().create().await;
+        let mod_ = game.new_mod("Test").unwrap().empty().await;
 
         assert_eq!(game.mods().await.unwrap().len(), 1);
 
@@ -188,10 +183,9 @@ mod test {
 
         assert_eq!(game.mods().await.unwrap().len(), 0);
 
-        game.add_mod("Better Spoon Textures 8K")
-            .await
+        game.new_mod("Better Spoon Textures 8K")
             .unwrap()
-            .create()
+            .empty()
             .await;
 
         assert_eq!(game.mods().await.unwrap().len(), 1);
@@ -205,7 +199,7 @@ mod test {
             .add_game("Morrowind", DeployKind::OpenMW)
             .await
             .unwrap();
-        let mod_ = game.add_mod("Test").await.unwrap().create().await;
+        let mod_ = game.new_mod("Test").unwrap().empty().await;
 
         assert_eq!(mod_.parent().await.unwrap(), game);
     }
@@ -217,10 +211,9 @@ mod test {
         repo.add_game("Fallout: New Vegas", DeployKind::FalloutNV)
             .await
             .unwrap()
-            .add_mod("Test")
-            .await
+            .new_mod("Test")
             .unwrap()
-            .create()
+            .empty()
             .await
             .name()
             .await
@@ -236,7 +229,7 @@ mod test {
             .await
             .unwrap();
 
-        let mod_ = game.add_mod("Test").await.unwrap().create().await;
+        let mod_ = game.new_mod("Test").unwrap().empty().await;
 
         let expected_dir = repo
             .cfg
