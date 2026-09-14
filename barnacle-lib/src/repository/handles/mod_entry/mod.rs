@@ -233,8 +233,8 @@ mod test {
             .unwrap();
         let profile = game.add_profile("Test").await.unwrap();
 
-        let mod1 = game.new_mod("Super Duper Mod").unwrap().empty().await;
-        let mod2 = game.new_mod("Super Duper Mod: 2").unwrap().empty().await;
+        let mod1 = game.new_mod("Super Duper Mod").empty().await;
+        let mod2 = game.new_mod("Super Duper Mod: 2").empty().await;
 
         profile.add_mod_entry(mod1).await.unwrap();
         profile.add_mod_entry(mod2).await.unwrap();
@@ -254,7 +254,7 @@ mod test {
 
         let mut mod_entries = Vec::new();
         for i in 1..=6 {
-            let m = game.new_mod(&format!("Mod{i}")).unwrap().empty().await;
+            let m = game.new_mod(&format!("Mod{i}")).empty().await;
             mod_entries.push(profile.add_mod_entry(m).await.unwrap());
         }
 
@@ -300,7 +300,6 @@ mod test {
         let profile = game.add_profile("The Best Profile").await.unwrap();
         let mod_ = game
             .new_mod("Better Khajiit Balls 16K - Remastered - 2025 Edition - REAL")
-            .unwrap()
             .empty()
             .await;
         let entry = profile.add_mod_entry(mod_).await.unwrap();
@@ -317,7 +316,7 @@ mod test {
             .await
             .unwrap();
         let profile = game.add_profile("Test").await.unwrap();
-        let mod_ = game.new_mod("Super Duper Mod").unwrap().empty().await;
+        let mod_ = game.new_mod("Super Duper Mod").empty().await;
 
         profile
             .add_mod_entry(mod_)
@@ -337,7 +336,7 @@ mod test {
             .await
             .unwrap();
         let profile = game.add_profile("Test").await.unwrap();
-        let mod_ = game.new_mod("Super Duper Mod").unwrap().empty().await;
+        let mod_ = game.new_mod("Super Duper Mod").empty().await;
 
         let entry = profile.add_mod_entry(mod_).await.unwrap();
 

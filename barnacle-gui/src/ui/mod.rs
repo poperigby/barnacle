@@ -102,7 +102,13 @@ impl Ui {
                 add_mod_menu::Action::Submit { name, path } => {
                     self.show_add_mod_dialog = false;
 
-                    Action::Mutate(Mutation::AddMod { name, path })
+                    match path {
+                        Some(path) if path.is_dir() => {
+                            Action::Mutate(Mutation::AddModFromDir { name, path })
+                        }
+                        Some(path) => Action::Mutate(Mutation::AddModFromArchive { name, path }),
+                        None => Action::Mutate(Mutation::AddEmptyMod { name }),
+                    }
                 }
                 add_mod_menu::Action::Cancel => {
                     self.show_add_mod_dialog = false;

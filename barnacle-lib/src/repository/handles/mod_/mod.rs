@@ -86,8 +86,8 @@ impl Mod {
         Ok(Game::from_id(parent_game_id, &self.db, &self.cfg))
     }
 
-    pub(crate) fn new_mod(db: Db, cfg: Cfg, game: &Game, name: &str) -> Result<NewMod, AddError> {
-        Ok(NewMod::new(&db, &cfg, game, name))
+    pub(crate) fn new_mod(db: Db, cfg: Cfg, game: &Game, name: &str) -> NewMod {
+        NewMod::new(&db, &cfg, game, name)
     }
 
     pub(crate) async fn list(db: &Db, cfg: &Cfg, game: &Game) -> Result<Vec<Self>, ListError> {
@@ -138,7 +138,7 @@ mod test {
             .add_game("Morrowind", DeployKind::OpenMW)
             .await
             .unwrap();
-        let mod_ = game.new_mod("Test").unwrap().empty().await;
+        let mod_ = game.new_mod("Test").empty().await;
 
         assert!(mod_.dir().await.unwrap().exists());
     }
@@ -151,7 +151,7 @@ mod test {
             .add_game("Morrowind", DeployKind::OpenMW)
             .await
             .unwrap();
-        game.new_mod("Test").unwrap().empty().await;
+        game.new_mod("Test").empty().await;
 
         // assert!(matches!(
         //     game.add_mod("Test").await.unwrap(),
@@ -164,7 +164,7 @@ mod test {
         let repo = Repository::in_memory().await;
 
         let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
-        let mod_ = game.new_mod("Test").unwrap().empty().await;
+        let mod_ = game.new_mod("Test").empty().await;
 
         assert_eq!(game.mods().await.unwrap().len(), 1);
 
@@ -183,10 +183,7 @@ mod test {
 
         assert_eq!(game.mods().await.unwrap().len(), 0);
 
-        game.new_mod("Better Spoon Textures 8K")
-            .unwrap()
-            .empty()
-            .await;
+        game.new_mod("Better Spoon Textures 8K").empty().await;
 
         assert_eq!(game.mods().await.unwrap().len(), 1);
     }
@@ -199,7 +196,7 @@ mod test {
             .add_game("Morrowind", DeployKind::OpenMW)
             .await
             .unwrap();
-        let mod_ = game.new_mod("Test").unwrap().empty().await;
+        let mod_ = game.new_mod("Test").empty().await;
 
         assert_eq!(mod_.parent().await.unwrap(), game);
     }
@@ -212,7 +209,6 @@ mod test {
             .await
             .unwrap()
             .new_mod("Test")
-            .unwrap()
             .empty()
             .await
             .name()
@@ -229,7 +225,7 @@ mod test {
             .await
             .unwrap();
 
-        let mod_ = game.new_mod("Test").unwrap().empty().await;
+        let mod_ = game.new_mod("Test").empty().await;
 
         let expected_dir = repo
             .cfg

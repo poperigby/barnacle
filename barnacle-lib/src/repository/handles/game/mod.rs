@@ -369,7 +369,7 @@ impl Game {
         Target::list(&self.db, &self.cfg, self).await
     }
 
-    pub fn new_mod(&self, name: &str) -> Result<NewMod, mod_::AddError> {
+    pub fn new_mod(&self, name: &str) -> NewMod {
         Mod::new_mod(self.db.clone(), self.cfg.clone(), self, name)
     }
 
@@ -433,7 +433,7 @@ mod test {
 
         let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
         let profile = game.add_profile("test_profile_1").await.unwrap();
-        let mod_ = game.new_mod("test_mod").unwrap().empty().await;
+        let mod_ = game.new_mod("test_mod").empty().await;
 
         assert_eq!(repo.games().await.unwrap().len(), 1);
 

@@ -5,9 +5,9 @@ use std::{
 
 use compress_tools::{Ownership, list_archive_files, uncompress_archive};
 use fs_more::directory::{
-    DirectoryCopyProgressRef, DirectoryCopyWithProgressOptions, DirectoryMoveProgress,
-    DirectoryMoveWithProgressOptions, SymlinkBehaviour, copy_directory_with_progress,
-    move_directory_with_progress,
+    DirectoryCopyOptions, DirectoryCopyWithProgressOptions, DirectoryMoveOptions,
+    DirectoryMoveWithProgressOptions, SymlinkBehaviour, copy_directory,
+    copy_directory_with_progress, move_directory, move_directory_with_progress,
 };
 use sea_orm::{ActiveValue::Set, EntityTrait};
 use tempfile::tempdir;
@@ -22,6 +22,36 @@ use crate::{
         },
     },
 };
+
+pub type ProgressCallback<'a> = &'a mut (dyn FnMut(FileProgress) + Send);
+
+#[derive(Debug, Clone, Copy)]
+pub struct FileProgress {
+    current: u64,
+    total: u64,
+}
+
+pub struct ProgressReporter<'a> {
+    callback: Option<&'a mut dyn FnMut(FileProgress)>,
+}
+
+impl<'a> ProgressReporter<'a> {
+    pub fn none() -> Self {
+        Self { callback: None }
+    }
+
+    pub fn new(callback: &'a mut dyn FnMut(FileProgress)) -> Self {
+        Self {
+            callback: Some(callback),
+        }
+    }
+
+    pub fn report(&mut self, progress: FileProgress) {
+        if let Some(callback) = &mut self.callback {
+            callback(progress);
+        }
+    }
+}
 
 #[must_use]
 #[derive(Debug, Clone)]
@@ -70,11 +100,7 @@ impl NewMod {
     }
 
     /// Create a new [`Mod`], copying the contents from the given path
-    pub async fn import_dir(
-        &self,
-        path: &Path,
-        progress: impl FnMut(&DirectoryCopyProgressRef),
-    ) -> Mod {
+    pub async fn import_dir(&self, path: &Path, progress: Option<ProgressCallback<'_>>) -> Mod {
         if !path.is_dir() {
             panic!("Not a directory");
         }
@@ -84,22 +110,38 @@ impl NewMod {
 
         let dest = mod_.dir().await.unwrap();
 
-        // TODO: Use copy_directory_with_progress so we can, you know, report progress.
-        copy_directory_with_progress(
-            path,
-            dest,
-            DirectoryCopyWithProgressOptions {
-                symlink_behaviour: SymlinkBehaviour::Follow,
-                ..Default::default()
-            },
-            progress,
-        )
-        .unwrap();
+        if let Some(progress) = progress {
+            copy_directory_with_progress(
+                path,
+                dest,
+                DirectoryCopyWithProgressOptions {
+                    symlink_behaviour: SymlinkBehaviour::Follow,
+                    ..Default::default()
+                },
+                |p| {
+                    progress(FileProgress {
+                        current: p.bytes_finished,
+                        total: p.bytes_total,
+                    })
+                },
+            )
+            .unwrap();
+        } else {
+            copy_directory(
+                path,
+                dest,
+                DirectoryCopyOptions {
+                    symlink_behaviour: SymlinkBehaviour::Follow,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        };
 
         mod_
     }
 
-    pub async fn import_archive(&self, path: &Path) -> ImportArchive {
+    pub fn import_archive(&self, path: &Path) -> ImportArchive {
         ImportArchive::new(self, path)
     }
 }
@@ -134,7 +176,7 @@ impl ImportArchive {
         }
     }
 
-    pub async fn with_root(&mut self, path: &Path) -> &Self {
+    pub fn with_root(&mut self, path: &Path) -> &Self {
         if !self.entries.iter().any(|e| e.starts_with(path)) {
             panic!("Invalid root path");
         }
@@ -145,7 +187,7 @@ impl ImportArchive {
     }
 
     // TODO: Wrap in transaction
-    pub async fn intall(&self, progress: impl FnMut(&DirectoryMoveProgress)) -> Mod {
+    pub async fn intall(&self, progress: Option<ProgressCallback<'_>>) -> Mod {
         let mod_ = self.builder.add().await;
 
         let archive_file = File::open(&self.archive_path).unwrap();
@@ -158,13 +200,22 @@ impl ImportArchive {
 
             let source_path = staging_dir.path().join(root);
 
-            move_directory_with_progress(
-                source_path,
-                dest,
-                DirectoryMoveWithProgressOptions::default(),
-                progress,
-            )
-            .unwrap();
+            if let Some(progress) = progress {
+                move_directory_with_progress(
+                    source_path,
+                    dest,
+                    DirectoryMoveWithProgressOptions::default(),
+                    |p| {
+                        progress(FileProgress {
+                            current: p.bytes_finished,
+                            total: p.bytes_total,
+                        })
+                    },
+                )
+                .unwrap();
+            } else {
+                move_directory(source_path, dest, DirectoryMoveOptions::default()).unwrap();
+            };
         } else {
             uncompress_archive(archive_file, &dest, Ownership::Ignore).unwrap();
         }
@@ -218,7 +269,7 @@ mod test {
         fs::write(source.path().join("meshes").join("marker.nif"), "mesh").unwrap();
 
         let builder = NewMod::new(&repo.db, &repo.cfg, &game, "Mesh Replacer");
-        let mod_ = builder.import_dir(source.path(), |_| {}).await;
+        let mod_ = builder.import_dir(source.path(), None).await;
         let dir = mod_.dir().await.unwrap();
 
         assert!(dir.join("meshes").join("marker.nif").is_file());
@@ -244,11 +295,11 @@ mod test {
         );
 
         let builder = NewMod::new(&repo.db, &repo.cfg, &game, "Wrapped Mod");
-        let mut import = builder.import_archive(&archive_path).await;
+        let mut import = builder.import_archive(&archive_path);
 
-        import.with_root(Path::new("FooMod")).await;
+        import.with_root(Path::new("FooMod"));
 
-        let mod_ = import.intall(|_| {}).await;
+        let mod_ = import.intall(None).await;
         let dir = mod_.dir().await.unwrap();
 
         assert!(dir.join("meshes").join("marker.nif").is_file());

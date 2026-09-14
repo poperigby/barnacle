@@ -28,9 +28,16 @@ pub enum Mutation {
     },
 
     // Mods
-    AddMod {
+    AddEmptyMod {
         name: String,
-        path: Option<PathBuf>,
+    },
+    AddModFromDir {
+        name: String,
+        path: PathBuf,
+    },
+    AddModFromArchive {
+        name: String,
+        path: PathBuf,
     },
     DeleteMod(Mod),
 
@@ -74,23 +81,39 @@ impl Mutation {
             }
 
             // Mods
-            AddMod { name, path } => {
-                let game = match repo.active_game().await.unwrap() {
-                    Some(game) => game,
-                    None => return,
-                };
+            AddEmptyMod { name } => {
+                let active_game = repo.active_game().await.unwrap().unwrap();
 
-                let mod_ = if let Some(path) = path {
-                    game.new_mod(&name)
-                        .unwrap()
-                        .import_dir(&path, |p| println!("{}", p.bytes_total))
-                        .await
-                } else {
-                    game.new_mod(&name).unwrap().empty().await
-                };
+                let mod_ = active_game.new_mod(&name).empty().await;
 
-                if let Some(profile) = game.active_profile().await.unwrap() {
-                    profile.add_mod_entry(mod_).await.unwrap();
+                if let Some(active_profile) = active_game.active_profile().await.unwrap() {
+                    active_profile.add_mod_entry(mod_).await.unwrap();
+                }
+            }
+            AddModFromDir { name, path } => {
+                let active_game = repo.active_game().await.unwrap().unwrap();
+
+                let mod_ = active_game
+                    .new_mod(&name)
+                    .import_dir(&path, None)
+                    .await;
+
+                if let Some(active_profile) = active_game.active_profile().await.unwrap() {
+                    active_profile.add_mod_entry(mod_).await.unwrap();
+                }
+            }
+            AddModFromArchive { name, path } => {
+                let active_game = repo.active_game().await.unwrap().unwrap();
+
+                let mod_ = active_game
+                    .new_mod(&name)
+                    .import_archive(&path)
+                    .with_root(&PathBuf::from("PerksOfMorrowind"))
+                    .intall(None)
+                    .await;
+
+                if let Some(active_profile) = active_game.active_profile().await.unwrap() {
+                    active_profile.add_mod_entry(mod_).await.unwrap();
                 }
             }
             DeleteMod(mod_) => {
