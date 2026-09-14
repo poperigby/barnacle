@@ -28,10 +28,7 @@ pub async fn handle(repo: &Repository, cmd: &Command) {
                     }
                 }
                 Command::Add { name, path } => {
-                    let mod_ = active_game
-                        .add_mod(name, path.as_deref().map(Path::new))
-                        .await
-                        .unwrap();
+                    let mod_ = active_game.add_mod(name).await.unwrap().create().await;
                     active_profile.add_mod_entry(mod_).await.unwrap();
                 }
             }

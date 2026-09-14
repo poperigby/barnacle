@@ -12,6 +12,7 @@ clap = { version = "4.5.58", features = ["derive"] }
 compress-tools = "0.16.1"
 damascus = { version = "0.0.11", default-features=false, features = ["overlayfs"] }
 derive_more = { version = "2.1.1", features = ["eq", "from", "as_ref", "display", "deref"] }
+fs-more = "0.8.1"
 getset = "0.1.6"
 heck = "0.5.0"
 human-panic = "2.0.4"

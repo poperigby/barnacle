@@ -75,9 +75,10 @@ impl Mutation {
 
             // Mods
             AddMod { name, path } => {
-                if let Some(game) = repo.active_game().await.unwrap() {
-                    let mod_ = game.add_mod(&name, path.as_deref()).await.unwrap();
-
+                if let Some(game) = repo.active_game().await.unwrap()
+                    && let Some(path) = path
+                {
+                    let mod_ = game.add_mod(&name).await.unwrap().from_dir(&path).await;
                     if let Some(profile) = game.active_profile().await.unwrap() {
                         profile.add_mod_entry(mod_).await.unwrap();
                     }

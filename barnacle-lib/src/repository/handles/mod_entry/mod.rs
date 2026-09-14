@@ -233,8 +233,18 @@ mod test {
             .unwrap();
         let profile = game.add_profile("Test").await.unwrap();
 
-        let mod1 = game.add_mod("Super Duper Mod", None).await.unwrap();
-        let mod2 = game.add_mod("Super Duper Mod: 2", None).await.unwrap();
+        let mod1 = game
+            .add_mod("Super Duper Mod")
+            .await
+            .unwrap()
+            .create()
+            .await;
+        let mod2 = game
+            .add_mod("Super Duper Mod: 2")
+            .await
+            .unwrap()
+            .create()
+            .await;
 
         profile.add_mod_entry(mod1).await.unwrap();
         profile.add_mod_entry(mod2).await.unwrap();
@@ -254,7 +264,7 @@ mod test {
 
         let mut mod_entries = Vec::new();
         for i in 1..=6 {
-            let m = game.add_mod(&format!("Mod{i}"), None).await.unwrap();
+            let m = game.add_mod(&format!("Mod{i}")).await.unwrap().create().await;
             mod_entries.push(profile.add_mod_entry(m).await.unwrap());
         }
 
@@ -299,12 +309,11 @@ mod test {
         let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
         let profile = game.add_profile("The Best Profile").await.unwrap();
         let mod_ = game
-            .add_mod(
-                "Better Khajiit Balls 16K - Remastered - 2025 Edition - REAL",
-                None,
-            )
+            .add_mod("Better Khajiit Balls 16K - Remastered - 2025 Edition - REAL")
             .await
-            .unwrap();
+            .unwrap()
+            .create()
+            .await;
         let entry = profile.add_mod_entry(mod_).await.unwrap();
 
         assert_eq!(entry.parent().await.unwrap(), profile);
@@ -319,7 +328,12 @@ mod test {
             .await
             .unwrap();
         let profile = game.add_profile("Test").await.unwrap();
-        let mod_ = game.add_mod("Super Duper Mod", None).await.unwrap();
+        let mod_ = game
+            .add_mod("Super Duper Mod")
+            .await
+            .unwrap()
+            .create()
+            .await;
 
         profile
             .add_mod_entry(mod_)
@@ -339,7 +353,12 @@ mod test {
             .await
             .unwrap();
         let profile = game.add_profile("Test").await.unwrap();
-        let mod_ = game.add_mod("Super Duper Mod", None).await.unwrap();
+        let mod_ = game
+            .add_mod("Super Duper Mod")
+            .await
+            .unwrap()
+            .create()
+            .await;
 
         let entry = profile.add_mod_entry(mod_).await.unwrap();
 
