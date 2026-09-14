@@ -9,18 +9,10 @@ use strum::Display;
 )]
 #[strum(serialize_all = "title_case")]
 pub enum DeployKind {
-    /// Deploys directly to the game directory with an overlay filesystem.
-    Overlay,
-    /// Same as the overlay type, but with support for Gamebryo/Creation Engine `plugins.txt`.
-    Gamebryo,
-    CreationEngine,
-    /// Deploys mods to an intermediary staging directory with OverlayFS, preventing the mod store
-    /// from needing to be modified. The individual mod directories are then added to `openmw.cfg`.
-    /// Plugins are also handled.
+    Skyrim,
+    FalloutNV,
     #[strum(serialize = "OpenMW")]
     OpenMW,
-    #[strum(serialize = "Baldur's Gate 3")]
-    BaldursGate3,
 }
 
 #[sea_orm::model]
@@ -34,6 +26,11 @@ pub struct Model {
     pub name: String,
 
     pub deploy_kind: DeployKind,
+
+    /// Path to the game's main executable. Can be an absolute path or a command name.
+    pub launch_program: String,
+    #[sea_orm(default_value = "")]
+    pub launch_args: String,
 
     pub active_profile_id: Option<i32>,
     #[sea_orm(

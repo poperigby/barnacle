@@ -1,18 +1,21 @@
 use std::{
     fmt::Debug,
-    fs,
+    fs::{self, create_dir_all},
     path::{Path, PathBuf},
 };
 
 mod error;
 
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ConnectionTrait, EntityTrait, TransactionTrait};
+use tokio::process::Command;
 use tracing::info;
 
 pub use error::*;
 
 use crate::{
-    deployers, mod_, profile,
+    deployers,
+    fs::state_dir,
+    mod_, profile,
     repository::{
         Cfg, DeployKind,
         db::{
@@ -76,10 +79,25 @@ impl Game {
     pub async fn launch(&self) {
         match self.deploy_kind().await.unwrap() {
             DeployKind::OpenMW => {
-                deployers::openmw::OpenMw::prepare(self).await;
+                let mut command = deployers::openmw::OpenMw::prepare(self).await;
+
+                command.spawn().unwrap();
             }
             _ => println!("I DON'T UNDERSTAND THIS DEPLOY TYPE :("),
         };
+    }
+
+    pub(crate) async fn launch_command(&self) -> Command {
+        let model = self.model(self.db.conn()).await.unwrap();
+
+        let program = model.launch_program;
+        let args = model.launch_args.split(" ");
+
+        let mut command = Command::new(program);
+
+        command.args(args);
+
+        command
     }
 
     pub async fn name(&self) -> Result<String, GetFieldError> {
@@ -118,6 +136,16 @@ impl Game {
 
     pub async fn dir(&self) -> Result<PathBuf, DirError> {
         Ok(Self::dir_from_id(&self.cfg, self.id))
+    }
+
+    /// Directory where Barnacle generated files are stored. The directory is
+    /// created if it doesn't already exist.
+    pub async fn generated_dir(&self) -> Result<PathBuf, GeneratedDirError> {
+        let path = state_dir().join("games").join(self.id.to_string());
+
+        create_dir_all(&path).map_err(GeneratedDirError::Create)?;
+
+        Ok(path)
     }
 
     fn dir_from_id(cfg: &Cfg, id: i32) -> PathBuf {
@@ -163,9 +191,17 @@ impl Game {
     ) -> Result<Self, AddError> {
         let name = name.to_string();
 
+        let launch_program = match deploy_kind {
+            DeployKind::OpenMW => "openmw",
+            DeployKind::Skyrim => "skyrim",
+            DeployKind::FalloutNV => "fallout_nv",
+        };
+
         let model = ActiveModel {
             name: Set(name.clone()),
             deploy_kind: Set(deploy_kind),
+            launch_program: Set(launch_program.to_string()),
+            launch_args: Set("".to_string()),
             ..Default::default()
         };
 
@@ -359,10 +395,7 @@ mod test {
     async fn test_add() {
         let repo = Repository::in_memory().await;
 
-        let game1 = repo
-            .add_game("Skyrim", DeployKind::CreationEngine)
-            .await
-            .unwrap();
+        let game1 = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
         repo.add_game("Morrowind", DeployKind::OpenMW)
             .await
             .unwrap();
@@ -374,7 +407,7 @@ mod test {
         assert_eq!(games.first().unwrap().name().await.unwrap(), "Morrowind");
         assert_eq!(
             games.last().unwrap().deploy_kind().await.unwrap(),
-            DeployKind::CreationEngine
+            DeployKind::Skyrim
         );
     }
 
@@ -397,10 +430,7 @@ mod test {
     async fn test_remove() {
         let repo = Repository::in_memory().await;
 
-        let game = repo
-            .add_game("Skyrim", DeployKind::CreationEngine)
-            .await
-            .unwrap();
+        let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
         let profile = game.add_profile("test_profile_1").await.unwrap();
         let mod_ = game.add_mod("test_mod", None).await.unwrap();
 
@@ -421,10 +451,7 @@ mod test {
     #[tokio::test]
     async fn test_remove_made_next_game_active() {
         let repo = Repository::in_memory().await;
-        let game1 = repo
-            .add_game("Skyrim", DeployKind::CreationEngine)
-            .await
-            .unwrap();
+        let game1 = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
         let game2 = repo
             .add_game("Morrowind", DeployKind::OpenMW)
             .await
@@ -443,9 +470,7 @@ mod test {
 
         assert_eq!(repo.games().await.unwrap().len(), 0);
 
-        repo.add_game("Skyrim", DeployKind::CreationEngine)
-            .await
-            .unwrap();
+        repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
 
         assert_eq!(repo.games().await.unwrap().len(), 1);
     }
@@ -455,7 +480,7 @@ mod test {
         let repo = Repository::in_memory().await;
 
         let game = repo
-            .add_game("Fallout: New Vegas", DeployKind::Gamebryo)
+            .add_game("Fallout: New Vegas", DeployKind::FalloutNV)
             .await
             .unwrap();
 
@@ -466,10 +491,7 @@ mod test {
     async fn test_set_name() {
         let repo = Repository::in_memory().await;
 
-        let game = repo
-            .add_game("Skyrim", DeployKind::CreationEngine)
-            .await
-            .unwrap();
+        let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
 
         assert_eq!(game.name().await.unwrap(), "Skyrim");
 
@@ -483,7 +505,7 @@ mod test {
         let repo = Repository::in_memory().await;
 
         let game = repo
-            .add_game("Fallout: New Vegas", DeployKind::Gamebryo)
+            .add_game("Fallout: New Vegas", DeployKind::FalloutNV)
             .await
             .unwrap();
 
@@ -495,7 +517,7 @@ mod test {
         let repo = Repository::in_memory().await;
 
         let game = repo
-            .add_game("Fallout: New Vegas", DeployKind::Gamebryo)
+            .add_game("Fallout: New Vegas", DeployKind::FalloutNV)
             .await
             .unwrap();
 

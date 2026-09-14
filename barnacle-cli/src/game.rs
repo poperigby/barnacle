@@ -20,7 +20,7 @@ pub async fn handle(repo: &Repository, cmd: &Command) {
             }
         }
         Command::Add { name } => {
-            repo.add_game(name, DeployKind::Overlay).await.unwrap();
+            repo.add_game(name, DeployKind::OpenMW).await.unwrap();
         }
         Command::Activate { name } => {
             let game = repo

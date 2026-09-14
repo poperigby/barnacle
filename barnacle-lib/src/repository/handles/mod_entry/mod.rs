@@ -296,10 +296,7 @@ mod test {
     async fn test_parent() {
         let repo = Repository::in_memory().await;
 
-        let game = repo
-            .add_game("Skyrim", DeployKind::CreationEngine)
-            .await
-            .unwrap();
+        let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
         let profile = game.add_profile("The Best Profile").await.unwrap();
         let mod_ = game
             .add_mod(

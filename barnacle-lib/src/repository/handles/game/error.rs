@@ -50,6 +50,12 @@ pub struct DirError {
 }
 
 #[derive(Debug, Error)]
+pub enum GeneratedDirError {
+    #[error("could not great generated directory")]
+    Create(#[source] io::Error),
+}
+
+#[derive(Debug, Error)]
 pub enum RemoveError {
     #[error("could not get game name")]
     Name(#[source] GetFieldError),

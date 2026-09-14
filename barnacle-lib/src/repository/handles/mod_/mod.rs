@@ -209,10 +209,7 @@ mod test {
     async fn test_remove() {
         let repo = Repository::in_memory().await;
 
-        let game = repo
-            .add_game("Skyrim", DeployKind::CreationEngine)
-            .await
-            .unwrap();
+        let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
         let mod_ = game.add_mod("Test", None).await.unwrap();
 
         assert_eq!(game.mods().await.unwrap().len(), 1);
@@ -228,10 +225,7 @@ mod test {
     #[tokio::test]
     async fn test_list() {
         let repo = Repository::in_memory().await;
-        let game = repo
-            .add_game("Skyrim", DeployKind::CreationEngine)
-            .await
-            .unwrap();
+        let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
 
         assert_eq!(game.mods().await.unwrap().len(), 0);
 
@@ -259,7 +253,7 @@ mod test {
     async fn test_name() {
         let repo = Repository::in_memory().await;
 
-        repo.add_game("Fallout: New Vegas", DeployKind::Gamebryo)
+        repo.add_game("Fallout: New Vegas", DeployKind::FalloutNV)
             .await
             .unwrap()
             .add_mod("Test", None)
@@ -275,7 +269,7 @@ mod test {
         let repo = Repository::in_memory().await;
 
         let game = repo
-            .add_game("Fallout: New Vegas", DeployKind::Gamebryo)
+            .add_game("Fallout: New Vegas", DeployKind::FalloutNV)
             .await
             .unwrap();
 

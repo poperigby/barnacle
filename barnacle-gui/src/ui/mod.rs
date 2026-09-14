@@ -146,7 +146,7 @@ impl Ui {
         };
 
         let top_bar = row![
-            button(text(t!("main_top-bar_launch"))),
+            button(text(t!("main_top-bar_launch"))).on_press(Message::LaunchButtonPressed),
             button(Icon::Wrench),
             profile_selector,
             space::horizontal(),

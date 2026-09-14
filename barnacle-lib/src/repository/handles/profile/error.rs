@@ -32,6 +32,16 @@ pub enum DirError {
 }
 
 #[derive(Debug, Error)]
+pub enum GeneratedDirError {
+    #[error("could not load parent game")]
+    Parent(#[source] ParentError),
+    #[error("could not resolve parent game's generated directory")]
+    ParentGeneratedDir(#[source] game::GeneratedDirError),
+    #[error("could not great generated directory")]
+    Create(#[source] io::Error),
+}
+
+#[derive(Debug, Error)]
 pub enum ActivateError {
     #[error("could not load parent game")]
     Parent(#[source] ParentError),

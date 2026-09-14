@@ -1,4 +1,8 @@
-use std::{fmt::Debug, fs, path::PathBuf};
+use std::{
+    fmt::Debug,
+    fs::{self, create_dir_all},
+    path::PathBuf,
+};
 
 mod error;
 
@@ -97,6 +101,24 @@ impl Profile {
             .map_err(DirError::ParentDir)?
             .join("profiles")
             .join(self.id.to_string()))
+    }
+
+    /// Directory where Barnacle generated files are stored. The directory is
+    /// created if it doesn't already exist.
+    pub async fn generated_dir(&self) -> Result<PathBuf, GeneratedDirError> {
+        let parent_path = self
+            .parent()
+            .await
+            .map_err(GeneratedDirError::Parent)?
+            .generated_dir()
+            .await
+            .map_err(GeneratedDirError::ParentGeneratedDir)?;
+
+        let path = parent_path.join("profiles").join(self.id.to_string());
+
+        create_dir_all(&path).map_err(GeneratedDirError::Create)?;
+
+        Ok(path)
     }
 
     /// Activate this profile
@@ -306,10 +328,7 @@ mod test {
     #[tokio::test]
     async fn test_remove() {
         let repo = Repository::in_memory().await;
-        let game = repo
-            .add_game("Skyrim", DeployKind::CreationEngine)
-            .await
-            .unwrap();
+        let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
         let _mod = game.add_mod("test_mod", None).await.unwrap();
 
         let profile = game.add_profile("Test").await.unwrap();
@@ -331,10 +350,7 @@ mod test {
     #[tokio::test]
     async fn test_list() {
         let repo = Repository::in_memory().await;
-        let game = repo
-            .add_game("Skyrim", DeployKind::CreationEngine)
-            .await
-            .unwrap();
+        let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
 
         assert_eq!(game.profiles().await.unwrap().len(), 0);
 
@@ -347,10 +363,7 @@ mod test {
     async fn test_parent() {
         let repo = Repository::in_memory().await;
 
-        let game = repo
-            .add_game("Skyrim", DeployKind::CreationEngine)
-            .await
-            .unwrap();
+        let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
         let profile = game.add_profile("Test").await.unwrap();
 
         assert_eq!(profile.parent().await.unwrap(), game);
@@ -381,7 +394,7 @@ mod test {
         let repo = Repository::in_memory().await;
 
         let game = repo
-            .add_game("Fallout: New Vegas", DeployKind::Gamebryo)
+            .add_game("Fallout: New Vegas", DeployKind::FalloutNV)
             .await
             .unwrap();
 
@@ -401,10 +414,7 @@ mod test {
     #[tokio::test]
     async fn test_remove_made_next_profile_active() {
         let repo = Repository::in_memory().await;
-        let game = repo
-            .add_game("Skyrim", DeployKind::CreationEngine)
-            .await
-            .unwrap();
+        let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
 
         let profile1 = game.add_profile("Test1").await.unwrap();
         let profile2 = game.add_profile("Test2").await.unwrap();
@@ -420,10 +430,7 @@ mod test {
     async fn test_switching_games_preserves_each_games_active_profile() {
         let repo = Repository::in_memory().await;
 
-        let game1 = repo
-            .add_game("Skyrim", DeployKind::CreationEngine)
-            .await
-            .unwrap();
+        let game1 = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
         game1.activate().await.unwrap();
 
         let profile1 = game1.add_profile("Test1").await.unwrap();
