@@ -24,6 +24,7 @@ use crate::{
 };
 
 #[must_use]
+#[derive(Debug, Clone)]
 pub struct ModBuilder {
     db: Db,
     cfg: Cfg,
@@ -41,8 +42,26 @@ impl ModBuilder {
         }
     }
 
+    /// Insert mod to database and create an empty directory in the library
     async fn add(&self) -> Mod {
-        add_mod(&self.db, &self.cfg, &self.game, &self.name).await
+        let model = ActiveModel {
+            name: Set(self.name.to_string()),
+            game_id: Set(self.game.id()),
+            ..Default::default()
+        };
+
+        let id = Entity::insert(model)
+            .exec(self.db.conn())
+            .await
+            .unwrap()
+            .last_insert_id;
+
+        let mod_ = Mod::from_id(id, &self.db, &self.cfg);
+
+        let dir = mod_.dir().await.unwrap();
+        create_dir_all(dir).unwrap();
+
+        mod_
     }
 
     /// Create a new [`Mod`] with no contents
@@ -80,17 +99,14 @@ impl ModBuilder {
         mod_
     }
 
-    pub async fn from_archive(&self, name: &str, path: &Path) -> ModArchiveImport {
-        ModArchiveImport::new(&self.db, &self.cfg, &self.game, name, path)
+    pub async fn from_archive(&self, path: &Path) -> ModArchiveImport {
+        ModArchiveImport::new(self, path)
     }
 }
 
 #[must_use]
 pub struct ModArchiveImport {
-    db: Db,
-    cfg: Cfg,
-    game: Game,
-    name: String,
+    builder: ModBuilder,
     archive_path: PathBuf,
     entries: Vec<PathBuf>,
     /// A relative path to the directory that should be the root of the [`Mod`]
@@ -98,7 +114,7 @@ pub struct ModArchiveImport {
 }
 
 impl ModArchiveImport {
-    fn new(db: &Db, cfg: &Cfg, game: &Game, name: &str, path: &Path) -> Self {
+    fn new(builder: &ModBuilder, path: &Path) -> Self {
         if !path.is_file() {
             panic!("Not a file");
         }
@@ -111,10 +127,7 @@ impl ModArchiveImport {
             .collect();
 
         Self {
-            db: db.clone(),
-            cfg: cfg.clone(),
-            game: game.clone(),
-            name: name.to_string(),
+            builder: builder.clone(),
             archive_path: path.to_path_buf(),
             entries,
             root: None,
@@ -132,8 +145,8 @@ impl ModArchiveImport {
     }
 
     // TODO: Wrap in transaction
-    pub async fn import(&self, progress: impl FnMut(&DirectoryMoveProgress)) -> Mod {
-        let mod_ = add_mod(&self.db, &self.cfg, &self.game, &self.name).await;
+    pub async fn intall(&self, progress: impl FnMut(&DirectoryMoveProgress)) -> Mod {
+        let mod_ = self.builder.add().await;
 
         let archive_file = File::open(&self.archive_path).unwrap();
         let dest = mod_.dir().await.unwrap();
@@ -158,28 +171,6 @@ impl ModArchiveImport {
 
         mod_
     }
-}
-
-/// Insert mod to database and create an empty directory in the library
-async fn add_mod(db: &Db, cfg: &Cfg, game: &Game, name: &str) -> Mod {
-    let model = ActiveModel {
-        name: Set(name.to_string()),
-        game_id: Set(game.id()),
-        ..Default::default()
-    };
-
-    let id = Entity::insert(model)
-        .exec(db.conn())
-        .await
-        .unwrap()
-        .last_insert_id;
-
-    let mod_ = Mod::from_id(id, db, cfg);
-
-    let dir = mod_.dir().await.unwrap();
-    create_dir_all(dir).unwrap();
-
-    mod_
 }
 
 #[cfg(test)]
@@ -253,11 +244,11 @@ mod test {
         );
 
         let builder = ModBuilder::new(&repo.db, &repo.cfg, &game, "Wrapped Mod");
-        let mut import = builder.from_archive("Wrapped Mod", &archive_path).await;
+        let mut import = builder.from_archive(&archive_path).await;
 
         import.with_root(Path::new("FooMod")).await;
 
-        let mod_ = import.import(|_| {}).await;
+        let mod_ = import.intall(|_| {}).await;
         let dir = mod_.dir().await.unwrap();
 
         assert!(dir.join("meshes").join("marker.nif").is_file());

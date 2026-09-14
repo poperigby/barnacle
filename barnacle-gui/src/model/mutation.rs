@@ -75,18 +75,23 @@ impl Mutation {
 
             // Mods
             AddMod { name, path } => {
-                if let Some(game) = repo.active_game().await.unwrap()
-                    && let Some(path) = path
-                {
-                    let mod_ = game
-                        .add_mod(&name)
+                let game = match repo.active_game().await.unwrap() {
+                    Some(game) => game,
+                    None => return,
+                };
+
+                let mod_ = if let Some(path) = path {
+                    game.add_mod(&name)
                         .await
                         .unwrap()
-                        .from_dir(&path, |_| {})
-                        .await;
-                    if let Some(profile) = game.active_profile().await.unwrap() {
-                        profile.add_mod_entry(mod_).await.unwrap();
-                    }
+                        .from_dir(&path, |p| println!("{}", p.bytes_total))
+                        .await
+                } else {
+                    game.add_mod(&name).await.unwrap().create().await
+                };
+
+                if let Some(profile) = game.active_profile().await.unwrap() {
+                    profile.add_mod_entry(mod_).await.unwrap();
                 }
             }
             DeleteMod(mod_) => {
