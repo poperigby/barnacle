@@ -13,7 +13,7 @@ use sea_orm::{ActiveValue::Set, EntityTrait};
 use tempfile::tempdir;
 
 use crate::{
-    Game, Mod,
+    DeployKind, Game, Mod, deployers,
     repository::{
         config::Cfg,
         db::{
@@ -94,6 +94,19 @@ impl NewMod {
         mod_
     }
 
+    async fn scan_for_items(&self, mod_: &Mod) {
+        let items = match self.game.deploy_kind().await.unwrap() {
+            DeployKind::OpenMW => deployers::openmw::OpenMw::parse_items(mod_).await,
+            _ => panic!("Unsupported deploy_kind :("),
+        };
+
+        for item in items {
+            dbg!(item);
+        }
+
+        // TODO: Persist items
+    }
+
     /// Create a new [`Mod`] with no contents
     pub async fn empty(&self) -> Mod {
         self.add().await
@@ -137,6 +150,8 @@ impl NewMod {
             )
             .unwrap();
         };
+
+        self.scan_for_items(&mod_).await;
 
         mod_
     }
@@ -219,6 +234,8 @@ impl ImportArchive {
         } else {
             uncompress_archive(archive_file, &dest, Ownership::Ignore).unwrap();
         }
+
+        self.builder.scan_for_items(&mod_).await;
 
         mod_
     }
