@@ -5,7 +5,9 @@ use std::{
 
 use compress_tools::{Ownership, list_archive_files, uncompress_archive};
 use fs_more::directory::{
-    DirectoryCopyOptions, DirectoryMoveOptions, SymlinkBehaviour, copy_directory, move_directory,
+    DirectoryCopyProgressRef, DirectoryCopyWithProgressOptions, DirectoryMoveProgress,
+    DirectoryMoveWithProgressOptions, SymlinkBehaviour, copy_directory_with_progress,
+    move_directory_with_progress,
 };
 use sea_orm::{ActiveValue::Set, EntityTrait};
 use tempfile::tempdir;
@@ -49,7 +51,11 @@ impl ModBuilder {
     }
 
     /// Create a new [`Mod`], copying the contents from the given path
-    pub async fn from_dir(&self, path: &Path) -> Mod {
+    pub async fn from_dir(
+        &self,
+        path: &Path,
+        progress: impl FnMut(&DirectoryCopyProgressRef),
+    ) -> Mod {
         if !path.is_dir() {
             panic!("Not a directory");
         }
@@ -60,13 +66,14 @@ impl ModBuilder {
         let dest = mod_.dir().await.unwrap();
 
         // TODO: Use copy_directory_with_progress so we can, you know, report progress.
-        copy_directory(
+        copy_directory_with_progress(
             path,
             dest,
-            DirectoryCopyOptions {
+            DirectoryCopyWithProgressOptions {
                 symlink_behaviour: SymlinkBehaviour::Follow,
                 ..Default::default()
             },
+            progress,
         )
         .unwrap();
 
@@ -125,7 +132,7 @@ impl ModArchiveImport {
     }
 
     // TODO: Wrap in transaction
-    pub async fn import(&self) -> Mod {
+    pub async fn import(&self, progress: impl FnMut(&DirectoryMoveProgress)) -> Mod {
         let mod_ = add_mod(&self.db, &self.cfg, &self.game, &self.name).await;
 
         let archive_file = File::open(&self.archive_path).unwrap();
@@ -138,7 +145,13 @@ impl ModArchiveImport {
 
             let source_path = staging_dir.path().join(root);
 
-            move_directory(source_path, dest, DirectoryMoveOptions::default()).unwrap();
+            move_directory_with_progress(
+                source_path,
+                dest,
+                DirectoryMoveWithProgressOptions::default(),
+                progress,
+            )
+            .unwrap();
         } else {
             uncompress_archive(archive_file, &dest, Ownership::Ignore).unwrap();
         }
@@ -214,7 +227,7 @@ mod test {
         fs::write(source.path().join("meshes").join("marker.nif"), "mesh").unwrap();
 
         let builder = ModBuilder::new(&repo.db, &repo.cfg, &game, "Mesh Replacer");
-        let mod_ = builder.from_dir(source.path()).await;
+        let mod_ = builder.from_dir(source.path(), |_| {}).await;
         let dir = mod_.dir().await.unwrap();
 
         assert!(dir.join("meshes").join("marker.nif").is_file());
@@ -244,7 +257,7 @@ mod test {
 
         import.with_root(Path::new("FooMod")).await;
 
-        let mod_ = import.import().await;
+        let mod_ = import.import(|_| {}).await;
         let dir = mod_.dir().await.unwrap();
 
         assert!(dir.join("meshes").join("marker.nif").is_file());
