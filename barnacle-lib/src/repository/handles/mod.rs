@@ -6,6 +6,7 @@
 
 pub(crate) mod error;
 pub mod game;
+pub mod item_entry;
 pub mod mod_;
 pub mod mod_entry;
 pub mod profile;

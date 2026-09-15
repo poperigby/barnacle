@@ -5,7 +5,7 @@ use strum::Display;
 #[sea_orm(
     rs_type = "String",
     db_type = "String(StringLen::None)",
-    rename_all = "camelCase"
+    rename_all = "snake_case"
 )]
 #[strum(serialize_all = "title_case")]
 pub enum DeployKind {

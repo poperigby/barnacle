@@ -206,6 +206,10 @@
                             barnacle-gui
                         ];
 
+                        packages = with pkgs; [
+                            sqlite-web
+                        ];
+
                         LD_LIBRARY_PATH = libraryPath;
 
                         checks = self.checks.${system};
