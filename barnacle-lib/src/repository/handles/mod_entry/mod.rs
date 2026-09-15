@@ -14,7 +14,7 @@ use crate::repository::{
     config::Cfg,
     db::{
         Db,
-        models::mod_entries::{ActiveModel, COLUMN, Entity, Model},
+        models::mods::entries::{ActiveModel, COLUMN, Entity, Model},
     },
     handles::error::{GetFieldError, LoadModelError, ModelKind, is_unique_violation},
 };

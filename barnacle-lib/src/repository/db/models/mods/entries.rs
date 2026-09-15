@@ -1,5 +1,7 @@
 use sea_orm::prelude::*;
 
+use crate::repository::db::models::{mods, profiles, targets};
+
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "mod_entries")]
@@ -20,16 +22,16 @@ pub struct Model {
     )]
     pub profile_id: i32,
     #[sea_orm(belongs_to, from = "profile_id", to = "id", on_delete = "Cascade")]
-    pub profile: BelongsTo<super::profiles::Entity>,
+    pub profile: BelongsTo<profiles::Entity>,
 
     #[sea_orm(unique_key = "mod_entry_per_profile")]
     pub mod_id: i32,
     #[sea_orm(belongs_to, from = "mod_id", to = "id", on_delete = "Cascade")]
-    pub mod_: BelongsTo<super::mods::Entity>,
+    pub mod_: BelongsTo<mods::Entity>,
 
     pub target_id: Option<i32>,
     #[sea_orm(belongs_to, from = "target_id", to = "id", on_delete = "SetNull")]
-    pub target: BelongsTo<Option<super::targets::Entity>>,
+    pub target: BelongsTo<Option<targets::Entity>>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

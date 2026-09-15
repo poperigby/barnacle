@@ -1,5 +1,7 @@
 use sea_orm::prelude::*;
 
+pub mod entries;
+
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "mods")]

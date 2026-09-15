@@ -1,5 +1,7 @@
 use sea_orm::prelude::*;
 
+use crate::repository::db::models::mods;
+
 /// Represents a destination where mod files are deployed to.
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
@@ -20,7 +22,7 @@ pub struct Model {
     pub game: BelongsTo<super::games::Entity>,
 
     #[sea_orm(has_many)]
-    pub mod_entries: HasMany<super::mod_entries::Entity>,
+    pub mod_entries: HasMany<mods::entries::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
