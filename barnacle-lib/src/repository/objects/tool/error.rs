@@ -1,8 +1,8 @@
-//! Error types for tool handle operations.
+//! Error types for tool object operations.
 
 use thiserror::Error;
 
-use crate::repository::handles::error::{GetFieldError, LoadModelError, ModelKind};
+use crate::repository::objects::error::{GetFieldError, LoadModelError, ModelKind};
 
 impl super::Tool {
     pub(crate) fn field_error(&self, field: &'static str, source: LoadModelError) -> GetFieldError {

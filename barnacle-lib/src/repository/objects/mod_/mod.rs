@@ -18,7 +18,7 @@ use crate::repository::{
         Db,
         models::mods::{COLUMN, Entity, Model},
     },
-    handles::{
+    objects::{
         error::{GetFieldError, LoadModelError, ModelKind},
         game::Game,
         mod_::builder::NewMod,

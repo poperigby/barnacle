@@ -1,10 +1,10 @@
-//! Error types for mod handle operations.
+//! Error types for mod object operations.
 
 use std::{io, path::PathBuf};
 
 use thiserror::Error;
 
-use crate::repository::handles::{
+use crate::repository::objects::{
     error::{GetFieldError, LoadModelError, ModelKind},
     game,
 };

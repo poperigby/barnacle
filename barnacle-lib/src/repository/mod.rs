@@ -11,10 +11,10 @@ mod db;
 mod state;
 
 pub mod config;
-pub mod handles;
+pub mod objects;
 
 pub use db::models::DeployKind;
-pub use handles::{Game, Mod, ModEntry, Profile, Tool};
+pub use objects::{Game, Mod, ModEntry, Profile, Tool};
 
 /// Central access point for all persistent data.
 ///
@@ -39,22 +39,22 @@ impl Repository {
         &self,
         name: &str,
         deploy_kind: DeployKind,
-    ) -> Result<Game, handles::game::AddError> {
+    ) -> Result<Game, objects::game::AddError> {
         Game::add(&self.db, &self.cfg, name, deploy_kind).await
     }
 
-    pub async fn games(&self) -> Result<Vec<Game>, handles::game::ListError> {
+    pub async fn games(&self) -> Result<Vec<Game>, objects::game::ListError> {
         Game::list(self.db.clone(), self.cfg.clone()).await
     }
 
     pub async fn search_game(
         &self,
         name: &str,
-    ) -> Result<Option<Game>, handles::game::SearchError> {
+    ) -> Result<Option<Game>, objects::game::SearchError> {
         Game::search(self.db.clone(), self.cfg.clone(), name).await
     }
 
-    pub async fn active_game(&self) -> Result<Option<Game>, handles::game::ActiveError> {
+    pub async fn active_game(&self) -> Result<Option<Game>, objects::game::ActiveError> {
         Game::active(&self.db, &self.cfg).await
     }
 

@@ -16,7 +16,7 @@ use crate::repository::{
         Db,
         models::mods::entries::{ActiveModel, COLUMN, Entity, Model},
     },
-    handles::error::{GetFieldError, LoadModelError, ModelKind, is_unique_violation},
+    objects::error::{GetFieldError, LoadModelError, ModelKind, is_unique_violation},
 };
 
 /// Represents a mod entry in the Barnacle system.

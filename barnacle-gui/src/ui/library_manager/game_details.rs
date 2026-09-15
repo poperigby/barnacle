@@ -67,7 +67,7 @@ impl GameDetails {
             text("Current").into()
         } else {
             button("Activate")
-                .on_press(Message::ActivateGameButtonPressed(game.handle()))
+                .on_press(Message::ActivateGameButtonPressed(game.object()))
                 .into()
         };
 
@@ -94,7 +94,7 @@ fn profile_row<'a>(row: &ProfileItem) -> Element<'a, Message> {
             space::horizontal(),
             button(Icon::Edit),
             button(Icon::Delete)
-                .on_press(Message::DeleteProfileButtonPressed(row.handle().clone()))
+                .on_press(Message::DeleteProfileButtonPressed(row.object().clone()))
         ]
         .padding(12),
     )

@@ -1,10 +1,10 @@
-//! Error types for mod entry handle operations.
+//! Error types for mod entry object operations.
 
 use thiserror::Error;
 
 use crate::{
     mod_,
-    repository::handles::error::{GetFieldError, LoadModelError, ModelKind},
+    repository::objects::error::{GetFieldError, LoadModelError, ModelKind},
 };
 
 impl super::ModEntry {

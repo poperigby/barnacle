@@ -27,7 +27,7 @@ pub struct Model {
 impl Model {
     pub async fn load(repo: &Repository) -> anyhow::Result<Self> {
         // We barely have anything to load if there's no active game (which means there aren't any games).
-        let active_game_handle = match repo.active_game().await? {
+        let active_game_object = match repo.active_game().await? {
             Some(game) => game,
             None => {
                 return Ok(Self::new(None, Vec::new(), None, Vec::new(), Vec::new()));
@@ -38,17 +38,17 @@ impl Model {
 
         let games = GameItem::load_all(repo).await?;
 
-        let active_profile_handle = match active_game_handle.active_profile().await? {
+        let active_profile_object = match active_game_object.active_profile().await? {
             Some(profile) => profile,
             None => {
                 return Ok(Self::new(active_game, games, None, Vec::new(), Vec::new()));
             }
         };
 
-        let active_profile = ProfileItem::load(active_profile_handle.clone()).await?;
+        let active_profile = ProfileItem::load(active_profile_object.clone()).await?;
 
-        let mods = ModItem::load_all(&active_game_handle).await?;
-        let mod_entries = ModEntryItem::load_all(&active_profile_handle).await?;
+        let mods = ModItem::load_all(&active_game_object).await?;
+        let mod_entries = ModEntryItem::load_all(&active_profile_object).await?;
 
         Ok(Self::new(
             active_game,
@@ -86,7 +86,7 @@ impl Model {
     pub fn game(&self, game: &Game) -> Option<GameItem> {
         self.games()
             .iter()
-            .find(|item| item.handle() == *game)
+            .find(|item| item.object() == *game)
             .cloned()
     }
 
@@ -98,7 +98,7 @@ impl Model {
         self.active_game()?
             .profiles
             .iter()
-            .find(|item| item.handle() == *profile)
+            .find(|item| item.object() == *profile)
             .cloned()
     }
 
@@ -113,7 +113,7 @@ impl Model {
 
 #[derive(Debug, Clone)]
 pub struct GameItem {
-    handle: Game,
+    object: Game,
     pub name: String,
     pub active: bool,
     pub profiles: Vec<ProfileItem>,
@@ -121,13 +121,13 @@ pub struct GameItem {
 
 impl PartialEq for GameItem {
     fn eq(&self, other: &Self) -> bool {
-        self.handle == other.handle
+        self.object == other.object
     }
 }
 
 impl GameItem {
-    pub fn handle(&self) -> Game {
-        self.handle.clone()
+    pub fn object(&self) -> Game {
+        self.object.clone()
     }
 
     async fn load(game: Game) -> anyhow::Result<Self> {
@@ -135,7 +135,7 @@ impl GameItem {
             name: game.name().await?,
             active: game.is_active().await?,
             profiles: ProfileItem::load_all(&game).await?,
-            handle: game,
+            object: game,
         })
     }
 
@@ -159,19 +159,19 @@ impl GameItem {
 #[derive(Debug, Clone, Display)]
 #[display("{name}")]
 pub struct ProfileItem {
-    handle: Profile,
+    object: Profile,
     pub name: String,
 }
 
 impl ProfileItem {
-    pub fn handle(&self) -> Profile {
-        self.handle.clone()
+    pub fn object(&self) -> Profile {
+        self.object.clone()
     }
 
     async fn load(profile: Profile) -> anyhow::Result<Self> {
         Ok(Self {
             name: profile.name().await?,
-            handle: profile,
+            object: profile,
         })
     }
 
@@ -194,7 +194,7 @@ impl ProfileItem {
 
 #[derive(Debug, Clone)]
 pub struct ModItem {
-    handle: Mod,
+    object: Mod,
     pub name: String,
 }
 
@@ -202,7 +202,7 @@ impl ModItem {
     async fn load(mod_: Mod) -> anyhow::Result<Self> {
         Ok(Self {
             name: mod_.name().await?,
-            handle: mod_,
+            object: mod_,
         })
     }
 
@@ -215,21 +215,21 @@ impl ModItem {
 
 #[derive(Debug, Clone)]
 pub struct ModEntryItem {
-    handle: ModEntry,
+    object: ModEntry,
     pub name: String,
     pub enabled: bool,
 }
 
 impl ModEntryItem {
-    pub fn handle(&self) -> ModEntry {
-        self.handle.clone()
+    pub fn object(&self) -> ModEntry {
+        self.object.clone()
     }
 
     async fn load(mod_entry: ModEntry) -> anyhow::Result<Self> {
         Ok(Self {
             name: mod_entry.name().await?,
             enabled: mod_entry.enabled().await?,
-            handle: mod_entry,
+            object: mod_entry,
         })
     }
 

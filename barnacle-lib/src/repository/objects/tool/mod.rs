@@ -12,7 +12,7 @@ use crate::repository::{
         Db,
         models::tools::{ActiveModel, Entity, Model},
     },
-    handles::error::{GetFieldError, LoadModelError, ModelKind},
+    objects::error::{GetFieldError, LoadModelError, ModelKind},
 };
 
 /// Represents a tool entity in the Barnacle system.

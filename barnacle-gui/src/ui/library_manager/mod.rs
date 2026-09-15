@@ -84,7 +84,7 @@ impl LibraryManager {
         self.selected_game = self
             .selected_game
             .as_ref()
-            .and_then(|item| model.game(&item.handle()))
+            .and_then(|item| model.game(&item.object()))
             .or_else(|| model.active_game().clone());
     }
 
@@ -145,7 +145,7 @@ impl LibraryManager {
 
                     if let Some(game) = &self.selected_game {
                         Action::Mutate(Mutation::CreateProfile {
-                            game: game.handle(),
+                            game: game.object(),
                             name,
                         })
                     } else {

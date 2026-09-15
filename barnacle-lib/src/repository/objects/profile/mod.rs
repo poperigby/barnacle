@@ -17,7 +17,7 @@ use crate::repository::{
         Db,
         models::profiles::{ActiveModel, COLUMN, Entity, Model},
     },
-    handles::{
+    objects::{
         error::{GetFieldError, LoadModelError, ModelKind, is_unique_violation},
         mod_entry,
     },

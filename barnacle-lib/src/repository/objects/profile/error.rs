@@ -2,7 +2,7 @@ use std::{io, path::PathBuf};
 
 use thiserror::Error;
 
-use crate::repository::handles::{
+use crate::repository::objects::{
     error::{GetFieldError, LoadModelError, ModelKind},
     game,
 };

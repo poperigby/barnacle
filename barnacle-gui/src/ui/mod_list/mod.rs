@@ -46,7 +46,7 @@ impl ModList {
                 entry_item,
                 enabled,
             } => Action::Mutate(Mutation::SetModEntryEnabled {
-                entry: entry_item.handle(),
+                entry: entry_item.object(),
                 enabled,
             }),
         }

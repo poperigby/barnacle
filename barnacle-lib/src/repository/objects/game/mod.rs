@@ -23,7 +23,7 @@ use crate::{
             Db,
             models::games::{ActiveModel, Entity, Model},
         },
-        handles::{
+        objects::{
             Target,
             error::{
                 GetFieldError, LoadModelError, ModelKind, is_unique_violation,

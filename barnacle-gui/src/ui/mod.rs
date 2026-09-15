@@ -92,7 +92,7 @@ impl Ui {
                 Action::None
             }
             Message::ProfileSelected(row) => {
-                Action::Mutate(Mutation::ActivateProfile(row.handle()))
+                Action::Mutate(Mutation::ActivateProfile(row.object()))
             }
 
             // Children
