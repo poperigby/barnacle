@@ -16,10 +16,9 @@ use crate::{
     DeployKind, Game, Mod, deployers,
     repository::{
         config::Cfg,
-        db::{
-            Db,
-            models::mods::{ActiveModel, Entity},
-        },
+        db::Db,
+        item,
+        mod_::{ActiveModel, Entity},
     },
 };
 
@@ -94,17 +93,29 @@ impl NewMod {
         mod_
     }
 
-    async fn scan_for_items(&self, mod_: &Mod) {
-        let items = match self.game.deploy_kind().await.unwrap() {
-            DeployKind::OpenMW => deployers::openmw::OpenMw::parse_items(mod_).await,
-            _ => panic!("Unsupported deploy_kind :("),
+    async fn add_items(&self, mod_: &Mod) {
+        let mod_dir = mod_.dir().await.unwrap();
+
+        let parsed_items = match self.game.deploy_kind().await.unwrap() {
+            DeployKind::OpenMW => deployers::openmw::OpenMw::parse_items(&mod_dir),
+            _ => Vec::new(),
         };
 
-        for item in items {
-            dbg!(item);
-        }
+        for parsed in parsed_items {
+            let group_id = item::group::find_id_by_key(&self.db, &self.game, parsed.group).await;
+            let model = item::ActiveModel {
+                name: Set(parsed.name),
+                path: Set(parsed.path.to_str().unwrap().to_string()),
+                mod_id: Set(mod_.id),
+                group_id: Set(group_id),
+                ..Default::default()
+            };
 
-        // TODO: Persist items
+            item::Entity::insert(model)
+                .exec(self.db.conn())
+                .await
+                .unwrap();
+        }
     }
 
     /// Create a new [`Mod`] with no contents
@@ -113,7 +124,7 @@ impl NewMod {
     }
 
     /// Create a new [`Mod`], copying the contents from the given path
-    pub async fn import_dir(&self, path: &Path, progress: Option<ProgressCallback<'_>>) -> Mod {
+    pub async fn from_dir(&self, path: &Path, progress: Option<ProgressCallback<'_>>) -> Mod {
         if !path.is_dir() {
             panic!("Not a directory");
         }
@@ -151,12 +162,12 @@ impl NewMod {
             .unwrap();
         };
 
-        self.scan_for_items(&mod_).await;
+        self.add_items(&mod_).await;
 
         mod_
     }
 
-    pub fn import_archive(&self, path: &Path) -> ImportArchive {
+    pub fn from_archive(&self, path: &Path) -> ImportArchive {
         ImportArchive::new(self, path)
     }
 }
@@ -235,7 +246,7 @@ impl ImportArchive {
             uncompress_archive(archive_file, &dest, Ownership::Ignore).unwrap();
         }
 
-        self.builder.scan_for_items(&mod_).await;
+        self.builder.add_items(&mod_).await;
 
         mod_
     }
@@ -286,7 +297,7 @@ mod test {
         fs::write(source.path().join("meshes").join("marker.nif"), "mesh").unwrap();
 
         let builder = NewMod::new(&repo.db, &repo.cfg, &game, "Mesh Replacer");
-        let mod_ = builder.import_dir(source.path(), None).await;
+        let mod_ = builder.from_dir(source.path(), None).await;
         let dir = mod_.dir().await.unwrap();
 
         assert!(dir.join("meshes").join("marker.nif").is_file());
@@ -312,7 +323,7 @@ mod test {
         );
 
         let builder = NewMod::new(&repo.db, &repo.cfg, &game, "Wrapped Mod");
-        let mut import = builder.import_archive(&archive_path);
+        let mut import = builder.from_archive(&archive_path);
 
         import.with_root(Path::new("FooMod"));
 

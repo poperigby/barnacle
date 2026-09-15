@@ -93,10 +93,7 @@ impl Mutation {
             AddModFromDir { name, path } => {
                 let active_game = repo.active_game().await.unwrap().unwrap();
 
-                let mod_ = active_game
-                    .new_mod(&name)
-                    .import_dir(&path, None)
-                    .await;
+                let mod_ = active_game.new_mod(&name).from_dir(&path, None).await;
 
                 if let Some(active_profile) = active_game.active_profile().await.unwrap() {
                     active_profile.add_mod_entry(mod_).await.unwrap();
@@ -107,7 +104,7 @@ impl Mutation {
 
                 let mod_ = active_game
                     .new_mod(&name)
-                    .import_archive(&path)
+                    .from_archive(&path)
                     .with_root(&PathBuf::from("PerksOfMorrowind"))
                     .intall(None)
                     .await;

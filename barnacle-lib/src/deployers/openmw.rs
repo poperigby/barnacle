@@ -1,16 +1,52 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use openmw_config::OpenMWConfiguration;
+use strum::EnumIter;
 use tokio::process::Command;
 use walkdir::WalkDir;
 
-use crate::{Game, Mod};
+use crate::{
+    Game,
+    deployers::{ItemGroup, ParsedItem},
+};
 
-#[derive(Debug, Clone)]
-pub struct FoundItem {
-    name: String,
-    path: PathBuf,
-    group_key: String,
+#[derive(Debug, Clone, Copy, EnumIter)]
+pub enum ItemGroupKey {
+    Plugin,
+    Archive,
+}
+
+impl ItemGroupKey {
+    fn from_file_extension(extension: &str) -> Option<Self> {
+        match extension {
+            "esp" | "esm" | "omwscript" | "omwplugin" | "omwgame" => Some(Self::Plugin),
+            "bsa" => Some(Self::Archive),
+            _ => None,
+        }
+    }
+}
+
+impl ItemGroup for ItemGroupKey {
+    fn key(self) -> &'static str {
+        match self {
+            Self::Plugin => "plugin",
+            Self::Archive => "archive",
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Self::Plugin => "Plugin",
+            Self::Archive => "Archive",
+        }
+    }
+
+    fn sortable(self) -> bool {
+        match self {
+            Self::Plugin => true,
+            Self::Archive => false,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -45,34 +81,32 @@ impl OpenMw {
         program
     }
 
-    pub async fn parse_items(mod_: &Mod) -> Vec<FoundItem> {
-        let paths: Vec<PathBuf> = WalkDir::new(mod_.dir().await.unwrap())
+    pub fn item_groups() -> Vec<ItemGroupKey> {
+        vec![ItemGroupKey::Plugin, ItemGroupKey::Archive]
+    }
+
+    pub fn parse_items(mod_dir: &Path) -> Vec<ParsedItem<ItemGroupKey>> {
+        let paths: Vec<PathBuf> = WalkDir::new(mod_dir)
             .into_iter()
             .map(|e| e.unwrap().into_path())
             .collect();
 
         let mut found = Vec::new();
-
         for path in paths {
-            let mod_dir = mod_.dir().await.unwrap();
             let name = path.file_name();
             let path = path.strip_prefix(mod_dir).unwrap().to_path_buf();
 
             if let Some(extension) = path.extension() {
-                let group_key = match extension.to_str().unwrap() {
-                    "esp" => "openmw.plugins",
-                    "bsa" => "openmw.archives",
-                    _ => "",
-                }
-                .to_string();
+                let Some(group) = ItemGroupKey::from_file_extension(&extension.to_string_lossy())
+                else {
+                    continue;
+                };
 
-                if !group_key.is_empty() {
-                    found.push(FoundItem {
-                        name: name.unwrap().to_str().unwrap().to_string(),
-                        path,
-                        group_key,
-                    });
-                }
+                found.push(ParsedItem {
+                    name: name.unwrap().to_str().unwrap().to_string(),
+                    path: path.clone(),
+                    group,
+                });
             }
         }
 

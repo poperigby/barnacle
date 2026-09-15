@@ -8,6 +8,7 @@ mod children;
 mod error;
 mod fields;
 mod lifecycle;
+pub(crate) mod model;
 
 #[cfg(test)]
 mod tests;
@@ -19,14 +20,12 @@ pub use error::*;
 
 use crate::repository::{
     Cfg, Game, Mod, ModEntry,
-    db::{
-        Db,
-        models::profiles::{ActiveModel, COLUMN, Entity, Model},
-    },
+    db::Db,
     objects::{
         error::{GetFieldError, LoadModelError, ModelKind, is_unique_violation},
         mod_entry,
     },
+    profile::{ActiveModel, COLUMN, Entity, Model},
 };
 
 /// Represents a profile entity in the Barnacle system.
@@ -63,7 +62,6 @@ impl Profile {
     ) -> Result<ActiveModel, LoadModelError> {
         Ok(self.model(conn).await?.into())
     }
-
 }
 
 impl PartialEq for Profile {

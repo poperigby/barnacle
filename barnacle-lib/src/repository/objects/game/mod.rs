@@ -7,8 +7,9 @@ use std::{
 mod children;
 mod error;
 mod fields;
-mod lifecycle;
 mod launch;
+mod lifecycle;
+pub(crate) mod model;
 
 #[cfg(test)]
 mod tests;
@@ -26,10 +27,8 @@ use crate::{
     profile,
     repository::{
         Cfg, DeployKind,
-        db::{
-            Db,
-            models::games::{ActiveModel, Entity, Model},
-        },
+        db::Db,
+        game::{ActiveModel, Entity, Model},
         objects::{
             Target,
             error::{

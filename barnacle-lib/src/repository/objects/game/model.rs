@@ -1,6 +1,8 @@
 use sea_orm::entity::prelude::*;
 use strum::Display;
 
+use crate::repository::{mod_, profile, target, tool};
+
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Display)]
 #[sea_orm(
     rs_type = "String",
@@ -40,16 +42,16 @@ pub struct Model {
         to = "id",
         on_delete = "SetNull"
     )]
-    pub active_profile: BelongsTo<Option<super::profiles::Entity>>,
+    pub active_profile: BelongsTo<Option<profile::Entity>>,
 
     #[sea_orm(has_many)]
-    pub profiles: HasMany<super::profiles::Entity>,
+    pub profiles: HasMany<profile::Entity>,
     #[sea_orm(has_many)]
-    pub mods: HasMany<super::mods::Entity>,
+    pub mods: HasMany<mod_::Entity>,
     #[sea_orm(has_many)]
-    pub tools: HasMany<super::tools::Entity>,
+    pub tools: HasMany<tool::Entity>,
     #[sea_orm(has_many)]
-    pub targets: HasMany<super::targets::Entity>,
+    pub targets: HasMany<target::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

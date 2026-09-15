@@ -3,6 +3,7 @@ use std::{fmt::Debug, path::PathBuf};
 mod error;
 mod fields;
 mod lifecycle;
+pub(crate) mod model;
 mod relations;
 
 #[cfg(test)]
@@ -18,10 +19,8 @@ pub use error::*;
 use crate::repository::{
     Mod, Profile,
     config::Cfg,
-    db::{
-        Db,
-        models::mods::entries::{ActiveModel, COLUMN, Entity, Model},
-    },
+    db::Db,
+    mod_entry::{ActiveModel, COLUMN, Entity, Model},
     objects::error::{GetFieldError, LoadModelError, ModelKind, is_unique_violation},
 };
 
@@ -37,8 +36,12 @@ pub struct ModEntry {
 }
 
 impl ModEntry {
-    pub(crate) fn from_id(id: i32, db: Db, cfg: Cfg) -> Self {
-        Self { id, db, cfg }
+    pub(crate) fn from_id(id: i32, db: &Db, cfg: &Cfg) -> Self {
+        Self {
+            id,
+            db: db.clone(),
+            cfg: cfg.clone(),
+        }
     }
 
     async fn model(&self, conn: &impl ConnectionTrait) -> Result<Model, LoadModelError> {
@@ -55,7 +58,6 @@ impl ModEntry {
     ) -> Result<ActiveModel, LoadModelError> {
         Ok(self.model(conn).await?.into())
     }
-
 }
 
 impl PartialEq for ModEntry {

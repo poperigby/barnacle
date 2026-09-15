@@ -1,3 +1,5 @@
+use crate::repository::objects::item;
+
 use super::*;
 
 impl Game {
@@ -84,7 +86,11 @@ impl Game {
 
         info!("Created new game: {name}");
 
-        Ok(Game::from_id(id, db, cfg))
+        let game = Game::from_id(id, db, cfg);
+
+        item::group::add_groups_to_game(db, &game).await;
+
+        Ok(game)
     }
 
     pub(crate) async fn list(db: Db, cfg: Cfg) -> Result<Vec<Game>, ListError> {

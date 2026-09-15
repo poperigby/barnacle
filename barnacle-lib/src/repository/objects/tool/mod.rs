@@ -1,6 +1,7 @@
 use std::{fmt::Debug, path::PathBuf};
 
 mod error;
+pub(crate) mod model;
 
 use sea_orm::{ConnectionTrait, EntityTrait};
 
@@ -8,11 +9,9 @@ pub use error::*;
 
 use crate::repository::{
     config::Cfg,
-    db::{
-        Db,
-        models::tools::{ActiveModel, Entity, Model},
-    },
+    db::Db,
     objects::error::{GetFieldError, LoadModelError, ModelKind},
+    tool::{ActiveModel, Entity, Model},
 };
 
 /// Represents a tool entity in the Barnacle system.

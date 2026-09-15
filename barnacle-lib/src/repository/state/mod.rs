@@ -1,8 +1,10 @@
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ConnectionTrait, EntityTrait};
 
+pub(crate) mod model;
+
 use crate::repository::{
-    db::models::state::{ActiveModel, Entity, Model},
     state::error::{LoadStateError, SetActiveGameIdError},
+    state::model::{ActiveModel, Entity, Model},
 };
 
 pub(crate) mod error;

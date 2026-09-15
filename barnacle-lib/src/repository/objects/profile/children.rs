@@ -1,3 +1,5 @@
+use crate::{deployers::ItemGroup, repository::objects::item::ItemEntry};
+
 use super::*;
 
 impl Profile {
@@ -8,5 +10,9 @@ impl Profile {
 
     pub async fn mod_entries(&self) -> Result<Vec<ModEntry>, mod_entry::ListError> {
         ModEntry::list(&self.db, &self.cfg, self).await
+    }
+
+    pub async fn item_entries(&self, group: impl ItemGroup) -> Vec<ItemEntry> {
+        ItemEntry::list(&self.db, &self.cfg, self, group).await
     }
 }

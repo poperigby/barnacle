@@ -1,7 +1,6 @@
 use sea_orm::prelude::*;
 
-pub mod entries;
-pub mod groups;
+use crate::repository::{item::group, mod_};
 
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
@@ -17,11 +16,11 @@ pub struct Model {
 
     pub group_id: i32,
     #[sea_orm(belongs_to, from = "group_id", to = "id", on_delete = "Cascade")]
-    pub group: BelongsTo<super::items::groups::Entity>,
+    pub group: BelongsTo<group::Entity>,
 
     pub mod_id: i32,
     #[sea_orm(belongs_to, from = "mod_id", to = "id", on_delete = "Cascade")]
-    pub mod_: BelongsTo<super::mods::Entity>,
+    pub mod_: BelongsTo<mod_::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

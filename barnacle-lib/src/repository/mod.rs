@@ -13,7 +13,53 @@ mod state;
 pub mod config;
 pub mod objects;
 
-pub use db::models::DeployKind;
+pub mod game {
+    pub use super::objects::game::model::DeployKind;
+    pub(crate) use super::objects::game::model::*;
+    pub use super::objects::game::*;
+}
+
+pub mod item {
+    pub(crate) use super::objects::item::model::*;
+    pub use super::objects::item::*;
+
+    pub mod entry {
+        pub(crate) use super::super::objects::item::entry::model::*;
+        pub use super::super::objects::item::entry::*;
+    }
+
+    pub mod group {
+        pub(crate) use super::super::objects::item::group::model::*;
+        pub(crate) use super::super::objects::item::group::*;
+    }
+}
+
+pub mod mod_ {
+    pub(crate) use super::objects::mod_::model::*;
+    pub use super::objects::mod_::*;
+}
+
+pub mod mod_entry {
+    pub(crate) use super::objects::mod_entry::model::*;
+    pub use super::objects::mod_entry::*;
+}
+
+pub mod profile {
+    pub(crate) use super::objects::profile::model::*;
+    pub use super::objects::profile::*;
+}
+
+pub mod target {
+    pub(crate) use super::objects::target::model::*;
+    pub use super::objects::target::*;
+}
+
+pub mod tool {
+    pub(crate) use super::objects::tool::model::*;
+    pub use super::objects::tool::*;
+}
+
+pub use game::DeployKind;
 pub use objects::{Game, Mod, ModEntry, Profile, Tool};
 
 /// Central access point for all persistent data.

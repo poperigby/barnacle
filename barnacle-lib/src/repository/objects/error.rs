@@ -5,11 +5,12 @@ use thiserror::Error;
 #[derive(Debug, Clone, Copy, Display)]
 pub enum ModelKind {
     Game,
-    Profile,
+    ItemEntry,
     Mod,
     ModEntry,
-    Tool,
+    Profile,
     Target,
+    Tool,
 }
 
 #[derive(Debug, Error)]

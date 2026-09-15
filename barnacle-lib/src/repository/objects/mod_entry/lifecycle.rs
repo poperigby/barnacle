@@ -1,3 +1,5 @@
+use crate::repository::{item, objects::item::ItemEntry};
+
 use super::*;
 
 impl ModEntry {
@@ -7,10 +9,12 @@ impl ModEntry {
         profile: &Profile,
         mod_: Mod,
     ) -> Result<Self, AddError> {
+        let conn = db.conn();
+
         let next_priority = Entity::find()
             .filter(COLUMN.profile_id.eq(profile.id))
             .order_by_desc(COLUMN.priority)
-            .one(db.conn())
+            .one(conn)
             .await
             .map_err(AddError::NextPriority)?
             .map_or(0, |e| e.priority + 1);
@@ -23,7 +27,7 @@ impl ModEntry {
         };
 
         let id = Entity::insert(model)
-            .exec(db.conn())
+            .exec(conn)
             .await
             .map_err(|source| {
                 if is_unique_violation(&source) {
@@ -33,7 +37,20 @@ impl ModEntry {
                 }
             })?
             .last_insert_id;
-        let mod_entry = ModEntry::from_id(id, db.clone(), cfg.clone());
+        let mod_entry = ModEntry::from_id(id, db, cfg);
+
+        let items_ids: Vec<i32> = item::Entity::find()
+            .filter(item::COLUMN.mod_id.eq(mod_.id))
+            .all(conn)
+            .await
+            .unwrap()
+            .iter()
+            .map(|m| m.id)
+            .collect();
+
+        for id in items_ids {
+            ItemEntry::add(db, cfg, &mod_entry, id).await.unwrap();
+        }
 
         info!(
             "Added mod entry for mod '{}' to profile '{}'",
@@ -86,7 +103,7 @@ impl ModEntry {
             .await
             .map_err(ListError)?
             .iter()
-            .map(|model| ModEntry::from_id(model.id, db.clone(), cfg.clone()))
+            .map(|model| ModEntry::from_id(model.id, db, cfg))
             .collect())
     }
 }

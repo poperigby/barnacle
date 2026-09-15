@@ -129,15 +129,13 @@ impl Profile {
         game: &Game,
         name: &str,
     ) -> Result<Option<Profile>, SearchError> {
-        Ok(
-            Entity::find_by_profile_name_per_game((name.to_string(), game.id()))
-                .one(db.conn())
-                .await
-                .map_err(|source| SearchError {
-                    name: name.to_string(),
-                    source,
-                })?
-                .map(|model| Profile::from_id(model.id, &db, &cfg)),
-        )
+        Ok(Entity::find_by_name_per_game((name.to_string(), game.id()))
+            .one(db.conn())
+            .await
+            .map_err(|source| SearchError {
+                name: name.to_string(),
+                source,
+            })?
+            .map(|model| Profile::from_id(model.id, &db, &cfg)))
     }
 }

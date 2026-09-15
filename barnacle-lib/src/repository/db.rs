@@ -2,8 +2,6 @@ use sea_orm::{Database, DatabaseConnection, DbErr};
 
 use crate::fs::state_dir;
 
-pub(crate) mod models;
-
 #[derive(Debug, Clone)]
 pub(crate) struct Db(DatabaseConnection);
 

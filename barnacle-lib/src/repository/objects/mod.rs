@@ -1,4 +1,4 @@
-//! Core domain entities for Barnacle.
+//! Core domain objects
 //!
 //! These types represent games, profiles, mods, and other elements managed by
 //! the system. They provide a unified interface for inspecting and mutating
@@ -6,7 +6,7 @@
 
 pub(crate) mod error;
 pub mod game;
-pub mod item_entry;
+pub mod item;
 pub mod mod_;
 pub mod mod_entry;
 pub mod profile;

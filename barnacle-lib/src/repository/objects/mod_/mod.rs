@@ -8,6 +8,7 @@ pub mod builder;
 mod error;
 mod fields;
 mod lifecycle;
+pub(crate) mod model;
 
 #[cfg(test)]
 mod tests;
@@ -19,10 +20,8 @@ pub use error::*;
 
 use crate::repository::{
     Cfg,
-    db::{
-        Db,
-        models::mods::{COLUMN, Entity, Model},
-    },
+    db::Db,
+    mod_::{COLUMN, Entity, Model},
     objects::{
         error::{GetFieldError, LoadModelError, ModelKind},
         game::Game,
@@ -57,7 +56,6 @@ impl Mod {
             .map_err(|source| LoadModelError::query(ModelKind::Mod, self.id, source))?
             .ok_or_else(|| LoadModelError::stale(ModelKind::Mod, self.id))
     }
-
 }
 
 impl PartialEq for Mod {
