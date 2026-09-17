@@ -11,6 +11,7 @@ pub enum ModelKind {
     Profile,
     Target,
     Tool,
+    Item,
 }
 
 #[derive(Debug, Error)]

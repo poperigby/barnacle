@@ -2,7 +2,7 @@
 
 use sea_orm::prelude::*;
 
-use crate::repository::game;
+use crate::repository::games;
 
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
@@ -13,7 +13,7 @@ pub struct Model {
 
     pub active_game_id: Option<i32>,
     #[sea_orm(belongs_to, from = "active_game_id", to = "id", on_delete = "SetNull")]
-    pub active_game: BelongsTo<Option<game::Entity>>,
+    pub active_game: BelongsTo<Option<games::Entity>>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

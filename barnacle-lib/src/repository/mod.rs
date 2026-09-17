@@ -13,53 +13,52 @@ mod state;
 pub mod config;
 pub mod objects;
 
-pub mod game {
-    pub use super::objects::game::model::DeployKind;
-    pub(crate) use super::objects::game::model::*;
-    pub use super::objects::game::*;
+pub mod games {
+    pub use super::objects::games::model::DeployKind;
+    pub(crate) use super::objects::games::model::*;
+    pub use super::objects::games::*;
 }
 
-pub mod item {
-    pub(crate) use super::objects::item::model::*;
-    pub use super::objects::item::*;
-
-    pub mod entry {
-        pub(crate) use super::super::objects::item::entry::model::*;
-        pub use super::super::objects::item::entry::*;
-    }
-
-    pub mod group {
-        pub(crate) use super::super::objects::item::group::model::*;
-        pub(crate) use super::super::objects::item::group::*;
-    }
+pub mod items {
+    pub(crate) use super::objects::items::model::*;
 }
 
-pub mod mod_ {
-    pub(crate) use super::objects::mod_::model::*;
-    pub use super::objects::mod_::*;
+pub mod item_entries {
+    pub(crate) use super::objects::item_entries::model::*;
+    pub use super::objects::item_entries::*;
 }
 
-pub mod mod_entry {
-    pub(crate) use super::objects::mod_entry::model::*;
-    pub use super::objects::mod_entry::*;
+pub mod item_lists {
+    pub(crate) use super::objects::item_lists::model::*;
+    pub(crate) use super::objects::item_lists::*;
 }
 
-pub mod profile {
-    pub(crate) use super::objects::profile::model::*;
-    pub use super::objects::profile::*;
+pub mod mods {
+    pub(crate) use super::objects::mods::model::*;
+    pub use super::objects::mods::*;
 }
 
-pub mod target {
-    pub(crate) use super::objects::target::model::*;
-    pub use super::objects::target::*;
+pub mod mod_entries {
+    pub(crate) use super::objects::mod_entries::model::*;
+    pub use super::objects::mod_entries::*;
 }
 
-pub mod tool {
-    pub(crate) use super::objects::tool::model::*;
-    pub use super::objects::tool::*;
+pub mod profiles {
+    pub(crate) use super::objects::profiles::model::*;
+    pub use super::objects::profiles::*;
 }
 
-pub use game::DeployKind;
+pub mod targets {
+    pub(crate) use super::objects::targets::model::*;
+    pub use super::objects::targets::*;
+}
+
+pub mod tools {
+    pub(crate) use super::objects::tools::model::*;
+    pub use super::objects::tools::*;
+}
+
+pub use games::DeployKind;
 pub use objects::{Game, Mod, ModEntry, Profile, Tool};
 
 /// Central access point for all persistent data.
@@ -85,22 +84,22 @@ impl Repository {
         &self,
         name: &str,
         deploy_kind: DeployKind,
-    ) -> Result<Game, objects::game::AddError> {
+    ) -> Result<Game, objects::games::AddError> {
         Game::add(&self.db, &self.cfg, name, deploy_kind).await
     }
 
-    pub async fn games(&self) -> Result<Vec<Game>, objects::game::ListError> {
+    pub async fn games(&self) -> Result<Vec<Game>, objects::games::ListError> {
         Game::list(self.db.clone(), self.cfg.clone()).await
     }
 
     pub async fn search_game(
         &self,
         name: &str,
-    ) -> Result<Option<Game>, objects::game::SearchError> {
+    ) -> Result<Option<Game>, objects::games::SearchError> {
         Game::search(self.db.clone(), self.cfg.clone(), name).await
     }
 
-    pub async fn active_game(&self) -> Result<Option<Game>, objects::game::ActiveError> {
+    pub async fn active_game(&self) -> Result<Option<Game>, objects::games::ActiveError> {
         Game::active(&self.db, &self.cfg).await
     }
 

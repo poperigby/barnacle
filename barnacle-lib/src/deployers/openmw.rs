@@ -104,7 +104,7 @@ impl OpenMw {
 
                 found.push(ParsedItem {
                     name: name.unwrap().to_str().unwrap().to_string(),
-                    path: path.clone(),
+                    relative_path: path.to_str().unwrap().to_string(),
                     group,
                 });
             }

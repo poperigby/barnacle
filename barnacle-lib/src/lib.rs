@@ -8,22 +8,22 @@ pub mod error {
     pub use crate::repository::objects::error::{GetFieldError, LoadModelError, ModelKind};
 }
 
-pub mod game {
-    pub use crate::repository::objects::game::*;
+pub mod games {
+    pub use crate::repository::objects::games::*;
 }
 
-pub mod profile {
-    pub use crate::repository::objects::profile::*;
+pub mod profiles {
+    pub use crate::repository::objects::profiles::*;
 }
 
-pub mod mod_ {
-    pub use crate::repository::objects::mod_::*;
+pub mod mods {
+    pub use crate::repository::objects::mods::*;
 }
 
-pub mod mod_entry {
-    pub use crate::repository::objects::mod_entry::*;
+pub mod mod_entries {
+    pub use crate::repository::objects::mod_entries::*;
 }
 
-pub mod tool {
-    pub use crate::repository::objects::tool::*;
+pub mod tools {
+    pub use crate::repository::objects::tools::*;
 }

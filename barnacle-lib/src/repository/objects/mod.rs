@@ -5,17 +5,20 @@
 //! these elements, handling all necessary operations behind the scenes.
 
 pub(crate) mod error;
-pub mod game;
-pub mod item;
-pub mod mod_;
-pub mod mod_entry;
-pub mod profile;
-pub mod target;
-pub mod tool;
+pub mod games;
+pub mod item_entries;
+pub mod item_lists;
+pub mod items;
+pub mod mod_entries;
+pub mod mods;
+pub mod profiles;
+pub mod targets;
+pub mod tools;
 
-pub use game::Game;
-pub use mod_::Mod;
-pub use mod_entry::ModEntry;
-pub use profile::Profile;
-pub use target::Target;
-pub use tool::Tool;
+pub use games::Game;
+pub use item_entries::ItemEntry;
+pub use mod_entries::ModEntry;
+pub use mods::Mod;
+pub use profiles::Profile;
+pub use targets::Target;
+pub use tools::Tool;

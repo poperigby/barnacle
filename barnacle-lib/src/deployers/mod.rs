@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 pub mod openmw;
 
 #[derive(Debug, Clone)]
@@ -8,7 +6,7 @@ where
     G: ItemGroup,
 {
     pub name: String,
-    pub path: PathBuf,
+    pub relative_path: String,
     pub group: G,
 }
 
