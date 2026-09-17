@@ -1,12 +1,10 @@
-use sea_orm::{ActiveValue::Set, EntityTrait, QueryFilter};
+use sea_orm::{ActiveValue::Set, ConnectionTrait, DatabaseTransaction, EntityTrait};
 
 use crate::{
-    Game,
     deployers::ItemGroupSpec,
     repository::{
-        config::Cfg,
-        db::Db,
-        objects::item_groups::model::{ActiveModel, COLUMN, Entity, Model},
+        item_groups::Model,
+        objects::item_groups::model::{ActiveModel, Entity},
     },
 };
 
@@ -15,66 +13,28 @@ pub(crate) mod model;
 #[cfg(test)]
 mod tests;
 
-/// A category for an [`Item`] defined by a [`Deployer`].
-#[derive(Debug, Clone)]
-pub struct ItemGroup {
-    pub id: i32,
-    db: Db,
-    cfg: Cfg,
+pub(crate) async fn insert(txn: &DatabaseTransaction, game_id: i32, spec: impl ItemGroupSpec) {
+    let model = ActiveModel {
+        game_id: Set(game_id),
+        key: Set(spec.key().to_string()),
+        name: Set(spec.name().to_string()),
+        ordered: Set(spec.ordered()),
+        ..Default::default()
+    };
+
+    Entity::insert(model).exec(txn).await.unwrap();
 }
 
-impl ItemGroup {
-    pub(crate) fn from_id(db: &Db, cfg: &Cfg, id: i32) -> Self {
-        Self {
-            db: db.clone(),
-            cfg: cfg.clone(),
-            id,
-        }
-    }
-
-    async fn model(&self) -> Model {
-        Entity::find_by_id(self.id)
-            .one(self.db.conn())
+pub(crate) async fn find_by_key(
+    conn: &impl ConnectionTrait,
+    game_id: i32,
+    key: &str,
+) -> Option<Model> {
+    Some(
+        Entity::find_by_key_per_game((game_id, key.to_string()))
+            .one(conn)
             .await
             .unwrap()
-            .unwrap()
-    }
-
-    pub(crate) async fn key(&self) -> String {
-        self.model().await.key
-    }
-
-    pub(crate) async fn name(&self) -> String {
-        self.model().await.name
-    }
-
-    pub(crate) async fn add(db: &Db, game: &Game, spec: impl ItemGroupSpec) {
-        let model = ActiveModel {
-            game_id: Set(game.id()),
-            key: Set(spec.key().to_string()),
-            name: Set(spec.name().to_string()),
-            ordered: Set(spec.ordered()),
-            ..Default::default()
-        };
-
-        Entity::insert(model).exec(db.conn()).await.unwrap();
-    }
-
-    pub(crate) async fn list(db: &Db, cfg: &Cfg, game: &Game) -> Vec<Self> {
-        Entity::find()
-            .filter(COLUMN.game_id.eq(game.id()))
-            .order_by_id_desc()
-            .all(db.conn())
-            .await
-            .unwrap()
-            .iter()
-            .map(|m| Self::from_id(db, cfg, m.id))
-            .collect()
-    }
-}
-
-impl PartialEq for ItemGroup {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-    }
+            .unwrap(),
+    )
 }

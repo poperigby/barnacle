@@ -1,6 +1,6 @@
 use tokio::test;
 
-use crate::{DeployKind, Repository};
+use crate::{DeployKind, Repository, repository::item_groups::find_by_key};
 
 #[test]
 async fn test_add() {
@@ -12,11 +12,6 @@ async fn test_add() {
         .await
         .unwrap();
 
-    let mut keys = Vec::new();
-    for group in game.item_groups().await {
-        keys.push(group.key().await);
-    }
-
-    assert!(keys.contains(&"plugin".to_string()));
-    assert!(keys.contains(&"archive".to_string()));
+    find_by_key(repo.db.conn(), game.id(), "plugin").await;
+    find_by_key(repo.db.conn(), game.id(), "archive").await;
 }

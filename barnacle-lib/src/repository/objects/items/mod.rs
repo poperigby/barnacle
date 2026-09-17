@@ -1,14 +1,11 @@
-use sea_orm::{ActiveValue::Set, EntityTrait, QueryFilter};
+use sea_orm::EntityTrait;
 
 use crate::{
-    Mod,
-    deployers::{DiscoveredItem, ItemGroupSpec},
     error::{LoadModelError, ModelKind},
     repository::{
         config::Cfg,
         db::Db,
-        item_groups::ItemGroup,
-        items::{ActiveModel, COLUMN, Entity, Model},
+        items::{Entity, Model},
     },
 };
 
@@ -37,14 +34,14 @@ impl Item {
             .ok_or_else(|| LoadModelError::stale(ModelKind::Item, self.id))
     }
 
-    pub async fn list(db: &Db, cfg: &Cfg, group: &ItemGroup) -> Vec<Self> {
-        Entity::find()
-            .filter(COLUMN.group_id.eq(group.id))
-            .all(db.conn())
-            .await
-            .unwrap()
-            .iter()
-            .map(|m| Self::from_id(&db, &cfg, m.id))
-            .collect()
-    }
+    // pub async fn list(db: &Db, cfg: &Cfg, group: &ItemGroup) -> Vec<Self> {
+    //     Entity::find()
+    //         .filter(COLUMN.group_id.eq(group.id))
+    //         .all(db.conn())
+    //         .await
+    //         .unwrap()
+    //         .iter()
+    //         .map(|m| Self::from_id(&db, &cfg, m.id))
+    //         .collect()
+    // }
 }

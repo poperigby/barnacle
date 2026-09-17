@@ -1,6 +1,6 @@
 use crate::{
     deployers::{Deployer, openmw::OpenMw},
-    repository::objects::item_groups::ItemGroup,
+    repository::item_groups,
 };
 
 use super::*;
@@ -29,12 +29,10 @@ impl Game {
             ..Default::default()
         };
 
-        // We want to roll back the database mutations if the directory creation fails
         let id = db
             .conn()
             .transaction(|txn| {
                 let name = name.clone();
-                let db = db.clone();
                 let cfg = cfg.clone();
 
                 Box::pin(async move {
@@ -50,6 +48,15 @@ impl Game {
                         })?
                         .last_insert_id;
 
+                    let item_group_specs = match deploy_kind {
+                        DeployKind::OpenMW => OpenMw::item_groups(),
+                        _ => Vec::new(),
+                    };
+
+                    for spec in item_group_specs {
+                        item_groups::insert(txn, id, spec).await;
+                    }
+
                     let dir = Self::dir_from_id(&cfg, id);
                     fs::create_dir_all(&dir)
                         .map_err(|source| AddError::CreateDir { path: dir, source })?;
@@ -61,15 +68,6 @@ impl Game {
             .map_err(|source| map_transaction_error(source, AddError::Transaction))?;
 
         let game = Self::from_id(id, db, cfg);
-
-        let item_group_specs = match deploy_kind {
-            DeployKind::OpenMW => OpenMw::item_groups(),
-            _ => Vec::new(),
-        };
-
-        for spec in item_group_specs {
-            ItemGroup::add(db, &game, spec).await;
-        }
 
         info!("Created new game: {name}");
 

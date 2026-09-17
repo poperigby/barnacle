@@ -1,6 +1,6 @@
 pub mod openmw;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct DiscoveredItem<G>
 where
     G: ItemGroupSpec,

@@ -10,7 +10,7 @@ use crate::{
     deployers::{Deployer, DiscoveredItem, ItemGroupSpec},
 };
 
-#[derive(Debug, Clone, Copy, EnumIter)]
+#[derive(Debug, Clone, Copy, EnumIter, PartialEq, PartialOrd)]
 pub enum ItemGroup {
     Plugin,
     Archive,
@@ -133,6 +133,25 @@ mod tests {
 
         let found_items = OpenMw::find_items(dir.path());
 
-        dbg!(found_items);
+        assert_eq!(
+            found_items,
+            [
+                DiscoveredItem {
+                    group: ItemGroup::Archive,
+                    key: "bigger booba.bsa".to_string(),
+                    relative_path: "BIGGER BOOBA.BSA".to_string(),
+                },
+                DiscoveredItem {
+                    group: ItemGroup::Plugin,
+                    key: "hyper realistic horkers.esp".to_string(),
+                    relative_path: "optional/hyper realistic horkers.ESP".to_string(),
+                },
+                DiscoveredItem {
+                    group: ItemGroup::Plugin,
+                    key: "immersive spoons.esp".to_string(),
+                    relative_path: "Immersive Spoons.esp".to_string(),
+                },
+            ]
+        );
     }
 }
