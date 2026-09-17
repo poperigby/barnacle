@@ -14,7 +14,7 @@ use tempfile::tempdir;
 
 use crate::{
     DeployKind, Game, Mod,
-    deployers::{self, ItemGroup},
+    deployers::{self, ItemGroupSpec},
     repository::{
         config::Cfg,
         db::Db,

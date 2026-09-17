@@ -2,7 +2,7 @@ use sea_orm::{ActiveValue::Set, EntityTrait, QueryFilter};
 
 use crate::{
     Mod,
-    deployers::{ItemGroup, ParsedItem},
+    deployers::{ItemGroupSpec, ParsedItem},
     error::{LoadModelError, ModelKind},
     repository::{
         config::Cfg,
@@ -47,7 +47,11 @@ impl Item {
             .collect()
     }
 
-    pub async fn add_from_parsed<G: ItemGroup>(db: &Db, mod_: &Mod, parsed_item: ParsedItem<G>) {
+    pub async fn add_from_parsed<G: ItemGroupSpec>(
+        db: &Db,
+        mod_: &Mod,
+        parsed_item: ParsedItem<G>,
+    ) {
         let model = ActiveModel {
             name: Set(parsed_item.name),
             group: Set(parsed_item.group.key().to_string()),

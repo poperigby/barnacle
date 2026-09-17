@@ -2,6 +2,9 @@ pub mod deployers;
 pub mod fs;
 pub mod repository;
 
+#[cfg(test)]
+mod test;
+
 pub use repository::{DeployKind, Game, Mod, ModEntry, Profile, Repository, Tool};
 
 pub mod error {

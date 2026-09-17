@@ -1,6 +1,81 @@
+use crate::{
+    deployers::{Deployer, openmw::OpenMw},
+    repository::objects::item_groups::ItemGroup,
+};
+
 use super::*;
 
 impl Game {
+    /// Insert a new [`Game`] into the database. The [`Game`] must have a unique name.
+    pub(crate) async fn add(
+        db: &Db,
+        cfg: &Cfg,
+        name: &str,
+        deploy_kind: DeployKind,
+    ) -> Result<Self, AddError> {
+        let name = name.to_string();
+
+        let launch_program = match deploy_kind {
+            DeployKind::OpenMW => "openmw",
+            DeployKind::Skyrim => "skyrim",
+            DeployKind::FalloutNV => "fallout_nv",
+        };
+
+        let model = ActiveModel {
+            name: Set(name.clone()),
+            deploy_kind: Set(deploy_kind.clone()),
+            launch_program: Set(launch_program.to_string()),
+            launch_args: Set("".to_string()),
+            ..Default::default()
+        };
+
+        // We want to roll back the database mutations if the directory creation fails
+        let id = db
+            .conn()
+            .transaction(|txn| {
+                let name = name.clone();
+                let db = db.clone();
+                let cfg = cfg.clone();
+
+                Box::pin(async move {
+                    let id = Entity::insert(model)
+                        .exec(txn)
+                        .await
+                        .map_err(|source| {
+                            if is_unique_violation(&source) {
+                                AddError::DuplicateName { name: name.clone() }
+                            } else {
+                                AddError::Insert(source)
+                            }
+                        })?
+                        .last_insert_id;
+
+                    let dir = Self::dir_from_id(&cfg, id);
+                    fs::create_dir_all(&dir)
+                        .map_err(|source| AddError::CreateDir { path: dir, source })?;
+
+                    Ok(id)
+                })
+            })
+            .await
+            .map_err(|source| map_transaction_error(source, AddError::Transaction))?;
+
+        let game = Self::from_id(id, db, cfg);
+
+        let item_group_specs = match deploy_kind {
+            DeployKind::OpenMW => OpenMw::item_groups(),
+            _ => Vec::new(),
+        };
+
+        for spec in item_group_specs {
+            ItemGroup::add(db, &game, spec).await;
+        }
+
+        info!("Created new game: {name}");
+
+        Ok(game)
+    }
+
     pub async fn remove(self) -> Result<(), RemoveError> {
         // We have to store these so we can still access them once the game is deleted
         let name = self.name().await.map_err(RemoveError::Name)?;
@@ -27,64 +102,6 @@ impl Game {
         info!("Removed game: {name}");
 
         Ok(())
-    }
-
-    /// Insert a new [`Game`] into the database. The [`Game`] must have a unique name.
-    pub(crate) async fn add(
-        db: &Db,
-        cfg: &Cfg,
-        name: &str,
-        deploy_kind: DeployKind,
-    ) -> Result<Self, AddError> {
-        let name = name.to_string();
-
-        let launch_program = match deploy_kind {
-            DeployKind::OpenMW => "openmw",
-            DeployKind::Skyrim => "skyrim",
-            DeployKind::FalloutNV => "fallout_nv",
-        };
-
-        let model = ActiveModel {
-            name: Set(name.clone()),
-            deploy_kind: Set(deploy_kind),
-            launch_program: Set(launch_program.to_string()),
-            launch_args: Set("".to_string()),
-            ..Default::default()
-        };
-
-        // We want to roll back the database mutations if the directory creation fails
-        let id = db
-            .conn()
-            .transaction(|txn| {
-                let name = name.clone();
-                let cfg = cfg.clone();
-
-                Box::pin(async move {
-                    let id = Entity::insert(model)
-                        .exec(txn)
-                        .await
-                        .map_err(|source| {
-                            if is_unique_violation(&source) {
-                                AddError::DuplicateName { name: name.clone() }
-                            } else {
-                                AddError::Insert(source)
-                            }
-                        })?
-                        .last_insert_id;
-
-                    let dir = Self::dir_from_id(&cfg, id);
-                    fs::create_dir_all(&dir)
-                        .map_err(|source| AddError::CreateDir { path: dir, source })?;
-
-                    Ok(id)
-                })
-            })
-            .await
-            .map_err(|source| map_transaction_error(source, AddError::Transaction))?;
-
-        info!("Created new game: {name}");
-
-        Ok(Game::from_id(id, db, cfg))
     }
 
     pub(crate) async fn list(db: Db, cfg: Cfg) -> Result<Vec<Game>, ListError> {

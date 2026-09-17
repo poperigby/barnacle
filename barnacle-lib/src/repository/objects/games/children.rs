@@ -1,3 +1,5 @@
+use crate::repository::objects::item_groups::ItemGroup;
+
 use super::*;
 
 impl Game {
@@ -47,6 +49,10 @@ impl Game {
 
     pub async fn add_target(&self, name: &str, path: &Path) -> Result<Target, targets::AddError> {
         Target::add(&self.db, &self.cfg, self, name, path).await
+    }
+
+    pub(crate) async fn item_groups(&self) -> Vec<ItemGroup> {
+        ItemGroup::list(&self.db, &self.cfg, self).await
     }
 
     pub async fn targets(&self) -> Result<Vec<Target>, targets::ListError> {

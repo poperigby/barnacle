@@ -103,7 +103,6 @@ impl Profile {
             .last_insert_id;
 
         let profile = Profile::from_id(id, db, cfg);
-        item_lists::add_all_to_profile(db, &profile).await;
 
         let dir = profile.dir().await.map_err(AddError::Dir)?;
         fs::create_dir_all(&dir).map_err(|source| AddError::CreateDir { path: dir, source })?;

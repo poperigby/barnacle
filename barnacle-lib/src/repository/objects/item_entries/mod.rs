@@ -7,7 +7,7 @@ pub use error::*;
 
 use crate::{
     ModEntry, Profile,
-    deployers::ItemGroup,
+    deployers::ItemGroupSpec,
     error::{LoadModelError, ModelKind},
     repository::{
         config::Cfg,
@@ -94,7 +94,7 @@ impl ItemEntry {
         db: &Db,
         cfg: &Cfg,
         profile: &Profile,
-        group: impl ItemGroup,
+        group: impl ItemGroupSpec,
     ) -> Vec<Self> {
         let conn = db.conn();
 

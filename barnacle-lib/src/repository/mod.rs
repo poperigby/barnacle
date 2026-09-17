@@ -75,6 +75,7 @@ pub struct Repository {
 impl Repository {
     pub async fn new() -> Self {
         Self {
+            // TODO: WTF? Make this return a Result
             db: Db::new().await.unwrap(),
             cfg: Arc::new(RwLock::new(CoreConfig::load())),
         }

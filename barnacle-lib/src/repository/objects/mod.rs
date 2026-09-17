@@ -7,6 +7,7 @@
 pub(crate) mod error;
 pub mod games;
 pub mod item_entries;
+pub mod item_groups;
 pub mod item_lists;
 pub mod items;
 pub mod mod_entries;

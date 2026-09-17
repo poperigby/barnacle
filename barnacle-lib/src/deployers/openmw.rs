@@ -7,16 +7,16 @@ use walkdir::WalkDir;
 
 use crate::{
     Game,
-    deployers::{ItemGroup, ParsedItem},
+    deployers::{Deployer, ItemGroupSpec, ParsedItem},
 };
 
 #[derive(Debug, Clone, Copy, EnumIter)]
-pub enum ItemGroupKey {
+pub enum ItemGroup {
     Plugin,
     Archive,
 }
 
-impl ItemGroupKey {
+impl ItemGroup {
     fn from_file_extension(extension: &str) -> Option<Self> {
         match extension {
             "esp" | "esm" | "omwscript" | "omwplugin" | "omwgame" => Some(Self::Plugin),
@@ -26,7 +26,7 @@ impl ItemGroupKey {
     }
 }
 
-impl ItemGroup for ItemGroupKey {
+impl ItemGroupSpec for ItemGroup {
     fn key(self) -> &'static str {
         match self {
             Self::Plugin => "plugin",
@@ -41,7 +41,7 @@ impl ItemGroup for ItemGroupKey {
         }
     }
 
-    fn sortable(self) -> bool {
+    fn ordered(self) -> bool {
         match self {
             Self::Plugin => true,
             Self::Archive => false,
@@ -51,6 +51,12 @@ impl ItemGroup for ItemGroupKey {
 
 #[derive(Debug)]
 pub struct OpenMw {}
+
+impl Deployer for OpenMw {
+    fn item_groups() -> Vec<impl ItemGroupSpec> {
+        vec![ItemGroup::Plugin, ItemGroup::Archive]
+    }
+}
 
 impl OpenMw {
     pub async fn prepare(game: &Game) -> Command {
@@ -81,11 +87,7 @@ impl OpenMw {
         program
     }
 
-    pub fn item_groups() -> Vec<ItemGroupKey> {
-        vec![ItemGroupKey::Plugin, ItemGroupKey::Archive]
-    }
-
-    pub fn parse_items(mod_dir: &Path) -> Vec<ParsedItem<ItemGroupKey>> {
+    pub fn parse_items(mod_dir: &Path) -> Vec<ParsedItem<ItemGroup>> {
         let paths: Vec<PathBuf> = WalkDir::new(mod_dir)
             .into_iter()
             .map(|e| e.unwrap().into_path())
@@ -97,7 +99,7 @@ impl OpenMw {
             let path = path.strip_prefix(mod_dir).unwrap().to_path_buf();
 
             if let Some(extension) = path.extension() {
-                let Some(group) = ItemGroupKey::from_file_extension(&extension.to_string_lossy())
+                let Some(group) = ItemGroup::from_file_extension(&extension.to_string_lossy())
                 else {
                     continue;
                 };
