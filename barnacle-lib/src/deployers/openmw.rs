@@ -7,7 +7,7 @@ use walkdir::WalkDir;
 
 use crate::{
     Game,
-    deployers::{Deployer, ItemGroupSpec, ParsedItem},
+    deployers::{Deployer, DiscoveredItem, ItemGroupSpec},
 };
 
 #[derive(Debug, Clone, Copy, EnumIter)]
@@ -18,7 +18,7 @@ pub enum ItemGroup {
 
 impl ItemGroup {
     fn from_file_extension(extension: &str) -> Option<Self> {
-        match extension {
+        match extension.to_lowercase().as_str() {
             "esp" | "esm" | "omwscript" | "omwplugin" | "omwgame" => Some(Self::Plugin),
             "bsa" => Some(Self::Archive),
             _ => None,
@@ -87,7 +87,7 @@ impl OpenMw {
         program
     }
 
-    pub fn parse_items(mod_dir: &Path) -> Vec<ParsedItem<ItemGroup>> {
+    pub fn find_items(mod_dir: &Path) -> Vec<DiscoveredItem<ItemGroup>> {
         let paths: Vec<PathBuf> = WalkDir::new(mod_dir)
             .into_iter()
             .map(|e| e.unwrap().into_path())
@@ -95,23 +95,44 @@ impl OpenMw {
 
         let mut found = Vec::new();
         for path in paths {
-            let name = path.file_name();
-            let path = path.strip_prefix(mod_dir).unwrap().to_path_buf();
+            let relative_path = path.strip_prefix(mod_dir).unwrap().to_path_buf();
 
-            if let Some(extension) = path.extension() {
+            if let Some(extension) = relative_path.extension() {
                 let Some(group) = ItemGroup::from_file_extension(&extension.to_string_lossy())
                 else {
                     continue;
                 };
 
-                found.push(ParsedItem {
-                    name: name.unwrap().to_str().unwrap().to_string(),
-                    relative_path: path.to_str().unwrap().to_string(),
+                found.push(DiscoveredItem {
+                    key: path.file_name().unwrap().to_string_lossy().to_lowercase(),
+                    relative_path: relative_path.to_str().unwrap().to_string(),
                     group,
                 });
             }
         }
 
+        found.sort_by_key(|k| k.key.clone());
+
         found
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use test_files::TestFiles;
+
+    use super::*;
+
+    #[test]
+    fn test_find_items() {
+        let dir = TestFiles::new();
+
+        dir.file("Immersive Spoons.esp", "plugin")
+            .file("BIGGER BOOBA.BSA", "archive")
+            .file("optional/hyper realistic horkers.ESP", "plugin");
+
+        let found_items = OpenMw::find_items(dir.path());
+
+        dbg!(found_items);
     }
 }

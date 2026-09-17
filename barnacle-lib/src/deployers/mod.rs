@@ -1,13 +1,13 @@
 pub mod openmw;
 
 #[derive(Debug, Clone)]
-pub struct ParsedItem<G>
+pub struct DiscoveredItem<G>
 where
     G: ItemGroupSpec,
 {
-    pub name: String,
-    pub relative_path: String,
     pub group: G,
+    pub key: String,
+    pub relative_path: String,
 }
 
 pub trait ItemGroupSpec: Copy + Send {

@@ -15,6 +15,7 @@ pub(crate) mod model;
 #[cfg(test)]
 mod tests;
 
+/// A category for an [`Item`] defined by a [`Deployer`].
 #[derive(Debug, Clone)]
 pub struct ItemGroup {
     pub id: i32,

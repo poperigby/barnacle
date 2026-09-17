@@ -28,6 +28,11 @@ pub mod item_entries {
     pub use super::objects::item_entries::*;
 }
 
+pub mod item_groups {
+    pub(crate) use super::objects::item_groups::model::*;
+    pub(crate) use super::objects::item_groups::*;
+}
+
 pub mod item_lists {
     pub(crate) use super::objects::item_lists::model::*;
     pub(crate) use super::objects::item_lists::*;

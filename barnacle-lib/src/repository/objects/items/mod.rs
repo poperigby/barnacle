@@ -2,11 +2,12 @@ use sea_orm::{ActiveValue::Set, EntityTrait, QueryFilter};
 
 use crate::{
     Mod,
-    deployers::{ItemGroupSpec, ParsedItem},
+    deployers::{DiscoveredItem, ItemGroupSpec},
     error::{LoadModelError, ModelKind},
     repository::{
         config::Cfg,
         db::Db,
+        item_groups::ItemGroup,
         items::{ActiveModel, COLUMN, Entity, Model},
     },
 };
@@ -36,34 +37,14 @@ impl Item {
             .ok_or_else(|| LoadModelError::stale(ModelKind::Item, self.id))
     }
 
-    pub async fn list(db: &Db, cfg: &Cfg, mod_: &Mod) -> Vec<Self> {
+    pub async fn list(db: &Db, cfg: &Cfg, group: &ItemGroup) -> Vec<Self> {
         Entity::find()
-            .filter(COLUMN.mod_id.eq(mod_.id))
+            .filter(COLUMN.group_id.eq(group.id))
             .all(db.conn())
             .await
             .unwrap()
             .iter()
             .map(|m| Self::from_id(&db, &cfg, m.id))
             .collect()
-    }
-
-    pub async fn add_from_parsed<G: ItemGroupSpec>(
-        db: &Db,
-        mod_: &Mod,
-        parsed_item: ParsedItem<G>,
-    ) {
-        let model = ActiveModel {
-            name: Set(parsed_item.name),
-            group: Set(parsed_item.group.key().to_string()),
-            relative_path: Set(parsed_item.relative_path),
-            mod_id: Set(mod_.id),
-            ..Default::default()
-        };
-
-        Entity::insert(model).exec(db.conn()).await.unwrap();
-    }
-
-    pub(crate) async fn group(&self) -> String {
-        self.model().await.unwrap().group
     }
 }

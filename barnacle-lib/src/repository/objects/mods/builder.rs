@@ -95,27 +95,27 @@ impl NewMod {
     }
 
     async fn add_items(&self, mod_: &Mod) {
-        let mod_dir = mod_.dir().await.unwrap();
-
-        let parsed_items = match self.game.deploy_kind().await.unwrap() {
-            DeployKind::OpenMW => deployers::openmw::OpenMw::parse_items(&mod_dir),
-            _ => Vec::new(),
-        };
-
-        for parsed in parsed_items {
-            let model = items::ActiveModel {
-                name: Set(parsed.name),
-                group: Set(parsed.group.key().to_string()),
-                relative_path: Set(parsed.relative_path),
-                mod_id: Set(mod_.id),
-                ..Default::default()
-            };
-
-            items::Entity::insert(model)
-                .exec(self.db.conn())
-                .await
-                .unwrap();
-        }
+        // let mod_dir = mod_.dir().await.unwrap();
+        //
+        // let parsed_items = match self.game.deploy_kind().await.unwrap() {
+        //     DeployKind::OpenMW => deployers::openmw::OpenMw::find_items(&mod_dir),
+        //     _ => Vec::new(),
+        // };
+        //
+        // for parsed in parsed_items {
+        //     let model = items::ActiveModel {
+        //         name: Set(parsed.key),
+        //         group: Set(parsed.group.key().to_string()),
+        //         relative_path: Set(parsed.relative_path),
+        //         mod_id: Set(mod_.id),
+        //         ..Default::default()
+        //     };
+        //
+        //     items::Entity::insert(model)
+        //         .exec(self.db.conn())
+        //         .await
+        //         .unwrap();
+        // }
     }
 
     /// Create a new [`Mod`] with no contents

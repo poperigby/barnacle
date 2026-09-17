@@ -1,5 +1,3 @@
-use crate::repository::objects::{ItemEntry, items::Item};
-
 use super::*;
 
 impl ModEntry {
@@ -38,10 +36,6 @@ impl ModEntry {
             })?
             .last_insert_id;
         let mod_entry = ModEntry::from_id(id, db, cfg);
-
-        for id in Item::list(db, cfg, &mod_).await {
-            ItemEntry::add(db, cfg, &mod_entry, id).await.unwrap();
-        }
 
         info!(
             "Added mod entry for mod '{}' to profile '{}'",

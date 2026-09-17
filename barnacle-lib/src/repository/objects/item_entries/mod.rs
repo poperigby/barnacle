@@ -45,50 +45,50 @@ impl ItemEntry {
         Ok(self.model().await?.into())
     }
 
-    pub(crate) async fn add(
-        db: &Db,
-        cfg: &Cfg,
-        mod_entry: &ModEntry,
-        item: Item,
-    ) -> Result<Self, AddError> {
-        let conn = db.conn();
-
-        let profile = mod_entry.parent().await.unwrap();
-        let item_group = item.group().await;
-
-        let list_id = item_lists::find(db, &profile, &item_group).await;
-
-        let next_priority = Entity::find()
-            .filter(COLUMN.item_list_id.eq(list_id))
-            .order_by_desc(COLUMN.priority)
-            .one(conn)
-            .await
-            .map_err(AddError::NextPriority)?
-            .and_then(|e| e.priority.map(|priority| priority + 1))
-            .unwrap_or(0);
-
-        let model = ActiveModel {
-            mod_entry_id: Set(mod_entry.id),
-            item_id: Set(item.id),
-            item_list_id: Set(list_id),
-            priority: Set(Some(next_priority)),
-            ..Default::default()
-        };
-
-        let id = Entity::insert(model)
-            .exec(conn)
-            .await
-            .map_err(|source| {
-                if is_unique_violation(&source) {
-                    AddError::Duplicate
-                } else {
-                    AddError::Insert(source)
-                }
-            })?
-            .last_insert_id;
-
-        Ok(Self::from_id(id, db, cfg))
-    }
+    // pub(crate) async fn add(
+    //     db: &Db,
+    //     cfg: &Cfg,
+    //     mod_entry: &ModEntry,
+    //     item: Item,
+    // ) -> Result<Self, AddError> {
+    //     let conn = db.conn();
+    //
+    //     let profile = mod_entry.parent().await.unwrap();
+    //     let item_group = item.group().await;
+    //
+    //     let list_id = item_lists::find(db, &profile, &item_group).await;
+    //
+    //     let next_priority = Entity::find()
+    //         .filter(COLUMN.item_list_id.eq(list_id))
+    //         .order_by_desc(COLUMN.priority)
+    //         .one(conn)
+    //         .await
+    //         .map_err(AddError::NextPriority)?
+    //         .and_then(|e| e.priority.map(|priority| priority + 1))
+    //         .unwrap_or(0);
+    //
+    //     let model = ActiveModel {
+    //         mod_entry_id: Set(mod_entry.id),
+    //         item_id: Set(item.id),
+    //         item_list_id: Set(list_id),
+    //         priority: Set(Some(next_priority)),
+    //         ..Default::default()
+    //     };
+    //
+    //     let id = Entity::insert(model)
+    //         .exec(conn)
+    //         .await
+    //         .map_err(|source| {
+    //             if is_unique_violation(&source) {
+    //                 AddError::Duplicate
+    //             } else {
+    //                 AddError::Insert(source)
+    //             }
+    //         })?
+    //         .last_insert_id;
+    //
+    //     Ok(Self::from_id(id, db, cfg))
+    // }
 
     pub(crate) async fn list(
         db: &Db,
