@@ -1,6 +1,6 @@
 use barnacle_gui::{
     icons::Icon,
-    model::{GameItem, Model, Mutation, ProfileItem},
+    model::{GameRecord, Model, Mutation, ProfileRecord},
 };
 use barnacle_lib::{Game, repository::Profile};
 use iced::{
@@ -57,7 +57,7 @@ impl GameDetails {
             },
         }
     }
-    pub fn view(&self, model: &Model, selected_game: &Option<GameItem>) -> Element<'_, Message> {
+    pub fn view(&self, model: &Model, selected_game: &Option<GameRecord>) -> Element<'_, Message> {
         let game = match selected_game {
             Some(game) => game,
             None => return column![text("No game selected")].into(),
@@ -87,14 +87,14 @@ impl GameDetails {
     }
 }
 
-fn profile_row<'a>(row: &ProfileItem) -> Element<'a, Message> {
+fn profile_row<'a>(record: &ProfileRecord) -> Element<'a, Message> {
     container(
         row![
-            text(row.name.clone()),
+            text(record.name.clone()),
             space::horizontal(),
             button(Icon::Edit),
             button(Icon::Delete)
-                .on_press(Message::DeleteProfileButtonPressed(row.object().clone()))
+                .on_press(Message::DeleteProfileButtonPressed(record.object().clone()))
         ]
         .padding(12),
     )

@@ -15,13 +15,13 @@ mod mutation;
 /// this cheaply. [`Repository`] data is updated only from successful mutations.
 #[derive(Debug, Clone)]
 pub struct Model {
-    active_game: Option<GameItem>,
-    games: Vec<GameItem>,
+    active_game: Option<GameRecord>,
+    games: Vec<GameRecord>,
 
-    active_profile: Option<ProfileItem>,
+    active_profile: Option<ProfileRecord>,
 
-    mods: Vec<ModItem>,
-    mod_entries: Vec<ModEntryItem>,
+    mods: Vec<ModRecord>,
+    mod_entries: Vec<ModEntryRecord>,
 }
 
 impl Model {
@@ -34,9 +34,9 @@ impl Model {
             }
         };
 
-        let active_game = GameItem::load_active(repo).await?;
+        let active_game = GameRecord::load_active(repo).await?;
 
-        let games = GameItem::load_all(repo).await?;
+        let games = GameRecord::load_all(repo).await?;
 
         let active_profile_object = match active_game_object.active_profile().await? {
             Some(profile) => profile,
@@ -45,10 +45,10 @@ impl Model {
             }
         };
 
-        let active_profile = ProfileItem::load(active_profile_object.clone()).await?;
+        let active_profile = ProfileRecord::load(active_profile_object.clone()).await?;
 
-        let mods = ModItem::load_all(&active_game_object).await?;
-        let mod_entries = ModEntryItem::load_all(&active_profile_object).await?;
+        let mods = ModRecord::load_all(&active_game_object).await?;
+        let mod_entries = ModEntryRecord::load_all(&active_profile_object).await?;
 
         Ok(Self::new(
             active_game,
@@ -60,11 +60,11 @@ impl Model {
     }
 
     fn new(
-        active_game: Option<GameItem>,
-        games: Vec<GameItem>,
-        active_profile: Option<ProfileItem>,
-        mods: Vec<ModItem>,
-        mod_entries: Vec<ModEntryItem>,
+        active_game: Option<GameRecord>,
+        games: Vec<GameRecord>,
+        active_profile: Option<ProfileRecord>,
+        mods: Vec<ModRecord>,
+        mod_entries: Vec<ModEntryRecord>,
     ) -> Self {
         Self {
             active_game,
@@ -75,57 +75,57 @@ impl Model {
         }
     }
 
-    pub fn active_game(&self) -> Option<GameItem> {
+    pub fn active_game(&self) -> Option<GameRecord> {
         self.active_game.clone()
     }
 
-    pub fn games(&self) -> Vec<GameItem> {
+    pub fn games(&self) -> Vec<GameRecord> {
         self.games.clone()
     }
 
-    pub fn game(&self, game: &Game) -> Option<GameItem> {
+    pub fn game(&self, game: &Game) -> Option<GameRecord> {
         self.games()
             .iter()
-            .find(|item| item.object() == *game)
+            .find(|record| record.object() == *game)
             .cloned()
     }
 
-    pub fn active_profile(&self) -> Option<ProfileItem> {
+    pub fn active_profile(&self) -> Option<ProfileRecord> {
         self.active_profile.clone()
     }
 
-    pub fn profile(&self, profile: &Profile) -> Option<ProfileItem> {
+    pub fn profile(&self, profile: &Profile) -> Option<ProfileRecord> {
         self.active_game()?
             .profiles
             .iter()
-            .find(|item| item.object() == *profile)
+            .find(|record| record.object() == *profile)
             .cloned()
     }
 
-    pub fn mods(&self) -> Vec<ModItem> {
+    pub fn mods(&self) -> Vec<ModRecord> {
         self.mods.clone()
     }
 
-    pub fn mod_entries(&self) -> Vec<ModEntryItem> {
+    pub fn mod_entries(&self) -> Vec<ModEntryRecord> {
         self.mod_entries.clone()
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct GameItem {
+pub struct GameRecord {
     object: Game,
     pub name: String,
     pub active: bool,
-    pub profiles: Vec<ProfileItem>,
+    pub profiles: Vec<ProfileRecord>,
 }
 
-impl PartialEq for GameItem {
+impl PartialEq for GameRecord {
     fn eq(&self, other: &Self) -> bool {
         self.object == other.object
     }
 }
 
-impl GameItem {
+impl GameRecord {
     pub fn object(&self) -> Game {
         self.object.clone()
     }
@@ -134,16 +134,16 @@ impl GameItem {
         Ok(Self {
             name: game.name().await?,
             active: game.is_active().await?,
-            profiles: ProfileItem::load_all(&game).await?,
+            profiles: ProfileRecord::load_all(&game).await?,
             object: game,
         })
     }
 
-    async fn load_active(repo: &Repository) -> anyhow::Result<Option<GameItem>> {
+    async fn load_active(repo: &Repository) -> anyhow::Result<Option<GameRecord>> {
         let active_game = repo.active_game().await?;
 
         if let Some(game) = active_game {
-            Ok(Some(GameItem::load(game).await?))
+            Ok(Some(GameRecord::load(game).await?))
         } else {
             Ok(None)
         }
@@ -152,18 +152,18 @@ impl GameItem {
     async fn load_all(repo: &Repository) -> anyhow::Result<Vec<Self>> {
         let games = repo.games().await?;
 
-        try_join_all(games.into_iter().map(GameItem::load)).await
+        try_join_all(games.into_iter().map(GameRecord::load)).await
     }
 }
 
 #[derive(Debug, Clone, Display)]
 #[display("{name}")]
-pub struct ProfileItem {
+pub struct ProfileRecord {
     object: Profile,
     pub name: String,
 }
 
-impl ProfileItem {
+impl ProfileRecord {
     pub fn object(&self) -> Profile {
         self.object.clone()
     }
@@ -175,11 +175,11 @@ impl ProfileItem {
         })
     }
 
-    async fn load_active(game: &Game) -> anyhow::Result<Option<ProfileItem>> {
+    async fn load_active(game: &Game) -> anyhow::Result<Option<ProfileRecord>> {
         let active_profile = game.active_profile().await?;
 
         if let Some(profile) = active_profile {
-            Ok(Some(ProfileItem::load(profile).await?))
+            Ok(Some(ProfileRecord::load(profile).await?))
         } else {
             Ok(None)
         }
@@ -188,17 +188,17 @@ impl ProfileItem {
     async fn load_all(game: &Game) -> anyhow::Result<Vec<Self>> {
         let profiles = game.profiles().await?;
 
-        try_join_all(profiles.into_iter().map(ProfileItem::load)).await
+        try_join_all(profiles.into_iter().map(ProfileRecord::load)).await
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct ModItem {
+pub struct ModRecord {
     object: Mod,
     pub name: String,
 }
 
-impl ModItem {
+impl ModRecord {
     async fn load(mod_: Mod) -> anyhow::Result<Self> {
         Ok(Self {
             name: mod_.name().await?,
@@ -209,18 +209,18 @@ impl ModItem {
     async fn load_all(game: &Game) -> anyhow::Result<Vec<Self>> {
         let mods = game.mods().await?;
 
-        try_join_all(mods.into_iter().map(ModItem::load)).await
+        try_join_all(mods.into_iter().map(ModRecord::load)).await
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct ModEntryItem {
+pub struct ModEntryRecord {
     object: ModEntry,
     pub name: String,
     pub enabled: bool,
 }
 
-impl ModEntryItem {
+impl ModEntryRecord {
     pub fn object(&self) -> ModEntry {
         self.object.clone()
     }
@@ -236,6 +236,6 @@ impl ModEntryItem {
     async fn load_all(profile: &Profile) -> anyhow::Result<Vec<Self>> {
         let mod_entries = profile.mod_entries().await?;
 
-        try_join_all(mod_entries.into_iter().map(ModEntryItem::load)).await
+        try_join_all(mod_entries.into_iter().map(ModEntryRecord::load)).await
     }
 }

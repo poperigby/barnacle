@@ -1,5 +1,5 @@
 use barnacle_gui::{
-    model::{ModEntryItem, Model, Mutation},
+    model::{ModEntryRecord, Model, Mutation},
     persistence::state::UiStateStore,
 };
 use iced::{
@@ -10,11 +10,11 @@ use iced::{
 #[derive(Debug, Clone)]
 pub enum Message {
     ToggleModEntry {
-        entry_item: ModEntryItem,
+        entry_record: ModEntryRecord,
         enabled: bool,
     },
     ModEntryToggled,
-    ModEntryDeleted(ModEntryItem),
+    ModEntryDeleted(ModEntryRecord),
 }
 
 #[derive(Debug)]
@@ -43,10 +43,10 @@ impl ModList {
             }
             Message::ModEntryToggled => Action::None,
             Message::ToggleModEntry {
-                entry_item,
+                entry_record,
                 enabled,
             } => Action::Mutate(Mutation::SetModEntryEnabled {
-                entry: entry_item.object(),
+                entry: entry_record.object(),
                 enabled,
             }),
         }
@@ -54,12 +54,12 @@ impl ModList {
 
     pub fn view<'a>(&'a self, model: &'a Model) -> Element<'a, Message> {
         let columns = [
-            table::column(text("Name"), |entry_item: ModEntryItem| {
-                text(entry_item.name.clone())
+            table::column(text("Name"), |entry_record: ModEntryRecord| {
+                text(entry_record.name.clone())
             }),
-            table::column(text("Status"), |entry_item: ModEntryItem| {
-                checkbox(entry_item.enabled).on_toggle(move |state| Message::ToggleModEntry {
-                    entry_item: entry_item.clone(),
+            table::column(text("Status"), |entry_record: ModEntryRecord| {
+                checkbox(entry_record.enabled).on_toggle(move |state| Message::ToggleModEntry {
+                    entry_record: entry_record.clone(),
                     enabled: state,
                 })
             }),

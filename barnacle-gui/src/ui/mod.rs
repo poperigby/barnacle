@@ -1,6 +1,6 @@
 use barnacle_gui::{
     icons::Icon,
-    model::{Model, Mutation, ProfileItem},
+    model::{Model, Mutation, ProfileRecord},
     persistence::state::UiStateStore,
     widgets::modal,
 };
@@ -21,7 +21,7 @@ pub enum Message {
     LaunchButtonPressed,
     AddModButtonPressed,
     LibraryManagerButtonPressed,
-    ProfileSelected(ProfileItem),
+    ProfileSelected(ProfileRecord),
 
     // Children
     AddModDialog(add_mod_menu::Message),
@@ -42,7 +42,7 @@ pub struct Ui {
     show_library_manager: bool,
     show_add_mod_dialog: bool,
 
-    profile_selector_state: Option<combo_box::State<ProfileItem>>,
+    profile_selector_state: Option<combo_box::State<ProfileRecord>>,
 
     add_mod_dialog: AddModDialog,
     mod_list: ModList,
@@ -91,8 +91,8 @@ impl Ui {
 
                 Action::None
             }
-            Message::ProfileSelected(row) => {
-                Action::Mutate(Mutation::ActivateProfile(row.object()))
+            Message::ProfileSelected(record) => {
+                Action::Mutate(Mutation::ActivateProfile(record.object()))
             }
 
             // Children

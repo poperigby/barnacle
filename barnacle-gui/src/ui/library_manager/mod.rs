@@ -1,6 +1,6 @@
 use barnacle_gui::{
     icons::Icon,
-    model::{GameItem, Model, Mutation},
+    model::{GameRecord, Model, Mutation},
     widgets::modal,
 };
 use barnacle_lib::repository::Game;
@@ -20,7 +20,7 @@ pub enum Message {
     CloseButtonPressed,
     NewGameButtonPressed,
     ActivateButtonPressed(Game),
-    GameRowSelected(GameItem),
+    GameRowSelected(GameRecord),
 
     GameDetails(game_details::Message),
     NewGameMenu(new_game::Message),
@@ -46,7 +46,7 @@ pub enum MenuVisibility {
 
 #[derive(Debug, Clone)]
 pub struct LibraryManager {
-    selected_game: Option<GameItem>,
+    selected_game: Option<GameRecord>,
 
     menu_visiblity: MenuVisibility,
 
@@ -84,7 +84,7 @@ impl LibraryManager {
         self.selected_game = self
             .selected_game
             .as_ref()
-            .and_then(|item| model.game(&item.object()))
+            .and_then(|record| model.game(&record.object()))
             .or_else(|| model.active_game().clone());
     }
 
@@ -224,14 +224,14 @@ impl LibraryManager {
         .into()
     }
 
-    pub fn game_row<'a>(&self, item: &GameItem) -> Element<'a, Message> {
-        let mut content = row![text(item.name.clone()), space::horizontal()];
+    pub fn game_row<'a>(&self, record: &GameRecord) -> Element<'a, Message> {
+        let mut content = row![text(record.name.clone()), space::horizontal()];
 
-        if item.active {
+        if record.active {
             content = content.push(Icon::Check);
         }
 
-        let style = if Some(item) == self.selected_game.as_ref() {
+        let style = if Some(record) == self.selected_game.as_ref() {
             button::primary
         } else {
             button::subtle
@@ -240,7 +240,7 @@ impl LibraryManager {
         button(content)
             .width(Length::Fill)
             .style(style)
-            .on_press(Message::GameRowSelected(item.clone()))
+            .on_press(Message::GameRowSelected(record.clone()))
             .into()
     }
 }
