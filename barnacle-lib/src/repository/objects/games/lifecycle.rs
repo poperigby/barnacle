@@ -1,7 +1,4 @@
-use crate::{
-    deployers::{Deployer, openmw::OpenMw},
-    repository::item_groups,
-};
+use crate::deployers::{Deployer, openmw::OpenMw};
 
 use super::*;
 
@@ -52,10 +49,6 @@ impl Game {
                         DeployKind::OpenMW => OpenMw::item_groups(),
                         _ => Vec::new(),
                     };
-
-                    for spec in item_group_specs {
-                        item_groups::insert(txn, id, spec).await;
-                    }
 
                     let dir = Self::dir_from_id(&cfg, id);
                     fs::create_dir_all(&dir)

@@ -1,5 +1,4 @@
 use super::*;
-use crate::repository::item_lists;
 
 impl Profile {
     /// Activate this profile.

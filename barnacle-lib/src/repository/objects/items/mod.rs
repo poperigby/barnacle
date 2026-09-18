@@ -1,11 +1,14 @@
-use sea_orm::EntityTrait;
+use std::path::PathBuf;
+
+use sea_orm::{EntityTrait, QueryFilter};
 
 use crate::{
     error::{LoadModelError, ModelKind},
     repository::{
         config::Cfg,
         db::Db,
-        items::{Entity, Model},
+        items::{COLUMN, Entity, Model},
+        mods::Mod,
     },
 };
 
@@ -34,14 +37,18 @@ impl Item {
             .ok_or_else(|| LoadModelError::stale(ModelKind::Item, self.id))
     }
 
-    // pub async fn list(db: &Db, cfg: &Cfg, group: &ItemGroup) -> Vec<Self> {
-    //     Entity::find()
-    //         .filter(COLUMN.group_id.eq(group.id))
-    //         .all(db.conn())
-    //         .await
-    //         .unwrap()
-    //         .iter()
-    //         .map(|m| Self::from_id(&db, &cfg, m.id))
-    //         .collect()
-    // }
+    pub async fn relative_path(&self) -> PathBuf {
+        PathBuf::from(self.model().await.unwrap().relative_path)
+    }
+
+    pub(crate) async fn list(db: &Db, cfg: &Cfg, mod_: &Mod) -> Vec<Self> {
+        Entity::find()
+            .filter(COLUMN.mod_id.eq(mod_.id))
+            .all(db.conn())
+            .await
+            .unwrap()
+            .iter()
+            .map(|m| Self::from_id(db, cfg, m.id))
+            .collect()
+    }
 }

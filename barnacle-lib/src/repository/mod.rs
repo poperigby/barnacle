@@ -19,23 +19,14 @@ pub mod games {
     pub use super::objects::games::*;
 }
 
-pub mod items {
-    pub(crate) use super::objects::items::model::*;
-}
-
 pub mod item_entries {
     pub(crate) use super::objects::item_entries::model::*;
     pub use super::objects::item_entries::*;
 }
 
-pub mod item_groups {
-    pub(crate) use super::objects::item_groups::model::*;
-    pub(crate) use super::objects::item_groups::*;
-}
-
-pub mod item_lists {
-    pub(crate) use super::objects::item_lists::model::*;
-    pub(crate) use super::objects::item_lists::*;
+pub mod items {
+    pub(crate) use super::objects::items::model::*;
+    pub use super::objects::items::*;
 }
 
 pub mod mods {

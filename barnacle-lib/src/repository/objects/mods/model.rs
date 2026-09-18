@@ -1,6 +1,6 @@
 use sea_orm::prelude::*;
 
-use crate::repository::games;
+use crate::repository::{games, items};
 
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
@@ -16,6 +16,9 @@ pub struct Model {
     pub game_id: i32,
     #[sea_orm(belongs_to, from = "game_id", to = "id", on_delete = "Cascade")]
     pub game: BelongsTo<games::Entity>,
+
+    #[sea_orm(has_many)]
+    pub items: HasMany<items::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

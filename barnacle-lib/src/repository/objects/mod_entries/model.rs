@@ -1,6 +1,6 @@
 use sea_orm::prelude::*;
 
-use crate::repository::{item_entries, mods, profiles, targets};
+use crate::repository::{mods, profiles, targets};
 
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
@@ -29,9 +29,6 @@ pub struct Model {
     pub target_id: Option<i32>,
     #[sea_orm(belongs_to, from = "target_id", to = "id", on_delete = "SetNull")]
     pub target: BelongsTo<Option<targets::Entity>>,
-
-    #[sea_orm(has_many)]
-    pub item_entries: HasMany<item_entries::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

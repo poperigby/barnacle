@@ -7,8 +7,6 @@
 pub(crate) mod error;
 pub mod games;
 pub mod item_entries;
-pub mod item_groups;
-pub mod item_lists;
 pub mod items;
 pub mod mod_entries;
 pub mod mods;
@@ -17,7 +15,6 @@ pub mod targets;
 pub mod tools;
 
 pub use games::Game;
-pub use item_entries::ItemEntry;
 pub use mod_entries::ModEntry;
 pub use mods::Mod;
 pub use profiles::Profile;

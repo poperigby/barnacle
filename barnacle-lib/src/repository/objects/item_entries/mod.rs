@@ -1,31 +1,29 @@
+use std::path::PathBuf;
+
 use sea_orm::{ActiveValue::Set, EntityTrait, QueryFilter, QueryOrder};
 
-mod error;
-pub(crate) mod model;
-
-pub use error::*;
-
 use crate::{
-    ModEntry, Profile,
     deployers::ItemGroupSpec,
     error::{LoadModelError, ModelKind},
     repository::{
+        Profile,
         config::Cfg,
         db::Db,
         item_entries::{ActiveModel, COLUMN, Entity, Model},
-        item_lists, mod_entries,
-        objects::{error::is_unique_violation, items::Item},
+        items::{self, Item},
     },
 };
 
+pub(crate) mod model;
+
 pub struct ItemEntry {
-    pub(crate) id: i32,
+    pub id: i32,
     db: Db,
     cfg: Cfg,
 }
 
 impl ItemEntry {
-    pub(crate) fn from_id(id: i32, db: &Db, cfg: &Cfg) -> Self {
+    pub(crate) fn from_id(db: &Db, cfg: &Cfg, id: i32) -> Self {
         Self {
             id,
             db: db.clone(),
@@ -41,54 +39,36 @@ impl ItemEntry {
             .ok_or_else(|| LoadModelError::stale(ModelKind::ItemEntry, self.id))
     }
 
-    async fn active_model(&self) -> Result<ActiveModel, LoadModelError> {
-        Ok(self.model().await?.into())
+    async fn item_model(&self) -> items::Model {
+        let item_id = self.model().await.unwrap().item_id;
+
+        items::Entity::find_by_id(item_id)
+            .one(self.db.conn())
+            .await
+            .unwrap()
+            .unwrap()
     }
 
-    // pub(crate) async fn add(
-    //     db: &Db,
-    //     cfg: &Cfg,
-    //     mod_entry: &ModEntry,
-    //     item: Item,
-    // ) -> Result<Self, AddError> {
-    //     let conn = db.conn();
-    //
-    //     let profile = mod_entry.parent().await.unwrap();
-    //     let item_group = item.group().await;
-    //
-    //     let list_id = item_lists::find(db, &profile, &item_group).await;
-    //
-    //     let next_priority = Entity::find()
-    //         .filter(COLUMN.item_list_id.eq(list_id))
-    //         .order_by_desc(COLUMN.priority)
-    //         .one(conn)
-    //         .await
-    //         .map_err(AddError::NextPriority)?
-    //         .and_then(|e| e.priority.map(|priority| priority + 1))
-    //         .unwrap_or(0);
-    //
-    //     let model = ActiveModel {
-    //         mod_entry_id: Set(mod_entry.id),
-    //         item_id: Set(item.id),
-    //         item_list_id: Set(list_id),
-    //         priority: Set(Some(next_priority)),
-    //         ..Default::default()
-    //     };
-    //
-    //     let id = Entity::insert(model)
-    //         .exec(conn)
-    //         .await
-    //         .map_err(|source| {
-    //             if is_unique_violation(&source) {
-    //                 AddError::Duplicate
-    //             } else {
-    //                 AddError::Insert(source)
-    //             }
-    //         })?
-    //         .last_insert_id;
-    //
-    //     Ok(Self::from_id(id, db, cfg))
-    // }
+    pub async fn enabled(&self) -> bool {
+        self.model().await.unwrap().enabled
+    }
+
+    pub(crate) async fn relative_path(&self) -> PathBuf {
+        PathBuf::from(self.item_model().await.relative_path)
+    }
+
+    pub(crate) async fn add(db: &Db, profile: &Profile, item: &Item) {
+        // TODO: Compute next priority by finding the highest priority value and using the next one.
+
+        let model = ActiveModel {
+            item_id: Set(item.id),
+            profile_id: Set(profile.id),
+            position: Set(0),
+            ..Default::default()
+        };
+
+        Entity::insert(model).exec(db.conn()).await.unwrap();
+    }
 
     pub(crate) async fn list(
         db: &Db,
@@ -96,31 +76,16 @@ impl ItemEntry {
         profile: &Profile,
         group: impl ItemGroupSpec,
     ) -> Vec<Self> {
-        let conn = db.conn();
-
-        let list_id = item_lists::find(db, profile, group.key()).await;
-
-        let entries = Entity::find()
-            .inner_join(mod_entries::Entity)
-            .filter(COLUMN.item_list_id.eq(list_id))
-            .filter(mod_entries::COLUMN.enabled.eq(true))
-            .order_by_desc(COLUMN.priority)
-            .all(conn)
+        Entity::find()
+            .inner_join(items::Entity)
+            .filter(items::COLUMN.kind.eq(group.key()))
+            .filter(COLUMN.profile_id.eq(profile.id))
+            .order_by_asc(COLUMN.position)
+            .all(db.conn())
             .await
-            .unwrap();
-
-        entries
+            .unwrap()
             .iter()
-            .map(|m| Self::from_id(m.id, db, cfg))
+            .map(|m| Self::from_id(db, cfg, m.id))
             .collect()
-    }
-
-    /// Returns the parent [`ModEntry`] of this [`ItemEntry`].
-    pub async fn parent(&self) -> Result<ModEntry, ParentError> {
-        Ok(ModEntry::from_id(
-            self.model().await.map_err(ParentError::Load)?.mod_entry_id,
-            &self.db,
-            &self.cfg,
-        ))
     }
 }

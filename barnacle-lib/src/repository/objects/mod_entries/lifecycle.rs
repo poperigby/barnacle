@@ -37,6 +37,10 @@ impl ModEntry {
             .last_insert_id;
         let mod_entry = ModEntry::from_id(id, db, cfg);
 
+        for item in mod_.items().await {
+            profile.add_item_entry(&item).await;
+        }
+
         info!(
             "Added mod entry for mod '{}' to profile '{}'",
             mod_.name().await.map_err(AddError::ModName)?,

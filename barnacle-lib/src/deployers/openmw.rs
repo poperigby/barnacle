@@ -7,7 +7,7 @@ use walkdir::WalkDir;
 
 use crate::{
     Game,
-    deployers::{Deployer, DiscoveredItem, ItemGroupSpec},
+    deployers::{Deployer, FoundItem, ItemGroupSpec},
 };
 
 #[derive(Debug, Clone, Copy, EnumIter, PartialEq, PartialOrd)]
@@ -29,8 +29,8 @@ impl ItemGroup {
 impl ItemGroupSpec for ItemGroup {
     fn key(self) -> &'static str {
         match self {
-            Self::Plugin => "plugin",
-            Self::Archive => "archive",
+            Self::Plugin => "openmw.plugin",
+            Self::Archive => "openmw.archive",
         }
     }
 
@@ -71,6 +71,22 @@ impl OpenMw {
             }
         }
 
+        for plugin in active_profile.item_entries(ItemGroup::Plugin).await {
+            if plugin.enabled().await {
+                config
+                    .add_content_file(&plugin.relative_path().await.to_string_lossy())
+                    .unwrap();
+            }
+        }
+
+        for archive in active_profile.item_entries(ItemGroup::Archive).await {
+            if archive.enabled().await {
+                config
+                    .add_archive_file(&archive.relative_path().await.to_string_lossy())
+                    .unwrap();
+            }
+        }
+
         config.save_user().unwrap();
 
         let mut program = game.launch_command().await;
@@ -87,7 +103,7 @@ impl OpenMw {
         program
     }
 
-    pub fn find_items(mod_dir: &Path) -> Vec<DiscoveredItem<ItemGroup>> {
+    pub fn find_items(mod_dir: &Path) -> Vec<FoundItem<ItemGroup>> {
         let paths: Vec<PathBuf> = WalkDir::new(mod_dir)
             .into_iter()
             .map(|e| e.unwrap().into_path())
@@ -103,7 +119,7 @@ impl OpenMw {
                     continue;
                 };
 
-                found.push(DiscoveredItem {
+                found.push(FoundItem {
                     key: path.file_name().unwrap().to_string_lossy().to_lowercase(),
                     relative_path: relative_path.to_str().unwrap().to_string(),
                     group,
@@ -136,17 +152,17 @@ mod tests {
         assert_eq!(
             found_items,
             [
-                DiscoveredItem {
+                FoundItem {
                     group: ItemGroup::Archive,
                     key: "bigger booba.bsa".to_string(),
                     relative_path: "BIGGER BOOBA.BSA".to_string(),
                 },
-                DiscoveredItem {
+                FoundItem {
                     group: ItemGroup::Plugin,
                     key: "hyper realistic horkers.esp".to_string(),
                     relative_path: "optional/hyper realistic horkers.ESP".to_string(),
                 },
-                DiscoveredItem {
+                FoundItem {
                     group: ItemGroup::Plugin,
                     key: "immersive spoons.esp".to_string(),
                     relative_path: "Immersive Spoons.esp".to_string(),
