@@ -58,16 +58,24 @@ impl ItemEntry {
     }
 
     pub(crate) async fn add(db: &Db, profile: &Profile, item: &Item) {
-        // TODO: Compute next priority by finding the highest priority value and using the next one.
+        let conn = db.conn();
+
+        let next_position = Entity::find()
+            .filter(COLUMN.profile_id.eq(profile.id))
+            .order_by_desc(COLUMN.position)
+            .one(conn)
+            .await
+            .unwrap()
+            .map_or(0, |e| e.position + 1);
 
         let model = ActiveModel {
             item_id: Set(item.id),
             profile_id: Set(profile.id),
-            position: Set(0),
+            position: Set(next_position),
             ..Default::default()
         };
 
-        Entity::insert(model).exec(db.conn()).await.unwrap();
+        Entity::insert(model).exec(conn).await.unwrap();
     }
 
     pub(crate) async fn list(

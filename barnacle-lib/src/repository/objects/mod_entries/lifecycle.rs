@@ -9,18 +9,18 @@ impl ModEntry {
     ) -> Result<Self, AddError> {
         let conn = db.conn();
 
-        let next_priority = Entity::find()
+        let next_position = Entity::find()
             .filter(COLUMN.profile_id.eq(profile.id))
-            .order_by_desc(COLUMN.priority)
+            .order_by_desc(COLUMN.position)
             .one(conn)
             .await
             .map_err(AddError::NextPriority)?
-            .map_or(0, |e| e.priority + 1);
+            .map_or(0, |e| e.position + 1);
 
         let model = ActiveModel {
             profile_id: Set(profile.id),
             mod_id: Set(mod_.id),
-            priority: Set(next_priority),
+            position: Set(next_position),
             ..Default::default()
         };
 
@@ -88,6 +88,7 @@ impl ModEntry {
     ) -> Result<Vec<Self>, ListError> {
         Ok(Entity::find()
             .filter(COLUMN.profile_id.eq(profile.id))
+            .order_by_asc(COLUMN.position)
             .all(db.conn())
             .await
             .map_err(ListError)?

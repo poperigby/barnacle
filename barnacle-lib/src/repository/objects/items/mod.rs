@@ -41,6 +41,10 @@ impl Item {
         PathBuf::from(self.model().await.unwrap().relative_path)
     }
 
+    pub async fn group(&self) -> String {
+        self.model().await.unwrap().kind
+    }
+
     pub(crate) async fn list(db: &Db, cfg: &Cfg, mod_: &Mod) -> Vec<Self> {
         Entity::find()
             .filter(COLUMN.mod_id.eq(mod_.id))

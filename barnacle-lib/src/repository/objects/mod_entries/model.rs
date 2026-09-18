@@ -11,12 +11,11 @@ pub struct Model {
 
     #[sea_orm(default_value = true)]
     pub enabled: bool,
-    #[sea_orm(unique_key = "priority_per_profile")]
-    pub priority: i32,
+    pub position: i32,
     #[sea_orm(default_value = "")]
     pub notes: String,
 
-    #[sea_orm(unique_key = "mod_id_per_profile", unique_key = "priority_per_profile")]
+    #[sea_orm(unique_key = "mod_id_per_profile")]
     pub profile_id: i32,
     #[sea_orm(belongs_to, from = "profile_id", to = "id", on_delete = "Cascade")]
     pub profile: BelongsTo<profiles::Entity>,
