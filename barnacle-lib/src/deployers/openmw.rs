@@ -11,12 +11,12 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Copy, EnumIter, PartialEq, PartialOrd)]
-pub enum ItemGroup {
+pub enum ItemGroups {
     Plugin,
     Archive,
 }
 
-impl ItemGroup {
+impl ItemGroups {
     fn from_file_extension(extension: &str) -> Option<Self> {
         match extension.to_lowercase().as_str() {
             "esp" | "esm" | "omwscript" | "omwplugin" | "omwgame" => Some(Self::Plugin),
@@ -26,7 +26,7 @@ impl ItemGroup {
     }
 }
 
-impl ItemGroupSpec for ItemGroup {
+impl ItemGroupSpec for ItemGroups {
     fn key(self) -> &'static str {
         match self {
             Self::Plugin => "openmw.plugin",
@@ -54,7 +54,7 @@ pub struct OpenMw {}
 
 impl Deployer for OpenMw {
     fn item_groups() -> Vec<impl ItemGroupSpec> {
-        vec![ItemGroup::Plugin, ItemGroup::Archive]
+        vec![ItemGroups::Plugin, ItemGroups::Archive]
     }
 }
 
@@ -71,7 +71,7 @@ impl OpenMw {
             }
         }
 
-        for plugin in active_profile.item_entries(ItemGroup::Plugin).await {
+        for plugin in active_profile.item_entries(ItemGroups::Plugin).await {
             if plugin.enabled().await {
                 config
                     .add_content_file(&plugin.relative_path().await.to_string_lossy())
@@ -79,7 +79,7 @@ impl OpenMw {
             }
         }
 
-        for archive in active_profile.item_entries(ItemGroup::Archive).await {
+        for archive in active_profile.item_entries(ItemGroups::Archive).await {
             if archive.enabled().await {
                 config
                     .add_archive_file(&archive.relative_path().await.to_string_lossy())
@@ -103,7 +103,7 @@ impl OpenMw {
         program
     }
 
-    pub fn find_items(mod_dir: &Path) -> Vec<FoundItem<ItemGroup>> {
+    pub fn find_items(mod_dir: &Path) -> Vec<FoundItem<ItemGroups>> {
         let paths: Vec<PathBuf> = WalkDir::new(mod_dir)
             .into_iter()
             .map(|e| e.unwrap().into_path())
@@ -114,7 +114,7 @@ impl OpenMw {
             let relative_path = path.strip_prefix(mod_dir).unwrap().to_path_buf();
 
             if let Some(extension) = relative_path.extension() {
-                let Some(group) = ItemGroup::from_file_extension(&extension.to_string_lossy())
+                let Some(group) = ItemGroups::from_file_extension(&extension.to_string_lossy())
                 else {
                     continue;
                 };
@@ -153,17 +153,17 @@ mod tests {
             found_items,
             [
                 FoundItem {
-                    group: ItemGroup::Archive,
+                    group: ItemGroups::Archive,
                     key: "bigger booba.bsa".to_string(),
                     relative_path: "BIGGER BOOBA.BSA".to_string(),
                 },
                 FoundItem {
-                    group: ItemGroup::Plugin,
+                    group: ItemGroups::Plugin,
                     key: "hyper realistic horkers.esp".to_string(),
                     relative_path: "optional/hyper realistic horkers.ESP".to_string(),
                 },
                 FoundItem {
-                    group: ItemGroup::Plugin,
+                    group: ItemGroups::Plugin,
                     key: "immersive spoons.esp".to_string(),
                     relative_path: "Immersive Spoons.esp".to_string(),
                 },

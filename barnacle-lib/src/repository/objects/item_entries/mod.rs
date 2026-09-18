@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
-use sea_orm::{ActiveValue::Set, EntityTrait, QueryFilter, QueryOrder};
+use sea_orm::{ActiveValue::Set, EntityTrait, QueryFilter, QueryOrder, QuerySelect};
 
 use crate::{
-    deployers::ItemGroupSpec,
+    deployers::{ItemGroupDef, ItemGroupSpec},
     error::{LoadModelError, ModelKind},
     repository::{
         Profile,
@@ -16,6 +16,7 @@ use crate::{
 
 pub(crate) mod model;
 
+#[derive(Debug, Clone)]
 pub struct ItemEntry {
     pub id: i32,
     db: Db,
@@ -78,16 +79,16 @@ impl ItemEntry {
         Entity::insert(model).exec(conn).await.unwrap();
     }
 
-    pub(crate) async fn list(
+    pub(crate) async fn list_by_group(
         db: &Db,
         cfg: &Cfg,
         profile: &Profile,
-        group: impl ItemGroupSpec,
-    ) -> Vec<Self> {
+        group_key: &str,
+    ) -> Vec<ItemEntry> {
         Entity::find()
             .inner_join(items::Entity)
-            .filter(items::COLUMN.kind.eq(group.key()))
             .filter(COLUMN.profile_id.eq(profile.id))
+            .filter(items::COLUMN.kind.eq(group_key))
             .order_by_asc(COLUMN.position)
             .all(db.conn())
             .await
@@ -96,4 +97,34 @@ impl ItemEntry {
             .map(|m| Self::from_id(db, cfg, m.id))
             .collect()
     }
+
+    pub(crate) async fn list_groups(
+        db: &Db,
+        cfg: &Cfg,
+        profile: &Profile,
+        groups: &[ItemGroupDef],
+    ) -> Vec<ItemEntryGroup> {
+        let mut loaded_groups: Vec<ItemEntryGroup> = Vec::with_capacity(groups.len());
+
+        for group in groups {
+            let entries = Self::list_by_group(db, cfg, profile, &group.key).await;
+
+            loaded_groups.push(ItemEntryGroup {
+                key: group.key.clone(),
+                name: group.name.clone(),
+                ordered: group.ordered,
+                entries,
+            });
+        }
+
+        loaded_groups
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ItemEntryGroup {
+    key: String,
+    name: String,
+    ordered: bool,
+    entries: Vec<ItemEntry>,
 }

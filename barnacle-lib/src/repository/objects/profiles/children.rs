@@ -1,6 +1,9 @@
 use crate::{
-    deployers::ItemGroupSpec,
-    repository::{item_entries::ItemEntry, items::Item},
+    deployers::{self, ItemGroupSpec},
+    repository::{
+        item_entries::{ItemEntry, ItemEntryGroup},
+        items::Item,
+    },
 };
 
 use super::*;
@@ -20,6 +23,15 @@ impl Profile {
     }
 
     pub(crate) async fn item_entries(&self, group: impl ItemGroupSpec) -> Vec<ItemEntry> {
-        ItemEntry::list(&self.db, &self.cfg, self, group).await
+        ItemEntry::list_by_group(&self.db, &self.cfg, self, group.key()).await
+    }
+
+    pub async fn item_entry_groups(&self) -> Vec<ItemEntryGroup> {
+        let game = self.parent().await.unwrap();
+        let deploy_kind = game.deploy_kind().await.unwrap();
+
+        let groups = deployers::item_group_defs(deploy_kind);
+
+        ItemEntry::list_groups(&self.db, &self.cfg, self, &groups).await
     }
 }
