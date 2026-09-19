@@ -103,7 +103,7 @@ impl OpenMw {
         program
     }
 
-    pub fn find_items(mod_dir: &Path) -> Vec<FoundItem<ItemGroups>> {
+    pub(crate) fn find_items(mod_dir: &Path) -> Vec<FoundItem<ItemGroups>> {
         let paths: Vec<PathBuf> = WalkDir::new(mod_dir)
             .into_iter()
             .map(|e| e.unwrap().into_path())

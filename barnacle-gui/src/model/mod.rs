@@ -1,9 +1,14 @@
+use std::path::PathBuf;
+
 use barnacle_lib::{
     Repository,
-    repository::{Game, Mod, ModEntry, Profile},
+    repository::{
+        Game, Mod, ModEntry, Profile,
+        item_entries::{ItemEntry, ItemEntryGroup},
+    },
 };
 use derive_more::Display;
-use futures::future::try_join_all;
+use futures::future::{join_all, try_join_all};
 
 pub use mutation::Mutation;
 
@@ -22,6 +27,8 @@ pub struct Model {
 
     mods: Vec<ModRecord>,
     mod_entries: Vec<ModEntryRecord>,
+
+    item_entry_groups: Vec<ItemEntryGroupRecord>,
 }
 
 impl Model {
@@ -30,7 +37,14 @@ impl Model {
         let active_game_object = match repo.active_game().await? {
             Some(game) => game,
             None => {
-                return Ok(Self::new(None, Vec::new(), None, Vec::new(), Vec::new()));
+                return Ok(Self::new(
+                    None,
+                    Vec::new(),
+                    None,
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                ));
             }
         };
 
@@ -41,7 +55,14 @@ impl Model {
         let active_profile_object = match active_game_object.active_profile().await? {
             Some(profile) => profile,
             None => {
-                return Ok(Self::new(active_game, games, None, Vec::new(), Vec::new()));
+                return Ok(Self::new(
+                    active_game,
+                    games,
+                    None,
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                ));
             }
         };
 
@@ -50,12 +71,15 @@ impl Model {
         let mods = ModRecord::load_all(&active_game_object).await?;
         let mod_entries = ModEntryRecord::load_all(&active_profile_object).await?;
 
+        let item_entry_groups = ItemEntryGroupRecord::load_all(&active_profile_object).await;
+
         Ok(Self::new(
             active_game,
             games,
             Some(active_profile),
             mods,
             mod_entries,
+            item_entry_groups,
         ))
     }
 
@@ -65,6 +89,7 @@ impl Model {
         active_profile: Option<ProfileRecord>,
         mods: Vec<ModRecord>,
         mod_entries: Vec<ModEntryRecord>,
+        item_entry_groups: Vec<ItemEntryGroupRecord>,
     ) -> Self {
         Self {
             active_game,
@@ -72,6 +97,7 @@ impl Model {
             active_profile,
             mods,
             mod_entries,
+            item_entry_groups,
         }
     }
 
@@ -237,5 +263,49 @@ impl ModEntryRecord {
         let mod_entries = profile.mod_entries().await?;
 
         try_join_all(mod_entries.into_iter().map(ModEntryRecord::load)).await
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ItemEntryRecord {
+    object: ItemEntry,
+    pub relative_path: PathBuf,
+    pub enabled: bool,
+}
+
+impl ItemEntryRecord {
+    async fn load(item_entry: &ItemEntry) -> Self {
+        Self {
+            object: item_entry.clone(),
+            relative_path: item_entry.relative_path().await,
+            enabled: item_entry.enabled().await,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ItemEntryGroupRecord {
+    object: ItemEntryGroup,
+    pub name: String,
+    pub ordered: bool,
+    pub entries: Vec<ItemEntryRecord>,
+}
+
+impl ItemEntryGroupRecord {
+    async fn load_all(profile: &Profile) -> Vec<ItemEntryGroupRecord> {
+        let item_entry_groups = profile.item_entry_groups().await;
+
+        join_all(item_entry_groups.iter().map(ItemEntryGroupRecord::load)).await
+    }
+
+    async fn load(item_entry_group: &ItemEntryGroup) -> Self {
+        let entries = join_all(item_entry_group.entries.iter().map(ItemEntryRecord::load)).await;
+
+        Self {
+            object: item_entry_group.clone(),
+            name: item_entry_group.name.clone(),
+            ordered: item_entry_group.ordered,
+            entries,
+        }
     }
 }

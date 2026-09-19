@@ -54,7 +54,7 @@ impl ItemEntry {
         self.model().await.unwrap().enabled
     }
 
-    pub(crate) async fn relative_path(&self) -> PathBuf {
+    pub async fn relative_path(&self) -> PathBuf {
         PathBuf::from(self.item_model().await.relative_path)
     }
 
@@ -123,8 +123,8 @@ impl ItemEntry {
 
 #[derive(Debug, Clone)]
 pub struct ItemEntryGroup {
-    key: String,
-    name: String,
-    ordered: bool,
-    entries: Vec<ItemEntry>,
+    pub key: String,
+    pub name: String,
+    pub ordered: bool,
+    pub entries: Vec<ItemEntry>,
 }
