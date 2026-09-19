@@ -36,8 +36,8 @@ impl ItemGroupSpec for ItemGroups {
 
     fn name(self) -> &'static str {
         match self {
-            Self::Plugin => "Plugin",
-            Self::Archive => "Archive",
+            Self::Plugin => "Plugins",
+            Self::Archive => "Archives",
         }
     }
 

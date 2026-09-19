@@ -135,6 +135,10 @@ impl Model {
     pub fn mod_entries(&self) -> Vec<ModEntryRecord> {
         self.mod_entries.clone()
     }
+
+    pub fn item_entry_groups(&self) -> Vec<ItemEntryGroupRecord> {
+        self.item_entry_groups.clone()
+    }
 }
 
 #[derive(Debug, Clone)]

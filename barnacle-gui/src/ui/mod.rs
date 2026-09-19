@@ -7,7 +7,7 @@ use barnacle_gui::{
 use fluent_i18n::t;
 use iced::{
     Element, Length, Task,
-    widget::{button, column, combo_box, row, space, text},
+    widget::{button, column, combo_box, row, rule, space, text},
 };
 
 use crate::ui::{add_mod_menu::AddModDialog, library_manager::LibraryManager, mod_list::ModList};
@@ -20,6 +20,7 @@ pub mod mod_list;
 pub enum Message {
     LaunchButtonPressed,
     AddModButtonPressed,
+    TabSelected(SelectedTab),
     LibraryManagerButtonPressed,
     ProfileSelected(ProfileRecord),
 
@@ -37,10 +38,19 @@ pub enum Action {
     Launch,
 }
 
+#[derive(Debug, Clone, Default)]
+pub enum SelectedTab {
+    #[default]
+    Mods,
+    ItemGroup(String),
+}
+
 #[derive(Debug, Clone)]
 pub struct Ui {
     show_library_manager: bool,
     show_add_mod_dialog: bool,
+
+    selected_tab: SelectedTab,
 
     profile_selector_state: Option<combo_box::State<ProfileRecord>>,
 
@@ -55,8 +65,11 @@ impl Ui {
             show_library_manager: false,
             show_add_mod_dialog: false,
 
+            selected_tab: SelectedTab::default(),
+
             profile_selector_state: None,
 
+            // TODO: Move to Mods tab
             add_mod_dialog: AddModDialog::new(),
             mod_list: ModList::new(ui_state.clone()),
             library_manager: LibraryManager::new(),
@@ -80,6 +93,11 @@ impl Ui {
 
     pub fn update(&mut self, message: Message) -> Action {
         match message {
+            Message::TabSelected(tab) => {
+                self.selected_tab = tab;
+
+                Action::None
+            }
             Message::LaunchButtonPressed => Action::Launch,
             Message::AddModButtonPressed => {
                 self.show_add_mod_dialog = true;
@@ -161,8 +179,16 @@ impl Ui {
             button(Icon::Notifications)
         ];
 
+        let mut tab_bar = row![button("Mods").on_press(Message::TabSelected(SelectedTab::Mods))];
+        for group in model.item_entry_groups() {
+            tab_bar = tab_bar.push(button(text(group.name.clone())).on_press(
+                Message::TabSelected(SelectedTab::ItemGroup(group.name.clone())),
+            ));
+        }
+
         let action_bar = row![
-            button(text(t!("main_action-bar_add-mod", { "count" => 1 }))).on_press_maybe(
+            space::horizontal(),
+            button(row!["Mod", Icon::Plus]).on_press_maybe(
                 model
                     .active_profile()
                     .is_some()
@@ -170,10 +196,20 @@ impl Ui {
             )
         ];
 
-        let main_pane: Element<'_, Message> =
-            column![self.mod_list.view(model).map(Message::ModList)].into();
+        let main_pane: Element<'_, Message> = match &self.selected_tab {
+            SelectedTab::Mods => column![self.mod_list.view(model).map(Message::ModList)].into(),
+            SelectedTab::ItemGroup(group) => text!("{}", group).into(),
+        };
 
-        let content = column![top_bar, action_bar, main_pane].height(Length::Fill);
+        let content = column![
+            top_bar,
+            rule::horizontal(1),
+            tab_bar,
+            rule::horizontal(1),
+            action_bar,
+            main_pane
+        ]
+        .height(Length::Fill);
 
         if self.show_library_manager {
             modal(
