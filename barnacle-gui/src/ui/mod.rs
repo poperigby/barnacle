@@ -7,8 +7,9 @@ use barnacle_gui::{
 use fluent_i18n::t;
 use iced::{
     Element, Length, Task,
-    widget::{button, column, combo_box, row, rule, space, text},
+    widget::{Button, button, column, combo_box, row, rule, space, text},
 };
+use strum::Display;
 
 use crate::ui::{add_mod_menu::AddModDialog, library_manager::LibraryManager, mod_list::ModList};
 
@@ -20,7 +21,7 @@ pub mod mod_list;
 pub enum Message {
     LaunchButtonPressed,
     AddModButtonPressed,
-    TabSelected(SelectedTab),
+    TabSelected(Tab),
     LibraryManagerButtonPressed,
     ProfileSelected(ProfileRecord),
 
@@ -38,10 +39,11 @@ pub enum Action {
     Launch,
 }
 
-#[derive(Debug, Clone, Default)]
-pub enum SelectedTab {
+#[derive(Debug, Clone, Default, PartialEq, PartialOrd, Display)]
+pub enum Tab {
     #[default]
     Mods,
+    #[strum(to_string = "{0}")]
     ItemGroup(String),
 }
 
@@ -50,7 +52,7 @@ pub struct Ui {
     show_library_manager: bool,
     show_add_mod_dialog: bool,
 
-    selected_tab: SelectedTab,
+    selected_tab: Tab,
 
     profile_selector_state: Option<combo_box::State<ProfileRecord>>,
 
@@ -65,7 +67,7 @@ impl Ui {
             show_library_manager: false,
             show_add_mod_dialog: false,
 
-            selected_tab: SelectedTab::default(),
+            selected_tab: Tab::default(),
 
             profile_selector_state: None,
 
@@ -179,10 +181,11 @@ impl Ui {
             button(Icon::Notifications)
         ];
 
-        let mut tab_bar = row![button("Mods").on_press(Message::TabSelected(SelectedTab::Mods))];
+        let mut tab_bar = row![self.tab_button(Tab::Mods, Message::TabSelected(Tab::Mods))];
         for group in model.item_entry_groups() {
-            tab_bar = tab_bar.push(button(text(group.name.clone())).on_press(
-                Message::TabSelected(SelectedTab::ItemGroup(group.name.clone())),
+            tab_bar = tab_bar.push(self.tab_button(
+                Tab::ItemGroup(group.name.clone()),
+                Message::TabSelected(Tab::ItemGroup(group.name.clone())),
             ));
         }
 
@@ -197,8 +200,8 @@ impl Ui {
         ];
 
         let main_pane: Element<'_, Message> = match &self.selected_tab {
-            SelectedTab::Mods => column![self.mod_list.view(model).map(Message::ModList)].into(),
-            SelectedTab::ItemGroup(group) => text!("{}", group).into(),
+            Tab::Mods => column![self.mod_list.view(model).map(Message::ModList)].into(),
+            Tab::ItemGroup(group) => text!("{}", group).into(),
         };
 
         let content = column![
@@ -228,5 +231,15 @@ impl Ui {
         } else {
             content.into()
         }
+    }
+
+    fn tab_button(&self, tab: Tab, message: Message) -> Button<'_, Message> {
+        let style = if self.selected_tab == tab {
+            button::primary
+        } else {
+            button::subtle
+        };
+
+        button(text(tab.to_string())).style(style).on_press(message)
     }
 }
