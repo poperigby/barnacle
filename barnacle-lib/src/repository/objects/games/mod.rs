@@ -19,14 +19,15 @@ use tokio::process::Command;
 use tracing::info;
 
 pub use error::*;
+pub use model::Kind;
 
 use crate::{
-    deployers,
     fs::state_dir,
+    integrations,
     mods::{self, builder::NewMod},
     profiles,
     repository::{
-        Cfg, DeployKind,
+        Cfg,
         db::Db,
         games::{ActiveModel, Entity, Model},
         objects::{

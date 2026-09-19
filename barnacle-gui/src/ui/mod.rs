@@ -1,9 +1,12 @@
+use std::collections::HashMap;
+
 use barnacle_gui::{
     icons::Icon,
     model::{Model, Mutation, ProfileRecord},
     persistence::state::UiStateStore,
     widgets::modal,
 };
+use barnacle_lib::repository::items;
 use fluent_i18n::t;
 use iced::{
     Element, Length, Task,
@@ -11,11 +14,16 @@ use iced::{
 };
 use strum::Display;
 
-use crate::ui::{add_mod_menu::AddModDialog, library_manager::LibraryManager, mod_list::ModList};
+use crate::ui::{
+    library_manager::LibraryManager,
+    tabs::{
+        item_group::ItemGroupTab,
+        mods::{ModsTab, add_mod_menu::AddModDialog},
+    },
+};
 
-pub mod add_mod_menu;
 pub mod library_manager;
-pub mod mod_list;
+pub mod tabs;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -26,8 +34,9 @@ pub enum Message {
     ProfileSelected(ProfileRecord),
 
     // Children
-    AddModDialog(add_mod_menu::Message),
-    ModList(mod_list::Message),
+    AddModDialog(tabs::mods::add_mod_menu::Message),
+    ModList(tabs::mods::Message),
+    ItemGroup(tabs::item_group::Message),
     LibraryManager(library_manager::Message),
 }
 
@@ -39,12 +48,11 @@ pub enum Action {
     Launch,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, PartialOrd, Display)]
+#[derive(Debug, Clone, Default, Display, PartialEq)]
 pub enum Tab {
     #[default]
     Mods,
-    #[strum(to_string = "{0}")]
-    ItemGroup(String),
+    ItemGroup(items::Kind),
 }
 
 #[derive(Debug, Clone)]
@@ -57,7 +65,7 @@ pub struct Ui {
     profile_selector_state: Option<combo_box::State<ProfileRecord>>,
 
     add_mod_dialog: AddModDialog,
-    mod_list: ModList,
+    mods_tab: ModsTab,
     library_manager: LibraryManager,
 }
 
@@ -73,7 +81,7 @@ impl Ui {
 
             // TODO: Move to Mods tab
             add_mod_dialog: AddModDialog::new(),
-            mod_list: ModList::new(ui_state.clone()),
+            mods_tab: ModsTab::new(ui_state.clone()),
             library_manager: LibraryManager::new(),
         };
 
@@ -117,9 +125,11 @@ impl Ui {
 
             // Children
             Message::AddModDialog(message) => match self.add_mod_dialog.update(message) {
-                add_mod_menu::Action::None => Action::None,
-                add_mod_menu::Action::Run(task) => Action::Run(task.map(Message::AddModDialog)),
-                add_mod_menu::Action::Submit { name, path } => {
+                tabs::mods::add_mod_menu::Action::None => Action::None,
+                tabs::mods::add_mod_menu::Action::Run(task) => {
+                    Action::Run(task.map(Message::AddModDialog))
+                }
+                tabs::mods::add_mod_menu::Action::Submit { name, path } => {
                     self.show_add_mod_dialog = false;
 
                     match path {
@@ -130,16 +140,21 @@ impl Ui {
                         None => Action::Mutate(Mutation::AddEmptyMod { name }),
                     }
                 }
-                add_mod_menu::Action::Cancel => {
+                tabs::mods::add_mod_menu::Action::Cancel => {
                     self.show_add_mod_dialog = false;
 
                     Action::None
                 }
             },
-            Message::ModList(message) => match self.mod_list.update(message) {
-                mod_list::Action::None => Action::None,
-                mod_list::Action::Run(task) => Action::Run(task.map(Message::ModList)),
-                mod_list::Action::Mutate(mutation) => Action::Mutate(mutation),
+            Message::ModList(message) => match self.mods_tab.update(message) {
+                tabs::mods::Action::None => Action::None,
+                tabs::mods::Action::Run(task) => Action::Run(task.map(Message::ModList)),
+                tabs::mods::Action::Mutate(mutation) => Action::Mutate(mutation),
+            },
+            Message::ItemGroup(message) => match ItemGroupTab::update(message) {
+                tabs::item_group::Action::None => Action::None,
+                tabs::item_group::Action::Run(task) => Action::Run(task.map(Message::ItemGroup)),
+                tabs::item_group::Action::Mutate(mutation) => Action::Mutate(mutation),
             },
             Message::LibraryManager(message) => match self.library_manager.update(message) {
                 library_manager::Action::None => Action::None,
@@ -182,10 +197,10 @@ impl Ui {
         ];
 
         let mut tab_bar = row![self.tab_button(Tab::Mods, Message::TabSelected(Tab::Mods))];
-        for group in model.item_entry_groups() {
+        for group in model.item_groups() {
             tab_bar = tab_bar.push(self.tab_button(
-                Tab::ItemGroup(group.name.clone()),
-                Message::TabSelected(Tab::ItemGroup(group.name.clone())),
+                Tab::ItemGroup(group.kind),
+                Message::TabSelected(Tab::ItemGroup(group.kind)),
             ));
         }
 
@@ -200,8 +215,15 @@ impl Ui {
         ];
 
         let main_pane: Element<'_, Message> = match &self.selected_tab {
-            Tab::Mods => column![self.mod_list.view(model).map(Message::ModList)].into(),
-            Tab::ItemGroup(group) => text!("{}", group).into(),
+            Tab::Mods => column![self.mods_tab.view(model).map(Message::ModList)].into(),
+            Tab::ItemGroup(kind) => {
+                let group = model
+                    .item_groups()
+                    .iter()
+                    .find(|g| g.kind == *kind)
+                    .unwrap();
+                ItemGroupTab::view(group).map(Message::ItemGroup)
+            }
         };
 
         let content = column![

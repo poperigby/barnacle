@@ -1,13 +1,10 @@
-use crate::{Repository, profiles, repository::DeployKind};
+use crate::{Repository, games::Kind, profiles};
 
 #[tokio::test]
 async fn test_add() {
     let repo = Repository::in_memory().await;
 
-    let game = repo
-        .add_game("Morrowind", DeployKind::OpenMW)
-        .await
-        .unwrap();
+    let game = repo.add_game("Morrowind", Kind::OpenMW).await.unwrap();
     let profile = game.add_profile("Test").await.unwrap();
 
     assert!(profile.dir().await.unwrap().exists());
@@ -17,10 +14,7 @@ async fn test_add() {
 async fn test_add_duplicate() {
     let repo = Repository::in_memory().await;
 
-    let game = repo
-        .add_game("Morrowind", DeployKind::OpenMW)
-        .await
-        .unwrap();
+    let game = repo.add_game("Morrowind", Kind::OpenMW).await.unwrap();
     game.add_profile("Test").await.unwrap();
 
     assert!(matches!(
@@ -32,7 +26,7 @@ async fn test_add_duplicate() {
 #[tokio::test]
 async fn test_remove() {
     let repo = Repository::in_memory().await;
-    let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
+    let game = repo.add_game("Skyrim", Kind::Skyrim).await.unwrap();
     let _mod = game.new_mod("test_mod").empty().await;
 
     let profile = game.add_profile("Test").await.unwrap();
@@ -54,7 +48,7 @@ async fn test_remove() {
 #[tokio::test]
 async fn test_list() {
     let repo = Repository::in_memory().await;
-    let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
+    let game = repo.add_game("Skyrim", Kind::Skyrim).await.unwrap();
 
     assert_eq!(game.profiles().await.unwrap().len(), 0);
 
@@ -67,7 +61,7 @@ async fn test_list() {
 async fn test_parent() {
     let repo = Repository::in_memory().await;
 
-    let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
+    let game = repo.add_game("Skyrim", Kind::Skyrim).await.unwrap();
     let profile = game.add_profile("Test").await.unwrap();
 
     assert_eq!(profile.parent().await.unwrap(), game);
@@ -77,10 +71,7 @@ async fn test_parent() {
 async fn test_activate() {
     let repo = Repository::in_memory().await;
 
-    let game = repo
-        .add_game("Morrowind", DeployKind::OpenMW)
-        .await
-        .unwrap();
+    let game = repo.add_game("Morrowind", Kind::OpenMW).await.unwrap();
 
     let profile1 = game.add_profile("Test1").await.unwrap();
     let profile2 = game.add_profile("Test2").await.unwrap();
@@ -98,7 +89,7 @@ async fn test_dir() {
     let repo = Repository::in_memory().await;
 
     let game = repo
-        .add_game("Fallout: New Vegas", DeployKind::FalloutNV)
+        .add_game("Fallout: New Vegas", Kind::FalloutNV)
         .await
         .unwrap();
 
@@ -118,7 +109,7 @@ async fn test_dir() {
 #[tokio::test]
 async fn test_remove_made_next_profile_active() {
     let repo = Repository::in_memory().await;
-    let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
+    let game = repo.add_game("Skyrim", Kind::Skyrim).await.unwrap();
 
     let profile1 = game.add_profile("Test1").await.unwrap();
     let profile2 = game.add_profile("Test2").await.unwrap();
@@ -134,17 +125,14 @@ async fn test_remove_made_next_profile_active() {
 async fn test_switching_games_preserves_each_games_active_profile() {
     let repo = Repository::in_memory().await;
 
-    let game1 = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
+    let game1 = repo.add_game("Skyrim", Kind::Skyrim).await.unwrap();
     game1.activate().await.unwrap();
 
     let profile1 = game1.add_profile("Test1").await.unwrap();
     profile1.activate().await.unwrap();
     game1.add_profile("Test2").await.unwrap();
 
-    let game2 = repo
-        .add_game("Morrowind", DeployKind::OpenMW)
-        .await
-        .unwrap();
+    let game2 = repo.add_game("Morrowind", Kind::OpenMW).await.unwrap();
     let profile2 = game2.add_profile("Test2").await.unwrap();
 
     game2.activate().await.unwrap();

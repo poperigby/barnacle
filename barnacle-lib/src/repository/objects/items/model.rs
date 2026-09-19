@@ -1,6 +1,6 @@
 use sea_orm::prelude::*;
 
-use crate::repository::mods;
+use crate::repository::{items::kind::Kind, mods};
 
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
@@ -13,7 +13,7 @@ pub struct Model {
     #[sea_orm(belongs_to, from = "mod_id", to = "id", on_delete = "Cascade")]
     pub mod_: BelongsTo<mods::Entity>,
 
-    pub kind: String,
+    pub kind: Kind,
 
     pub relative_path: String,
 }

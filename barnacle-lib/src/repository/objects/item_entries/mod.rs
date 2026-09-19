@@ -1,16 +1,16 @@
 use std::path::PathBuf;
 
-use sea_orm::{ActiveValue::Set, EntityTrait, QueryFilter, QueryOrder, QuerySelect};
+use derive_more::Display;
+use sea_orm::{ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect};
 
 use crate::{
-    deployers::{ItemGroupDef, ItemGroupSpec},
     error::{LoadModelError, ModelKind},
     repository::{
         Profile,
         config::Cfg,
         db::Db,
         item_entries::{ActiveModel, COLUMN, Entity, Model},
-        items::{self, Item},
+        items::{self, Item, kind::Kind},
     },
 };
 
@@ -79,16 +79,16 @@ impl ItemEntry {
         Entity::insert(model).exec(conn).await.unwrap();
     }
 
-    pub(crate) async fn list_by_group(
+    pub(crate) async fn list_by_kind(
         db: &Db,
         cfg: &Cfg,
         profile: &Profile,
-        group_key: &str,
+        kind: Kind,
     ) -> Vec<ItemEntry> {
         Entity::find()
             .inner_join(items::Entity)
             .filter(COLUMN.profile_id.eq(profile.id))
-            .filter(items::COLUMN.kind.eq(group_key))
+            .filter(items::COLUMN.kind.eq(kind))
             .order_by_asc(COLUMN.position)
             .all(db.conn())
             .await
@@ -102,29 +102,32 @@ impl ItemEntry {
         db: &Db,
         cfg: &Cfg,
         profile: &Profile,
-        groups: &[ItemGroupDef],
-    ) -> Vec<ItemEntryGroup> {
-        let mut loaded_groups: Vec<ItemEntryGroup> = Vec::with_capacity(groups.len());
+        kinds: &[Kind],
+    ) -> Vec<ItemGroup> {
+        let mut groups = Vec::with_capacity(kinds.len());
 
-        for group in groups {
-            let entries = Self::list_by_group(db, cfg, profile, &group.key).await;
+        for kind in kinds {
+            let entries = Self::list_by_kind(db, cfg, profile, kind.clone()).await;
 
-            loaded_groups.push(ItemEntryGroup {
-                key: group.key.clone(),
-                name: group.name.clone(),
-                ordered: group.ordered,
+            groups.push(ItemGroup {
+                kind: kind.clone(),
                 entries,
             });
         }
 
-        loaded_groups
+        groups
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct ItemEntryGroup {
-    pub key: String,
-    pub name: String,
-    pub ordered: bool,
+#[derive(Debug, Clone, Display)]
+#[display("{kind}")]
+pub struct ItemGroup {
+    pub kind: Kind,
     pub entries: Vec<ItemEntry>,
+}
+
+impl PartialEq for ItemGroup {
+    fn eq(&self, other: &Self) -> bool {
+        self.kind == other.kind
+    }
 }

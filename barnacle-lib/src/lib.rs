@@ -1,11 +1,11 @@
-pub mod deployers;
 pub mod fs;
+pub mod integrations;
 pub mod repository;
 
 #[cfg(test)]
 mod test;
 
-pub use repository::{DeployKind, Game, Mod, ModEntry, Profile, Repository, Tool};
+pub use repository::{Game, Mod, ModEntry, Profile, Repository, Tool};
 
 pub mod error {
     pub use crate::repository::objects::error::{GetFieldError, LoadModelError, ModelKind};

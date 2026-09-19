@@ -10,7 +10,7 @@ use crate::repository::{mods, profiles, targets, tools};
     rename_all = "snake_case"
 )]
 #[strum(serialize_all = "title_case")]
-pub enum DeployKind {
+pub enum Kind {
     Skyrim,
     FalloutNV,
     #[strum(serialize = "OpenMW")]
@@ -27,7 +27,7 @@ pub struct Model {
     #[sea_orm(unique)]
     pub name: String,
 
-    pub deploy_kind: DeployKind,
+    pub kind: Kind,
 
     /// Path to the game's main executable. Can be an absolute path or a command name.
     pub launch_program: String,

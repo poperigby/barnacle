@@ -13,11 +13,12 @@ use sea_orm::{ActiveValue::Set, EntityTrait};
 use tempfile::tempdir;
 
 use crate::{
-    DeployKind, Game, Mod,
-    deployers::{self, ItemGroupSpec},
+    Game, Mod,
+    integrations::{self},
     repository::{
         config::Cfg,
         db::Db,
+        games::Kind,
         items,
         mods::{ActiveModel, Entity},
     },
@@ -97,15 +98,15 @@ impl NewMod {
     async fn add_items(&self, mod_: &Mod) {
         let mod_dir = mod_.dir().await.unwrap();
 
-        let found_items = match self.game.deploy_kind().await.unwrap() {
-            DeployKind::OpenMW => deployers::openmw::OpenMw::find_items(&mod_dir),
+        let found_items = match self.game.kind().await.unwrap() {
+            Kind::OpenMW => integrations::openmw::OpenMw::find_items(&mod_dir),
             _ => Vec::new(),
         };
 
         for parsed in found_items {
             let model = items::ActiveModel {
                 mod_id: Set(mod_.id),
-                kind: Set(parsed.group.key().to_string()),
+                kind: Set(parsed.kind),
                 relative_path: Set(parsed.relative_path),
                 ..Default::default()
             };
@@ -262,17 +263,14 @@ mod test {
     use tempfile::tempdir;
     use zip::{ZipWriter, write::SimpleFileOptions};
 
-    use crate::{Repository, repository::DeployKind};
+    use crate::Repository;
 
     use super::*;
 
     #[tokio::test]
     async fn empty_adds_empty_mod_directory() {
         let repo = Repository::in_memory().await;
-        let game = repo
-            .add_game("Morrowind", DeployKind::OpenMW)
-            .await
-            .unwrap();
+        let game = repo.add_game("Morrowind", Kind::OpenMW).await.unwrap();
 
         let builder = NewMod::new(&repo.db, &repo.cfg, &game, "Patch for Purists");
         let mod_ = builder.empty().await;
@@ -286,10 +284,7 @@ mod test {
     #[tokio::test]
     async fn from_dir_copies_source_contents_into_mod_directory() {
         let repo = Repository::in_memory().await;
-        let game = repo
-            .add_game("Morrowind", DeployKind::OpenMW)
-            .await
-            .unwrap();
+        let game = repo.add_game("Morrowind", Kind::OpenMW).await.unwrap();
         let source = tempdir().unwrap();
 
         fs::create_dir_all(source.path().join("meshes")).unwrap();
@@ -306,10 +301,7 @@ mod test {
     #[tokio::test]
     async fn archive_import_with_root_strips_selected_root_directory() {
         let repo = Repository::in_memory().await;
-        let game = repo
-            .add_game("Morrowind", DeployKind::OpenMW)
-            .await
-            .unwrap();
+        let game = repo.add_game("Morrowind", Kind::OpenMW).await.unwrap();
         let archive_dir = tempdir().unwrap();
         let archive_path = archive_dir.path().join("wrapped.zip");
 

@@ -1,10 +1,11 @@
-use std::path::PathBuf;
+use std::{fmt, path::PathBuf};
 
 use barnacle_lib::{
     Repository,
     repository::{
         Game, Mod, ModEntry, Profile,
-        item_entries::{ItemEntry, ItemEntryGroup},
+        item_entries::{ItemEntry, ItemGroup},
+        items,
     },
 };
 use derive_more::Display;
@@ -28,7 +29,7 @@ pub struct Model {
     mods: Vec<ModRecord>,
     mod_entries: Vec<ModEntryRecord>,
 
-    item_entry_groups: Vec<ItemEntryGroupRecord>,
+    item_entry_groups: Vec<ItemGroupRecord>,
 }
 
 impl Model {
@@ -71,7 +72,7 @@ impl Model {
         let mods = ModRecord::load_all(&active_game_object).await?;
         let mod_entries = ModEntryRecord::load_all(&active_profile_object).await?;
 
-        let item_entry_groups = ItemEntryGroupRecord::load_all(&active_profile_object).await;
+        let item_entry_groups = ItemGroupRecord::load_all(&active_profile_object).await;
 
         Ok(Self::new(
             active_game,
@@ -89,7 +90,7 @@ impl Model {
         active_profile: Option<ProfileRecord>,
         mods: Vec<ModRecord>,
         mod_entries: Vec<ModEntryRecord>,
-        item_entry_groups: Vec<ItemEntryGroupRecord>,
+        item_entry_groups: Vec<ItemGroupRecord>,
     ) -> Self {
         Self {
             active_game,
@@ -136,8 +137,8 @@ impl Model {
         self.mod_entries.clone()
     }
 
-    pub fn item_entry_groups(&self) -> Vec<ItemEntryGroupRecord> {
-        self.item_entry_groups.clone()
+    pub fn item_groups(&self) -> &[ItemGroupRecord] {
+        &self.item_entry_groups
     }
 }
 
@@ -271,13 +272,13 @@ impl ModEntryRecord {
 }
 
 #[derive(Debug, Clone)]
-pub struct ItemEntryRecord {
+pub struct ItemRecord {
     object: ItemEntry,
     pub relative_path: PathBuf,
     pub enabled: bool,
 }
 
-impl ItemEntryRecord {
+impl ItemRecord {
     async fn load(item_entry: &ItemEntry) -> Self {
         Self {
             object: item_entry.clone(),
@@ -287,29 +288,34 @@ impl ItemEntryRecord {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct ItemEntryGroupRecord {
-    object: ItemEntryGroup,
-    pub name: String,
-    pub ordered: bool,
-    pub entries: Vec<ItemEntryRecord>,
+#[derive(Debug, Clone, Display)]
+#[display("{object}")]
+pub struct ItemGroupRecord {
+    object: ItemGroup,
+    pub kind: items::Kind,
+    pub entries: Vec<ItemRecord>,
 }
 
-impl ItemEntryGroupRecord {
-    async fn load_all(profile: &Profile) -> Vec<ItemEntryGroupRecord> {
-        let item_entry_groups = profile.item_entry_groups().await;
+impl ItemGroupRecord {
+    async fn load_all(profile: &Profile) -> Vec<ItemGroupRecord> {
+        let item_entry_groups = profile.item_groups().await;
 
-        join_all(item_entry_groups.iter().map(ItemEntryGroupRecord::load)).await
+        join_all(item_entry_groups.iter().map(ItemGroupRecord::load)).await
     }
 
-    async fn load(item_entry_group: &ItemEntryGroup) -> Self {
-        let entries = join_all(item_entry_group.entries.iter().map(ItemEntryRecord::load)).await;
+    async fn load(item_entry_group: &ItemGroup) -> Self {
+        let entries = join_all(item_entry_group.entries.iter().map(ItemRecord::load)).await;
 
         Self {
             object: item_entry_group.clone(),
-            name: item_entry_group.name.clone(),
-            ordered: item_entry_group.ordered,
+            kind: item_entry_group.kind,
             entries,
         }
+    }
+}
+
+impl PartialEq for ItemGroupRecord {
+    fn eq(&self, other: &Self) -> bool {
+        self.object == other.object
     }
 }

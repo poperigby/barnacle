@@ -1,8 +1,8 @@
 use crate::{
-    deployers::{self, ItemGroupSpec},
+    integrations::{self},
     repository::{
-        item_entries::{ItemEntry, ItemEntryGroup},
-        items::Item,
+        item_entries::{ItemEntry, ItemGroup},
+        items::{Item, kind::Kind},
     },
 };
 
@@ -22,15 +22,15 @@ impl Profile {
         ItemEntry::add(&self.db, self, item).await
     }
 
-    pub(crate) async fn item_entries(&self, group: impl ItemGroupSpec) -> Vec<ItemEntry> {
-        ItemEntry::list_by_group(&self.db, &self.cfg, self, group.key()).await
+    pub(crate) async fn item_entries(&self, kind: Kind) -> Vec<ItemEntry> {
+        ItemEntry::list_by_kind(&self.db, &self.cfg, self, kind).await
     }
 
-    pub async fn item_entry_groups(&self) -> Vec<ItemEntryGroup> {
+    pub async fn item_groups(&self) -> Vec<ItemGroup> {
         let game = self.parent().await.unwrap();
-        let deploy_kind = game.deploy_kind().await.unwrap();
+        let deploy_kind = game.kind().await.unwrap();
 
-        let groups = deployers::item_group_defs(deploy_kind);
+        let groups = integrations::item_kinds(&deploy_kind);
 
         ItemEntry::list_groups(&self.db, &self.cfg, self, &groups).await
     }

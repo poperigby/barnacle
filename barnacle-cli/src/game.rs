@@ -1,4 +1,4 @@
-use barnacle_lib::{Repository, repository::DeployKind};
+use barnacle_lib::{Repository, games::Kind};
 use clap::Subcommand;
 
 #[derive(Subcommand, Debug, Clone)]
@@ -20,7 +20,7 @@ pub async fn handle(repo: &Repository, cmd: &Command) {
             }
         }
         Command::Add { name } => {
-            repo.add_game(name, DeployKind::OpenMW).await.unwrap();
+            repo.add_game(name, Kind::OpenMW).await.unwrap();
         }
         Command::Activate { name } => {
             let game = repo

@@ -1,14 +1,11 @@
 use super::*;
-use crate::{Repository, repository::DeployKind};
+use crate::{Repository, games::Kind};
 
 #[tokio::test]
 async fn test_add() {
     let repo = Repository::in_memory().await;
 
-    let game = repo
-        .add_game("Morrowind", DeployKind::OpenMW)
-        .await
-        .unwrap();
+    let game = repo.add_game("Morrowind", Kind::OpenMW).await.unwrap();
     let profile = game.add_profile("Test").await.unwrap();
 
     let mod1 = game.new_mod("Super Duper Mod").empty().await;
@@ -24,10 +21,7 @@ async fn test_add() {
 async fn test_remove() {
     let repo = Repository::in_memory().await;
 
-    let game = repo
-        .add_game("Morrowind", DeployKind::OpenMW)
-        .await
-        .unwrap();
+    let game = repo.add_game("Morrowind", Kind::OpenMW).await.unwrap();
     let profile = game.add_profile("Test").await.unwrap();
 
     let mut mod_entries = Vec::new();
@@ -74,7 +68,7 @@ async fn test_remove() {
 async fn test_parent() {
     let repo = Repository::in_memory().await;
 
-    let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
+    let game = repo.add_game("Skyrim", Kind::Skyrim).await.unwrap();
     let profile = game.add_profile("The Best Profile").await.unwrap();
     let mod_ = game
         .new_mod("Better Khajiit Balls 16K - Remastered - 2025 Edition - REAL")
@@ -89,10 +83,7 @@ async fn test_parent() {
 async fn test_name() {
     let repo = Repository::in_memory().await;
 
-    let game = repo
-        .add_game("Morrowind", DeployKind::OpenMW)
-        .await
-        .unwrap();
+    let game = repo.add_game("Morrowind", Kind::OpenMW).await.unwrap();
     let profile = game.add_profile("Test").await.unwrap();
     let mod_ = game.new_mod("Super Duper Mod").empty().await;
 
@@ -109,10 +100,7 @@ async fn test_name() {
 async fn test_enabled() {
     let repo = Repository::in_memory().await;
 
-    let game = repo
-        .add_game("Morrowind", DeployKind::OpenMW)
-        .await
-        .unwrap();
+    let game = repo.add_game("Morrowind", Kind::OpenMW).await.unwrap();
     let profile = game.add_profile("Test").await.unwrap();
     let mod_ = game.new_mod("Super Duper Mod").empty().await;
 

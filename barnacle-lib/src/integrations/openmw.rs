@@ -1,22 +1,34 @@
 use std::path::{Path, PathBuf};
 
 use openmw_config::OpenMWConfiguration;
-use strum::EnumIter;
 use tokio::process::Command;
 use walkdir::WalkDir;
 
 use crate::{
-    Game,
-    deployers::{Deployer, FoundItem, ItemGroupSpec},
+    Game, Profile,
+    integrations::FoundItem,
+    repository::{item_entries::ItemEntry, items},
 };
 
-#[derive(Debug, Clone, Copy, EnumIter, PartialEq, PartialOrd)]
-pub enum ItemGroups {
+#[derive(
+    Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Hash, strum::EnumIter, strum::EnumString,
+)]
+#[strum(serialize_all = "snake_case")]
+pub enum ItemKind {
     Plugin,
     Archive,
 }
 
-impl ItemGroups {
+impl ItemKind {
+    /// Stable database string
+    pub(crate) fn key(&self) -> String {
+        match self {
+            Self::Plugin => "plugin",
+            Self::Archive => "archive",
+        }
+        .into()
+    }
+
     fn from_file_extension(extension: &str) -> Option<Self> {
         match extension.to_lowercase().as_str() {
             "esp" | "esm" | "omwscript" | "omwplugin" | "omwgame" => Some(Self::Plugin),
@@ -26,37 +38,8 @@ impl ItemGroups {
     }
 }
 
-impl ItemGroupSpec for ItemGroups {
-    fn key(self) -> &'static str {
-        match self {
-            Self::Plugin => "openmw.plugin",
-            Self::Archive => "openmw.archive",
-        }
-    }
-
-    fn name(self) -> &'static str {
-        match self {
-            Self::Plugin => "Plugins",
-            Self::Archive => "Archives",
-        }
-    }
-
-    fn ordered(self) -> bool {
-        match self {
-            Self::Plugin => true,
-            Self::Archive => false,
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct OpenMw {}
-
-impl Deployer for OpenMw {
-    fn item_groups() -> Vec<impl ItemGroupSpec> {
-        vec![ItemGroups::Plugin, ItemGroups::Archive]
-    }
-}
 
 impl OpenMw {
     pub async fn prepare(game: &Game) -> Command {
@@ -71,7 +54,7 @@ impl OpenMw {
             }
         }
 
-        for plugin in active_profile.item_entries(ItemGroups::Plugin).await {
+        for plugin in Self::item_entries(&active_profile, ItemKind::Plugin).await {
             if plugin.enabled().await {
                 config
                     .add_content_file(&plugin.relative_path().await.to_string_lossy())
@@ -79,7 +62,7 @@ impl OpenMw {
             }
         }
 
-        for archive in active_profile.item_entries(ItemGroups::Archive).await {
+        for archive in Self::item_entries(&active_profile, ItemKind::Archive).await {
             if archive.enabled().await {
                 config
                     .add_archive_file(&archive.relative_path().await.to_string_lossy())
@@ -103,7 +86,11 @@ impl OpenMw {
         program
     }
 
-    pub(crate) fn find_items(mod_dir: &Path) -> Vec<FoundItem<ItemGroups>> {
+    pub(crate) async fn item_entries(profile: &Profile, kind: ItemKind) -> Vec<ItemEntry> {
+        profile.item_entries(items::Kind::OpenMW(kind)).await
+    }
+
+    pub(crate) fn find_items(mod_dir: &Path) -> Vec<FoundItem> {
         let paths: Vec<PathBuf> = WalkDir::new(mod_dir)
             .into_iter()
             .map(|e| e.unwrap().into_path())
@@ -114,15 +101,14 @@ impl OpenMw {
             let relative_path = path.strip_prefix(mod_dir).unwrap().to_path_buf();
 
             if let Some(extension) = relative_path.extension() {
-                let Some(group) = ItemGroups::from_file_extension(&extension.to_string_lossy())
-                else {
+                let Some(kind) = ItemKind::from_file_extension(&extension.to_string_lossy()) else {
                     continue;
                 };
 
                 found.push(FoundItem {
                     key: path.file_name().unwrap().to_string_lossy().to_lowercase(),
                     relative_path: relative_path.to_str().unwrap().to_string(),
-                    group,
+                    kind: items::Kind::OpenMW(kind),
                 });
             }
         }
@@ -153,17 +139,17 @@ mod tests {
             found_items,
             [
                 FoundItem {
-                    group: ItemGroups::Archive,
+                    kind: items::Kind::OpenMW(ItemKind::Archive),
                     key: "bigger booba.bsa".to_string(),
                     relative_path: "BIGGER BOOBA.BSA".to_string(),
                 },
                 FoundItem {
-                    group: ItemGroups::Plugin,
+                    kind: items::Kind::OpenMW(ItemKind::Plugin),
                     key: "hyper realistic horkers.esp".to_string(),
                     relative_path: "optional/hyper realistic horkers.ESP".to_string(),
                 },
                 FoundItem {
-                    group: ItemGroups::Plugin,
+                    kind: items::Kind::OpenMW(ItemKind::Plugin),
                     key: "immersive spoons.esp".to_string(),
                     relative_path: "Immersive Spoons.esp".to_string(),
                 },

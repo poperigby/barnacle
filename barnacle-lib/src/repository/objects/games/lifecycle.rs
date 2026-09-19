@@ -1,5 +1,3 @@
-use crate::deployers::{Deployer, openmw::OpenMw};
-
 use super::*;
 
 impl Game {
@@ -8,19 +6,19 @@ impl Game {
         db: &Db,
         cfg: &Cfg,
         name: &str,
-        deploy_kind: DeployKind,
+        deploy_kind: Kind,
     ) -> Result<Self, AddError> {
         let name = name.to_string();
 
         let launch_program = match deploy_kind {
-            DeployKind::OpenMW => "openmw",
-            DeployKind::Skyrim => "skyrim",
-            DeployKind::FalloutNV => "fallout_nv",
+            Kind::OpenMW => "openmw",
+            Kind::Skyrim => "skyrim",
+            Kind::FalloutNV => "fallout_nv",
         };
 
         let model = ActiveModel {
             name: Set(name.clone()),
-            deploy_kind: Set(deploy_kind.clone()),
+            kind: Set(deploy_kind.clone()),
             launch_program: Set(launch_program.to_string()),
             launch_args: Set("".to_string()),
             ..Default::default()
@@ -44,11 +42,6 @@ impl Game {
                             }
                         })?
                         .last_insert_id;
-
-                    let item_group_specs = match deploy_kind {
-                        DeployKind::OpenMW => OpenMw::item_groups(),
-                        _ => Vec::new(),
-                    };
 
                     let dir = Self::dir_from_id(&cfg, id);
                     fs::create_dir_all(&dir)

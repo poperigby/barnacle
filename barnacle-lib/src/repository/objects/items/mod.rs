@@ -12,6 +12,9 @@ use crate::{
     },
 };
 
+pub use kind::Kind;
+
+pub mod kind;
 pub(crate) mod model;
 
 pub struct Item {
@@ -41,7 +44,7 @@ impl Item {
         PathBuf::from(self.model().await.unwrap().relative_path)
     }
 
-    pub async fn group(&self) -> String {
+    pub async fn kind(&self) -> Kind {
         self.model().await.unwrap().kind
     }
 

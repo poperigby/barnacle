@@ -8,33 +8,25 @@ use super::*;
 async fn test_add() {
     let repo = Repository::in_memory().await;
 
-    let game1 = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
-    repo.add_game("Morrowind", DeployKind::OpenMW)
-        .await
-        .unwrap();
+    let game1 = repo.add_game("Skyrim", Kind::Skyrim).await.unwrap();
+    repo.add_game("Morrowind", Kind::OpenMW).await.unwrap();
 
     let games = repo.games().await.unwrap();
 
     assert!(game1.dir().await.unwrap().exists());
     assert_eq!(games.len(), 2);
     assert_eq!(games.first().unwrap().name().await.unwrap(), "Morrowind");
-    assert_eq!(
-        games.last().unwrap().deploy_kind().await.unwrap(),
-        DeployKind::Skyrim
-    );
+    assert_eq!(games.last().unwrap().kind().await.unwrap(), Kind::Skyrim);
 }
 
 #[tokio::test]
 async fn test_add_duplicate() {
     let repo = Repository::in_memory().await;
 
-    let _game = repo
-        .add_game("Morrowind", DeployKind::OpenMW)
-        .await
-        .unwrap();
+    let _game = repo.add_game("Morrowind", Kind::OpenMW).await.unwrap();
 
     assert_matches!(
-        repo.add_game("Morrowind", DeployKind::OpenMW).await,
+        repo.add_game("Morrowind", Kind::OpenMW).await,
         Err(AddError::DuplicateName { .. }),
     )
 }
@@ -43,7 +35,7 @@ async fn test_add_duplicate() {
 async fn test_remove() {
     let repo = Repository::in_memory().await;
 
-    let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
+    let game = repo.add_game("Skyrim", Kind::Skyrim).await.unwrap();
     let profile = game.add_profile("test_profile_1").await.unwrap();
     let mod_ = game.new_mod("test_mod").empty().await;
 
@@ -64,11 +56,8 @@ async fn test_remove() {
 #[tokio::test]
 async fn test_remove_made_next_game_active() {
     let repo = Repository::in_memory().await;
-    let game1 = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
-    let game2 = repo
-        .add_game("Morrowind", DeployKind::OpenMW)
-        .await
-        .unwrap();
+    let game1 = repo.add_game("Skyrim", Kind::Skyrim).await.unwrap();
+    let game2 = repo.add_game("Morrowind", Kind::OpenMW).await.unwrap();
 
     game1.activate().await.unwrap();
     assert!(game1.is_active().await.unwrap());
@@ -83,7 +72,7 @@ async fn test_list() {
 
     assert_eq!(repo.games().await.unwrap().len(), 0);
 
-    repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
+    repo.add_game("Skyrim", Kind::Skyrim).await.unwrap();
 
     assert_eq!(repo.games().await.unwrap().len(), 1);
 }
@@ -93,7 +82,7 @@ async fn test_name() {
     let repo = Repository::in_memory().await;
 
     let game = repo
-        .add_game("Fallout: New Vegas", DeployKind::FalloutNV)
+        .add_game("Fallout: New Vegas", Kind::FalloutNV)
         .await
         .unwrap();
 
@@ -104,7 +93,7 @@ async fn test_name() {
 async fn test_set_name() {
     let repo = Repository::in_memory().await;
 
-    let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
+    let game = repo.add_game("Skyrim", Kind::Skyrim).await.unwrap();
 
     assert_eq!(game.name().await.unwrap(), "Skyrim");
 
@@ -118,11 +107,11 @@ async fn test_deploy_kind() {
     let repo = Repository::in_memory().await;
 
     let game = repo
-        .add_game("Fallout: New Vegas", DeployKind::FalloutNV)
+        .add_game("Fallout: New Vegas", Kind::FalloutNV)
         .await
         .unwrap();
 
-    game.deploy_kind().await.unwrap();
+    game.kind().await.unwrap();
 }
 
 #[tokio::test]
@@ -130,7 +119,7 @@ async fn test_dir() {
     let repo = Repository::in_memory().await;
 
     let game = repo
-        .add_game("Fallout: New Vegas", DeployKind::FalloutNV)
+        .add_game("Fallout: New Vegas", Kind::FalloutNV)
         .await
         .unwrap();
 
@@ -143,10 +132,7 @@ async fn test_dir() {
 async fn test_activate() {
     let repo = Repository::in_memory().await;
 
-    let game = repo
-        .add_game("Morrowind", DeployKind::OpenMW)
-        .await
-        .unwrap();
+    let game = repo.add_game("Morrowind", Kind::OpenMW).await.unwrap();
 
     game.activate().await.unwrap();
 

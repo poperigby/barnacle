@@ -2,50 +2,31 @@ use std::path::PathBuf;
 
 use barnacle_lib::{
     Repository,
-    repository::{DeployKind, Game, Mod, ModEntry, Profile},
+    games::Kind,
+    repository::{Game, Mod, ModEntry, Profile},
 };
 
 #[derive(Debug)]
 pub enum Mutation {
     // Games
-    CreateGame {
-        name: String,
-        deploy_kind: DeployKind,
-    },
+    CreateGame { name: String, deploy_kind: Kind },
     DeleteGame(Game),
     ActivateGame(Game),
 
     // Profiles
-    CreateProfile {
-        game: Game,
-        name: String,
-    },
+    CreateProfile { game: Game, name: String },
     DeleteProfile(Profile),
     ActivateProfile(Profile),
-    EditProfile {
-        profile: Profile,
-        new_name: String,
-    },
+    EditProfile { profile: Profile, new_name: String },
 
     // Mods
-    AddEmptyMod {
-        name: String,
-    },
-    AddModFromDir {
-        name: String,
-        path: PathBuf,
-    },
-    AddModFromArchive {
-        name: String,
-        path: PathBuf,
-    },
+    AddEmptyMod { name: String },
+    AddModFromDir { name: String, path: PathBuf },
+    AddModFromArchive { name: String, path: PathBuf },
     DeleteMod(Mod),
 
     // Mod entries
-    SetModEntryEnabled {
-        entry: ModEntry,
-        enabled: bool,
-    },
+    SetModEntryEnabled { entry: ModEntry, enabled: bool },
     DeleteModEntry(ModEntry),
 }
 

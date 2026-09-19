@@ -27,12 +27,12 @@ impl Game {
         Ok(())
     }
 
-    pub async fn deploy_kind(&self) -> Result<DeployKind, GetFieldError> {
+    pub async fn kind(&self) -> Result<Kind, GetFieldError> {
         Ok(self
             .model(self.db.conn())
             .await
-            .map_err(|source| self.field_error("deploy_kind", source))?
-            .deploy_kind)
+            .map_err(|source| self.field_error("kind", source))?
+            .kind)
     }
 
     pub async fn dir(&self) -> Result<PathBuf, DirError> {

@@ -2,9 +2,9 @@ use super::*;
 
 impl Game {
     pub async fn launch(&self) {
-        match self.deploy_kind().await.unwrap() {
-            DeployKind::OpenMW => {
-                let mut command = deployers::openmw::OpenMw::prepare(self).await;
+        match self.kind().await.unwrap() {
+            Kind::OpenMW => {
+                let mut command = integrations::openmw::OpenMw::prepare(self).await;
 
                 command.spawn().unwrap();
             }

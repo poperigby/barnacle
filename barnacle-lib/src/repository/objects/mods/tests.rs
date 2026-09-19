@@ -1,13 +1,10 @@
-use crate::{Repository, repository::DeployKind};
+use crate::{Repository, games::Kind};
 
 #[tokio::test]
 async fn test_add() {
     let repo = Repository::in_memory().await;
 
-    let game = repo
-        .add_game("Morrowind", DeployKind::OpenMW)
-        .await
-        .unwrap();
+    let game = repo.add_game("Morrowind", Kind::OpenMW).await.unwrap();
     let mod_ = game.new_mod("Test").empty().await;
 
     assert!(mod_.dir().await.unwrap().exists());
@@ -17,10 +14,7 @@ async fn test_add() {
 async fn test_add_duplicate() {
     let repo = Repository::in_memory().await;
 
-    let game = repo
-        .add_game("Morrowind", DeployKind::OpenMW)
-        .await
-        .unwrap();
+    let game = repo.add_game("Morrowind", Kind::OpenMW).await.unwrap();
     game.new_mod("Test").empty().await;
 
     // assert!(matches!(
@@ -33,7 +27,7 @@ async fn test_add_duplicate() {
 async fn test_remove() {
     let repo = Repository::in_memory().await;
 
-    let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
+    let game = repo.add_game("Skyrim", Kind::Skyrim).await.unwrap();
     let mod_ = game.new_mod("Test").empty().await;
 
     assert_eq!(game.mods().await.unwrap().len(), 1);
@@ -49,7 +43,7 @@ async fn test_remove() {
 #[tokio::test]
 async fn test_list() {
     let repo = Repository::in_memory().await;
-    let game = repo.add_game("Skyrim", DeployKind::Skyrim).await.unwrap();
+    let game = repo.add_game("Skyrim", Kind::Skyrim).await.unwrap();
 
     assert_eq!(game.mods().await.unwrap().len(), 0);
 
@@ -62,10 +56,7 @@ async fn test_list() {
 async fn test_parent() {
     let repo = Repository::in_memory().await;
 
-    let game = repo
-        .add_game("Morrowind", DeployKind::OpenMW)
-        .await
-        .unwrap();
+    let game = repo.add_game("Morrowind", Kind::OpenMW).await.unwrap();
     let mod_ = game.new_mod("Test").empty().await;
 
     assert_eq!(mod_.parent().await.unwrap(), game);
@@ -75,7 +66,7 @@ async fn test_parent() {
 async fn test_name() {
     let repo = Repository::in_memory().await;
 
-    repo.add_game("Fallout: New Vegas", DeployKind::FalloutNV)
+    repo.add_game("Fallout: New Vegas", Kind::FalloutNV)
         .await
         .unwrap()
         .new_mod("Test")
@@ -91,7 +82,7 @@ async fn test_dir() {
     let repo = Repository::in_memory().await;
 
     let game = repo
-        .add_game("Fallout: New Vegas", DeployKind::FalloutNV)
+        .add_game("Fallout: New Vegas", Kind::FalloutNV)
         .await
         .unwrap();
 

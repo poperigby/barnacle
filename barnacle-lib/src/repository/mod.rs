@@ -14,7 +14,7 @@ pub mod config;
 pub mod objects;
 
 pub mod games {
-    pub use super::objects::games::model::DeployKind;
+    pub use super::objects::games::model::Kind;
     pub(crate) use super::objects::games::model::*;
     pub use super::objects::games::*;
 }
@@ -54,7 +54,6 @@ pub mod tools {
     pub use super::objects::tools::*;
 }
 
-pub use games::DeployKind;
 pub use objects::{Game, Mod, ModEntry, Profile, Tool};
 
 /// Central access point for all persistent data.
@@ -80,9 +79,9 @@ impl Repository {
     pub async fn add_game(
         &self,
         name: &str,
-        deploy_kind: DeployKind,
+        kind: games::Kind,
     ) -> Result<Game, objects::games::AddError> {
-        Game::add(&self.db, &self.cfg, name, deploy_kind).await
+        Game::add(&self.db, &self.cfg, name, kind).await
     }
 
     pub async fn games(&self) -> Result<Vec<Game>, objects::games::ListError> {

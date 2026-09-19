@@ -7,6 +7,8 @@ use iced::{
     widget::{checkbox, column, scrollable, table, text},
 };
 
+pub mod add_mod_menu;
+
 #[derive(Debug, Clone)]
 pub enum Message {
     ToggleModEntry {
@@ -25,11 +27,11 @@ pub enum Action {
 }
 
 #[derive(Debug, Clone)]
-pub struct ModList {
+pub struct ModsTab {
     ui_state: UiStateStore,
 }
 
-impl ModList {
+impl ModsTab {
     pub fn new(ui_state: UiStateStore) -> Self {
         Self { ui_state }
     }

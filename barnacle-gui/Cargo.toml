@@ -10,7 +10,7 @@ workspace = true
 [dependencies]
 anyhow = "1.0.104"
 barnacle-lib = { path = "../barnacle-lib" }
-derive_more = { version = "2.1.1", features = ["deref", "deref_mut"] }
+derive_more = { version = "2.1.1", features = ["deref", "deref_mut", "display"] }
 deunicode = "1.6.2"
 fluent-i18n = "0.1.0"
 futures = "0.3.34"

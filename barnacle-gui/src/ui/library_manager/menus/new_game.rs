@@ -1,4 +1,4 @@
-use barnacle_lib::repository::DeployKind;
+use barnacle_lib::games::Kind;
 use fluent_i18n::t;
 use iced::{
     Element, Task,
@@ -13,7 +13,7 @@ pub const ID: &str = "new_game_dialog";
 #[derive(Debug, Clone)]
 pub enum Message {
     NameInput(String),
-    DeployKindSelected(DeployKind),
+    DeployKindSelected(Kind),
     CancelPressed,
     CreatePressed,
 }
@@ -21,7 +21,7 @@ pub enum Message {
 #[derive(Debug)]
 pub struct NewGame {
     pub name: String,
-    pub deploy_kind: DeployKind,
+    pub deploy_kind: Kind,
 }
 
 #[derive(Debug)]
@@ -35,8 +35,8 @@ pub enum Action {
 #[derive(Debug, Clone)]
 pub struct Menu {
     name: String,
-    deploy_kind: Option<DeployKind>,
-    deploy_kind_state: combo_box::State<DeployKind>,
+    deploy_kind: Option<Kind>,
+    deploy_kind_state: combo_box::State<Kind>,
 }
 
 impl Menu {
@@ -44,7 +44,7 @@ impl Menu {
         Self {
             name: "".into(),
             deploy_kind: None,
-            deploy_kind_state: combo_box::State::new(DeployKind::iter().collect()),
+            deploy_kind_state: combo_box::State::new(Kind::iter().collect()),
         }
     }
 

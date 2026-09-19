@@ -1,12 +1,12 @@
 use rstest::fixture;
 
-use crate::{DeployKind, Game, Profile, Repository};
+use crate::{Game, Profile, Repository, games};
 
 #[fixture]
 pub async fn game() -> Game {
     let repo = Repository::new().await;
 
-    repo.add_game("Morrowind", DeployKind::OpenMW)
+    repo.add_game("Morrowind", games::Kind::OpenMW)
         .await
         .unwrap()
 }
@@ -16,7 +16,7 @@ pub async fn profile() -> Profile {
     let repo = Repository::new().await;
 
     let game = repo
-        .add_game("Morrowind", DeployKind::OpenMW)
+        .add_game("Morrowind", games::Kind::OpenMW)
         .await
         .unwrap();
 
