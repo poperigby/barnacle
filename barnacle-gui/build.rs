@@ -1,21 +1,27 @@
-use std::{env, fs, io, path::Path};
+use std::{
+    env, fs, io,
+    path::{Path, PathBuf},
+};
 
 use heck::ToUpperCamelCase;
 use quote::{format_ident, quote};
 
 fn main() -> io::Result<()> {
-    generate_icon_enum()?;
+    let manifest_dir =
+        PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR must be set"));
+    let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR must be set"));
+
+    generate_icon_enum(&manifest_dir, &out_dir)?;
 
     Ok(())
 }
 
-fn generate_icon_enum() -> io::Result<()> {
-    let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR must be set");
-    let icons_dir = Path::new(&manifest_dir).join("assets/icons");
-    let out_dir = env::var("OUT_DIR").expect("OUT_DIR must be set");
-    let generated_path = Path::new(&out_dir).join("icons.rs");
+fn generate_icon_enum(manifest_dir: &Path, out_dir: &Path) -> io::Result<()> {
+    let icons_dir = manifest_dir.join("assets/icons");
 
     println!("cargo:rerun-if-changed={}", icons_dir.display());
+
+    let generated_path = out_dir.join("icons.rs");
 
     let mut icons = Vec::new();
     for entry in fs::read_dir(&icons_dir)? {

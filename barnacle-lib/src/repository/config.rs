@@ -4,6 +4,7 @@ use std::{
     sync::Arc,
 };
 
+use icu::locale::Locale;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 
@@ -20,6 +21,7 @@ pub(crate) type Cfg = Arc<RwLock<CoreConfig>>;
 pub struct CoreConfig {
     version: u16,
     library_dir: PathBuf,
+    locale: Option<Locale>,
 }
 
 impl CoreConfig {
@@ -53,17 +55,21 @@ impl CoreConfig {
         &self.library_dir
     }
 
+    pub fn locale(&self) -> Option<&Locale> {
+        self.locale.as_ref()
+    }
+
     /// Create a new mock [`CoreConfig`] instance for testing
     #[cfg(test)]
     pub(crate) fn mock() -> Self {
         use tempfile::tempdir;
 
         Self {
-            version: CURRENT_CONFIG_VERSION,
             library_dir: tempdir()
                 .expect("temporary directory should exist")
                 .path()
                 .to_path_buf(),
+            ..Default::default()
         }
     }
 }
@@ -73,6 +79,7 @@ impl Default for CoreConfig {
         Self {
             version: CURRENT_CONFIG_VERSION,
             library_dir: data_dir().join("library"),
+            locale: None,
         }
     }
 }

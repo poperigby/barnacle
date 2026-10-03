@@ -1,0 +1,19 @@
+[package]
+name = "barnacle-l10n"
+version.workspace = true
+edition.workspace = true
+homepage.workspace = true
+
+[dependencies]
+fluent-langneg = "0.14.2"
+fluent-static = "0.6.0"
+icu = { version = "2.3.1", features = ["serde"] }
+sys-locale = "0.3.2"
+thiserror = "2.0.21"
+
+[lints]
+workspace = true
+
+[build-dependencies]
+fluent-static-codegen = "0.6.3"
+walkdir = "2.5.0"

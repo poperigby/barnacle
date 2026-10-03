@@ -23,6 +23,10 @@ impl ConfigStore {
         }
     }
 
+    fn save(&mut self) {
+        self.inner.write().save();
+    }
+
     pub fn theme(&self) -> iced::Theme {
         iced::Theme::from(&self.inner.read().theme)
     }
@@ -30,10 +34,6 @@ impl ConfigStore {
     pub fn set_theme(&mut self, iced_theme: iced::Theme) {
         self.inner.write().theme = Theme::from(iced_theme);
         self.save();
-    }
-
-    fn save(&mut self) {
-        self.inner.write().save();
     }
 }
 

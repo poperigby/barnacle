@@ -2,7 +2,7 @@
 resolver = "3"
 members = [
     "barnacle-cli",
-    "barnacle-gui",
+    "barnacle-gui", "barnacle-l10n",
     "barnacle-lib",
 ]
 

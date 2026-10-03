@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use barnacle_l10n::{TranslationBundle, Translations};
 use parking_lot::RwLock;
 
 use crate::repository::{
@@ -74,6 +75,11 @@ impl Repository {
             db: Db::new().await.unwrap(),
             cfg: Arc::new(RwLock::new(CoreConfig::load())),
         }
+    }
+
+    pub async fn translations(&self) -> Result<Translations, barnacle_l10n::TranslationsError> {
+        let cfg_locale = self.cfg.read().locale().map(|l| l.id);
+        barnacle_l10n::translations(cfg_locale)
     }
 
     pub async fn add_game(

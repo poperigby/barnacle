@@ -9,10 +9,10 @@ workspace = true
 
 [dependencies]
 anyhow = "1.0.104"
+barnacle-l10n = { path = "../barnacle-l10n" }
 barnacle-lib = { path = "../barnacle-lib" }
 derive_more = { version = "2.1.1", features = ["deref", "deref_mut", "display"] }
 deunicode = "1.6.2"
-fluent-i18n = "0.1.0"
 futures = "0.3.34"
 heck = "0.5.0"
 human-panic = "2.0.4"
@@ -23,6 +23,7 @@ parking_lot = "0.12.5"
 rfd = "0.17.2"
 serde = { version = "1.0.228", features = ["derive"] }
 strum = "0.28.0"
+sys-locale = "0.3.2"
 tokio = { version = "1.50.0", features = ["sync"] }
 toml = "1.0.1"
 tracing = "0.1.44"

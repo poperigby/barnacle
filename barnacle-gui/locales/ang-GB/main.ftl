@@ -1,2 +1,0 @@
-create = Wyrc
-cancel = Awyrc

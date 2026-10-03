@@ -6,8 +6,8 @@ use barnacle_gui::{
     model::Model,
     persistence::{config::ConfigStore, state::UiStateStore},
 };
+use barnacle_l10n::{MessageBundle, Messages};
 use barnacle_lib::Repository;
-use fluent_i18n::i18n;
 use iced::{Element, Task, Theme, application, widget::text, window::Settings};
 use tracing::error;
 
@@ -15,14 +15,14 @@ use crate::ui::Ui;
 
 pub mod ui;
 
-i18n!("locales", fallback = "en-US");
-
 fn main() -> iced::Result {
     human_panic::setup_panic!();
-    let _guard = log::setup();
+    let _log_guard = log::setup();
 
     let mut settings = Settings::default();
     settings.platform_specific.application_id = App::TITLE.to_string();
+
+    Messages::get("en-US").unwrap();
 
     application(App::new, App::update, App::view)
         .theme(App::theme)

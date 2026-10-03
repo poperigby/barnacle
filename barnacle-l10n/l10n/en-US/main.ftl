@@ -1,27 +1,20 @@
-# Entities
-game = { $count ->
+# Objects
+object_game = { $count ->
     [1] Game
    *[other] Games
 }
-profile = { $count ->
+object_profile = { $count ->
     [1] Profile
    *[other] Profiles
 }
-mod = { $count ->
+object_mod = { $count ->
     [1] Mod
    *[other] Mods
 }
-tool = { $count ->
+object_tool = { $count ->
     [one] Tool
    *[other] Tools
 }
-
-# Actions
-activate = Activate
-add = Add
-create = Create
-cancel = Cancel
-new = New
 
 # Fields
 name = Name
