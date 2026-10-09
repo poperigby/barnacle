@@ -19,3 +19,9 @@ object_tool = { $count ->
 # Fields
 name = Name
 path = Path
+
+# Common actions
+add = Add
+confirm = Confirm
+create = Create
+cancel = Cancel

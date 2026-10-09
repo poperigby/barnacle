@@ -1,4 +1,5 @@
 use barnacle_gui::{
+    TranslationElementExt,
     icons::Icon,
     model::{Model, Mutation, ProfileRecord},
     persistence::state::UiStateStore,
@@ -176,7 +177,7 @@ impl Ui {
     ) -> Element<'a, Message> {
         let profile_selector: Element<'a, Message> = match &self.profile_selector_state {
             Some(state) => row![
-                text(translations.main_top_bar_add_mod().to_string()),
+                translations.main_top_bar_add_mod().element(),
                 combo_box(
                     state,
                     "...",
@@ -189,7 +190,7 @@ impl Ui {
         };
 
         let top_bar = row![
-            button(text(translations.main_top_bar_launch().to_string()))
+            button(translations.main_top_bar_launch().element())
                 .on_press(Message::LaunchButtonPressed),
             button(Icon::Wrench),
             profile_selector,
@@ -243,14 +244,16 @@ impl Ui {
             modal(
                 content,
                 self.library_manager
-                    .view(model)
+                    .view(model, translations)
                     .map(Message::LibraryManager),
                 None,
             )
         } else if self.show_add_mod_dialog {
             modal(
                 content,
-                self.add_mod_dialog.view().map(Message::AddModDialog),
+                self.add_mod_dialog
+                    .view(&translations)
+                    .map(Message::AddModDialog),
                 None,
             )
         } else {

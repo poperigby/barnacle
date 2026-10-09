@@ -1,11 +1,11 @@
+use barnacle_l10n::Translations;
 use barnacle_lib::repository::Profile;
-use fluent_i18n::t;
 use iced::{
     Element, Task,
-    widget::{button, column, container, row, space, text, text_input},
+    widget::{button, column, container, row, space, text_input},
 };
 
-use barnacle_gui::model::Mutation;
+use barnacle_gui::{TranslationElementExt, model::Mutation};
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -70,17 +70,17 @@ impl Menu {
         }
     }
 
-    pub fn view(&self) -> Element<'_, Message> {
+    pub fn view(&self, translations: &Translations) -> Element<'_, Message> {
         container(column![
             row![
-                text(t!("name")),
+                translations.name().element(),
                 text_input("...", &self.name).on_input(Message::NameInput),
             ],
             space::vertical(),
             row![
                 space::horizontal(),
-                button(text(t!("cancel"))).on_press(Message::CancelPressed),
-                button(text(t!("confirm"))).on_press(Message::ConfirmPressed),
+                button(translations.cancel().element()).on_press(Message::CancelPressed),
+                button(translations.confirm().element()).on_press(Message::ConfirmPressed),
             ],
         ])
         .padding(20)

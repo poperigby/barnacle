@@ -1,12 +1,12 @@
+use barnacle_l10n::Translations;
 use barnacle_lib::games::Kind;
-use fluent_i18n::t;
 use iced::{
     Element, Task,
     widget::{button, column, combo_box, container, row, space, text, text_input},
 };
 use strum::IntoEnumIterator;
 
-use barnacle_gui::model::Mutation;
+use barnacle_gui::{TranslationElementExt, model::Mutation};
 
 pub const ID: &str = "new_game_dialog";
 
@@ -79,14 +79,16 @@ impl Menu {
         }
     }
 
-    pub fn view(&self) -> Element<'_, Message> {
+    pub fn view(&self, translations: &Translations) -> Element<'_, Message> {
         container(column![
             row![
-                text(t!("name")),
+                translations.name().element(),
                 text_input("...", &self.name).on_input(Message::NameInput),
             ],
             row![
-                text(t!("library-manager_new-game-dialog_deploy-kind")),
+                translations
+                    .library_manager_new_game_dialog_deploy_kind()
+                    .element(),
                 combo_box(
                     &self.deploy_kind_state,
                     "...",
@@ -97,8 +99,8 @@ impl Menu {
             space::vertical(),
             row![
                 space::horizontal(),
-                button(text(t!("cancel"))).on_press(Message::CancelPressed),
-                button(text(t!("create")))
+                button(translations.cancel().element()).on_press(Message::CancelPressed),
+                button(translations.create().element())
                     .on_press_maybe(self.validate().then_some(Message::CreatePressed)),
             ],
         ])

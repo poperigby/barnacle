@@ -1,10 +1,10 @@
 use std::{env, path::PathBuf};
 
-use barnacle_gui::icons::Icon;
-use fluent_i18n::t;
+use barnacle_gui::{TranslationElementExt, icons::Icon};
+use barnacle_l10n::Translations;
 use iced::{
     Element, Task,
-    widget::{button, column, container, row, space, text, text_input},
+    widget::{button, column, container, row, space, text_input},
 };
 use rfd::AsyncFileDialog;
 
@@ -99,7 +99,7 @@ impl AddModDialog {
         }
     }
 
-    pub fn view(&self) -> Element<'_, Message> {
+    pub fn view(&self, translations: &Translations) -> Element<'_, Message> {
         let path_str = &self
             .path
             .as_ref()
@@ -107,11 +107,11 @@ impl AddModDialog {
 
         container(column![
             row![
-                text(t!("name")),
+                translations.name().element(),
                 text_input("...", &self.name).on_input(Message::NameChanged)
             ],
             row![
-                text(t!("path")),
+                translations.path().element(),
                 text_input("...", path_str).on_input(Message::PathChanged),
                 button(Icon::Archive).on_press(Message::PickPath(PickPathKind::Archive)),
                 button(Icon::Directory).on_press(Message::PickPath(PickPathKind::Directory))
@@ -119,8 +119,8 @@ impl AddModDialog {
             space::vertical(),
             row![
                 space::horizontal(),
-                button(text(t!("cancel"))).on_press(Message::CancelButtonPressed),
-                button(text(t!("add")))
+                button(translations.cancel().element()).on_press(Message::CancelButtonPressed),
+                button(translations.add().element())
                     .on_press_maybe(self.validate().then_some(Message::AddButtonPressed))
             ]
         ])

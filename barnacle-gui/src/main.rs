@@ -6,7 +6,7 @@ use barnacle_gui::{
     model::Model,
     persistence::{config::ConfigStore, state::UiStateStore},
 };
-use barnacle_l10n::{TranslationBundle, Translations};
+use barnacle_l10n::Translations;
 use barnacle_lib::Repository;
 use iced::{Element, Task, Theme, application, widget::text, window::Settings};
 use tracing::error;
@@ -190,7 +190,12 @@ impl App {
         match &self.state {
             State::Loading => text!("LOADING").into(),
             State::Error(_) => panic!("ERROR"),
-            State::Ready { model, ui, .. } => ui.view(model).map(Message::Ui),
+            State::Ready {
+                model,
+                translations,
+                ui,
+                ..
+            } => ui.view(model, translations).map(Message::Ui),
         }
     }
 

@@ -1,10 +1,11 @@
 use barnacle_gui::{
+    TranslationElementExt,
     icons::Icon,
     model::{GameRecord, Model, Mutation},
     widgets::modal,
 };
+use barnacle_l10n::Translations;
 use barnacle_lib::repository::Game;
-use fluent_i18n::t;
 use iced::{
     Element, Length, Task,
     widget::{Column, button, column, container, row, rule, scrollable, space, text},
@@ -167,21 +168,21 @@ impl LibraryManager {
         }
     }
 
-    pub fn view(&self, model: &Model) -> Element<'_, Message> {
+    pub fn view(&self, model: &Model, translations: &Translations) -> Element<'_, Message> {
         let title_bar = row![
-            text(t!("library-manager_title")),
+            translations.library_manager_title().element(),
             space::horizontal(),
             button(Icon::Close).on_press(Message::CloseButtonPressed)
         ];
 
         let new_game_button = button(row![
             Icon::Plus,
-            text(t!("library-manager_new-game", { "count" => 1 }))
+            translations.library_manager_new_game().element()
         ])
         .on_press(Message::NewGameButtonPressed);
 
         let games_list = column![
-            text(t!("game", { "count" => 2 })),
+            translations.object_game(2).element(),
             rule::horizontal(1),
             scrollable(Column::with_children(
                 model.games().iter().map(|g| self.game_row(g))
@@ -203,13 +204,21 @@ impl LibraryManager {
         .into();
 
         let modal_content: Option<Element<'_, Message>> = match self.menu_visiblity {
-            MenuVisibility::NewGame => Some(self.new_game_menu.view().map(Message::NewGameMenu)),
-            MenuVisibility::NewProfile => {
-                Some(self.new_profile_menu.view().map(Message::NewProfileMenu))
-            }
-            MenuVisibility::EditProfile => {
-                Some(self.edit_profile_menu.view().map(Message::EditProfileMenu))
-            }
+            MenuVisibility::NewGame => Some(
+                self.new_game_menu
+                    .view(translations)
+                    .map(Message::NewGameMenu),
+            ),
+            MenuVisibility::NewProfile => Some(
+                self.new_profile_menu
+                    .view(translations)
+                    .map(Message::NewProfileMenu),
+            ),
+            MenuVisibility::EditProfile => Some(
+                self.edit_profile_menu
+                    .view(translations)
+                    .map(Message::EditProfileMenu),
+            ),
             MenuVisibility::None => None,
         };
 

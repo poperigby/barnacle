@@ -5,23 +5,14 @@ pub mod persistence;
 pub mod widgets;
 
 use barnacle_l10n::Translation;
-use iced::widget::{
-    Text,
-    text::{self, Catalog},
-};
+use iced::widget::{Text, text};
 
-pub trait TranslationElementExt {
-    fn element<'a, Theme, Renderer>(self) -> Text<'a, Theme, Renderer>
-    where
-        Theme: 'a + Catalog,
-        Renderer: 'a;
+pub trait TranslationElementExt<'a> {
+    fn element(self) -> Text<'a>;
 }
 
-impl TranslationElementExt for Translation {
-    fn element<'a, AppMessage>(self) -> Text<'a, AppMessage>
-    where
-        AppMessage: 'a,
-    {
-        text(self.to_string()).into()
+impl<'a> TranslationElementExt<'a> for Translation {
+    fn element(self) -> Text<'a> {
+        text(self.to_string())
     }
 }

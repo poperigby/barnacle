@@ -1,7 +1,8 @@
-use fluent_i18n::t;
+use barnacle_gui::TranslationElementExt;
+use barnacle_l10n::Translations;
 use iced::{
     Element, Task,
-    widget::{button, column, container, row, space, text, text_input},
+    widget::{button, column, container, row, space, text_input},
 };
 
 #[derive(Debug, Clone)]
@@ -53,17 +54,17 @@ impl Menu {
         }
     }
 
-    pub fn view(&self) -> Element<'_, Message> {
+    pub fn view(&self, translations: &Translations) -> Element<'_, Message> {
         container(column![
             row![
-                text(t!("name")),
+                translations.name().element(),
                 text_input("...", &self.name).on_input(Message::NameInput),
             ],
             space::vertical(),
             row![
                 space::horizontal(),
-                button(text(t!("cancel"))).on_press(Message::CancelPressed),
-                button(text(t!("create")))
+                button(translations.cancel().element()).on_press(Message::CancelPressed),
+                button(translations.create().element())
                     .on_press_maybe(self.validate().then_some(Message::CreatePressed)),
             ],
         ])
