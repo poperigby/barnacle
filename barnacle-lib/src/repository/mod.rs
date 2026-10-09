@@ -78,7 +78,7 @@ impl Repository {
     }
 
     pub async fn translations(&self) -> Result<Translations, barnacle_l10n::TranslationsError> {
-        let cfg_locale = self.cfg.read().locale().map(|l| l.id);
+        let cfg_locale = self.cfg.read().locale().map(|l| l.id.clone());
         barnacle_l10n::translations(cfg_locale)
     }
 

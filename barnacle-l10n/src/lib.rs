@@ -1,11 +1,14 @@
 use std::env;
 
-use fluent_langneg::{NegotiationStrategy, negotiate_languages};
+use fluent_langneg::{
+    LanguageIdentifier as FluentLanguageIdentifier, LangugeIdentifierParserError,
+    NegotiationStrategy, negotiate_languages,
+};
 use icu::locale::LanguageIdentifier;
 use sys_locale::get_locales;
 use thiserror::Error;
 
-pub use fluent_static::MessageBundle as TranslationBundle;
+pub use fluent_static::{Message as Translation, MessageBundle as TranslationBundle};
 
 include!(concat!(env!("OUT_DIR"), "/messages.rs"));
 
@@ -15,17 +18,25 @@ include!(concat!(env!("OUT_DIR"), "/messages.rs"));
 pub fn translations(
     requested_lang: Option<LanguageIdentifier>,
 ) -> Result<Translations, TranslationsError> {
-    let requested: Vec<LanguageIdentifier> = requested_lang
+    // NOTE: We have to convert from `icu::locale::LanguageIdentifier` to `fluent_langneg`'s exposed
+    // `LanguageIdentifier` because we don't want to expose a type from the deprecated `icu_locid`
+    // crate, which `fluent_langneg` re-exports.
+    let requested: Vec<FluentLanguageIdentifier> = requested_lang
         .into_iter()
         .chain(get_locales().filter_map(|tag| tag.parse().ok()))
-        .collect();
+        .map(|l| {
+            l.to_string()
+                .parse()
+                .map_err(TranslationsError::ParseLanguageId)
+        })
+        .collect::<Result<_, _>>()?;
 
-    let available: Vec<LanguageIdentifier> = Translations::supported_language_ids()
+    let available: Vec<FluentLanguageIdentifier> = Translations::supported_language_ids()
         .iter()
         .map(|id| id.parse().map_err(TranslationsError::ParseLanguageId))
         .collect::<Result<_, _>>()?;
 
-    let default: LanguageIdentifier = "en-US"
+    let default: FluentLanguageIdentifier = "en-US"
         .parse()
         .expect("en-US is a valid LanguageIdentifier");
 
@@ -48,7 +59,7 @@ pub fn translations(
 #[derive(Debug, Clone, Error)]
 pub enum TranslationsError {
     #[error("Failed to parse language ID from Translations into a LanguageIdentifier: {0}")]
-    ParseLanguageId(icu::locale::ParseError),
+    ParseLanguageId(LangugeIdentifierParserError),
 }
 
 #[cfg(test)]

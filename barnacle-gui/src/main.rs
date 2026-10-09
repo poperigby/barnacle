@@ -6,7 +6,7 @@ use barnacle_gui::{
     model::Model,
     persistence::{config::ConfigStore, state::UiStateStore},
 };
-use barnacle_l10n::{MessageBundle, Messages};
+use barnacle_l10n::{TranslationBundle, Translations};
 use barnacle_lib::Repository;
 use iced::{Element, Task, Theme, application, widget::text, window::Settings};
 use tracing::error;
@@ -22,8 +22,6 @@ fn main() -> iced::Result {
     let mut settings = Settings::default();
     settings.platform_specific.application_id = App::TITLE.to_string();
 
-    Messages::get("en-US").unwrap();
-
     application(App::new, App::update, App::view)
         .theme(App::theme)
         .title(App::title)
@@ -33,7 +31,7 @@ fn main() -> iced::Result {
 
 #[derive(Debug, Clone)]
 enum Message {
-    Initialized(Result<(Repository, Model), AppError>),
+    Initialized(Result<(Repository, Model, Translations), AppError>),
     Ui(ui::Message),
     Mutated(Result<Model, AppError>),
     Launched,
@@ -51,6 +49,7 @@ enum State {
     Ready {
         repo: Repository,
         model: Model,
+        translations: Translations,
         ui: Ui,
     },
 }
@@ -84,9 +83,10 @@ impl App {
             Task::perform(
                 async {
                     let repo = Repository::new().await;
+                    let translations = repo.translations().await.unwrap();
 
                     match Model::load(&repo).await {
-                        Ok(model) => Ok((repo, model)),
+                        Ok(model) => Ok((repo, model, translations)),
                         Err(error) => {
                             error!(error = %format!("{error:#}"), "failed to initialize app");
 
@@ -104,10 +104,15 @@ impl App {
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Initialized(result) => match result {
-                Ok((repo, model)) => {
+                Ok((repo, model, translations)) => {
                     let ui = Ui::init(&model, &self.ui_state);
 
-                    self.state = State::Ready { repo, model, ui };
+                    self.state = State::Ready {
+                        repo,
+                        model,
+                        translations,
+                        ui,
+                    };
 
                     Task::none()
                 }

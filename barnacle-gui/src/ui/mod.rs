@@ -1,13 +1,11 @@
-use std::collections::HashMap;
-
 use barnacle_gui::{
     icons::Icon,
     model::{Model, Mutation, ProfileRecord},
     persistence::state::UiStateStore,
     widgets::modal,
 };
+use barnacle_l10n::Translations;
 use barnacle_lib::repository::items;
-use fluent_i18n::t;
 use iced::{
     Element, Length, Task,
     widget::{Button, button, column, combo_box, row, rule, space, text},
@@ -171,10 +169,14 @@ impl Ui {
         }
     }
 
-    pub fn view<'a>(&'a self, model: &'a Model) -> Element<'a, Message> {
+    pub fn view<'a>(
+        &'a self,
+        model: &'a Model,
+        translations: &'a Translations,
+    ) -> Element<'a, Message> {
         let profile_selector: Element<'a, Message> = match &self.profile_selector_state {
             Some(state) => row![
-                text(t!("profile", { "count" => 1 })),
+                text(translations.main_top_bar_add_mod().to_string()),
                 combo_box(
                     state,
                     "...",
@@ -187,7 +189,8 @@ impl Ui {
         };
 
         let top_bar = row![
-            button(text(t!("main_top-bar_launch"))).on_press(Message::LaunchButtonPressed),
+            button(text(translations.main_top_bar_launch().to_string()))
+                .on_press(Message::LaunchButtonPressed),
             button(Icon::Wrench),
             profile_selector,
             space::horizontal(),
