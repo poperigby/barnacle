@@ -1,3 +1,4 @@
+use barnacle_l10n::Translations;
 use sea_orm::{prelude::*, sea_query::ValueTypeErr};
 
 use crate::integrations::openmw;
@@ -13,6 +14,16 @@ pub enum Kind {
 }
 
 impl Kind {
+    pub fn name(&self, translations: &Translations) -> String {
+        match self {
+            Kind::OpenMW(kind) => match kind {
+                openmw::ItemKind::Plugin => translations.items_kind_openmw_plugin("many"),
+                openmw::ItemKind::Archive => translations.items_kind_openmw_archive("many"),
+            },
+        }
+        .to_string()
+    }
+
     pub(crate) fn as_db_key(&self) -> String {
         use Kind::*;
 

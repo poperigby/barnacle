@@ -11,7 +11,6 @@ use iced::{
     Element, Length, Task,
     widget::{Button, button, column, combo_box, row, rule, space, text},
 };
-use strum::Display;
 
 use crate::ui::{
     library_manager::LibraryManager,
@@ -47,7 +46,7 @@ pub enum Action {
     Launch,
 }
 
-#[derive(Debug, Clone, Default, Display, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub enum Tab {
     #[default]
     Mods,
@@ -200,9 +199,12 @@ impl Ui {
             button(Icon::Notifications)
         ];
 
-        let mut tab_bar = row![self.tab_button(Tab::Mods, Message::TabSelected(Tab::Mods))];
+        let mut tab_bar =
+            row![self.tab_button(translations, Tab::Mods, Message::TabSelected(Tab::Mods))];
+
         for group in model.item_groups() {
             tab_bar = tab_bar.push(self.tab_button(
+                translations,
                 Tab::ItemGroup(group.kind),
                 Message::TabSelected(Tab::ItemGroup(group.kind)),
             ));
@@ -252,7 +254,7 @@ impl Ui {
             modal(
                 content,
                 self.add_mod_dialog
-                    .view(&translations)
+                    .view(translations)
                     .map(Message::AddModDialog),
                 None,
             )
@@ -261,13 +263,23 @@ impl Ui {
         }
     }
 
-    fn tab_button(&self, tab: Tab, message: Message) -> Button<'_, Message> {
+    fn tab_button(
+        &self,
+        translations: &Translations,
+        tab: Tab,
+        message: Message,
+    ) -> Button<'_, Message> {
         let style = if self.selected_tab == tab {
             button::primary
         } else {
             button::subtle
         };
 
-        button(text(tab.to_string())).style(style).on_press(message)
+        let label = text(match tab {
+            Tab::Mods => translations.object_mod("many").to_string(),
+            Tab::ItemGroup(kind) => kind.name(translations),
+        });
+
+        button(label).style(style).on_press(message)
     }
 }

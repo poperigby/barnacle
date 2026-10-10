@@ -5,7 +5,10 @@ pub mod repository;
 #[cfg(test)]
 mod test;
 
+use barnacle_l10n::Translations;
 pub use repository::{Game, Mod, ModEntry, Profile, Repository, Tool};
+
+use crate::repository::config::Cfg;
 
 pub mod error {
     pub use crate::repository::objects::error::{GetFieldError, LoadModelError, ModelKind};
@@ -29,4 +32,11 @@ pub mod mod_entries {
 
 pub mod tools {
     pub use crate::repository::objects::tools::*;
+}
+
+pub(crate) async fn translations(
+    cfg: &Cfg,
+) -> Result<Translations, barnacle_l10n::TranslationsError> {
+    let cfg_locale = cfg.read().locale().map(|l| l.id.clone());
+    barnacle_l10n::translations(cfg_locale)
 }

@@ -288,8 +288,7 @@ impl ItemRecord {
     }
 }
 
-#[derive(Debug, Clone, Display)]
-#[display("{object}")]
+#[derive(Debug, Clone)]
 pub struct ItemGroupRecord {
     object: ItemGroup,
     pub kind: items::Kind,

@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
-use derive_more::Display;
-use sea_orm::{ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect};
+use sea_orm::{ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder};
 
 use crate::{
     error::{LoadModelError, ModelKind},
@@ -107,10 +106,11 @@ impl ItemEntry {
         let mut groups = Vec::with_capacity(kinds.len());
 
         for kind in kinds {
-            let entries = Self::list_by_kind(db, cfg, profile, kind.clone()).await;
+            let entries = Self::list_by_kind(db, cfg, profile, *kind).await;
 
             groups.push(ItemGroup {
-                kind: kind.clone(),
+                cfg: cfg.clone(),
+                kind: *kind,
                 entries,
             });
         }
@@ -119,9 +119,9 @@ impl ItemEntry {
     }
 }
 
-#[derive(Debug, Clone, Display)]
-#[display("{kind}")]
+#[derive(Debug, Clone)]
 pub struct ItemGroup {
+    pub cfg: Cfg,
     pub kind: Kind,
     pub entries: Vec<ItemEntry>,
 }
