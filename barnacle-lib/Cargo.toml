@@ -14,10 +14,12 @@ compress-tools = "0.16.1"
 damascus = { version = "0.0.11", default-features=false, features = ["overlayfs"] }
 derive_more = { version = "2.1.1", features = ["eq", "from", "as_ref", "display", "deref"] }
 fs-more = "0.8.1"
+futures = "0.3.34"
 getset = "0.1.6"
 heck = "0.5.0"
 human-panic = "2.0.4"
 icu = { version = "2.3.1", features = ["serde"] }
+libloot = "0.29.6"
 openmw-config = "1.1.0"
 parking_lot = "0.12.5"
 sea-orm = { version = "2.0.0", features = ["sqlx-sqlite", "runtime-tokio", "macros", "schema-sync", "entity-registry"] }
@@ -30,6 +32,7 @@ toml = "1.0.1"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 walkdir = "2.5.0"
+which = "8.0.6"
 xdg = "3.0.0"
 zip = "8.4.0"
 

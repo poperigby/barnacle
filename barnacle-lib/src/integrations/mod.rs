@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use crate::repository::{games, items};
 
 use strum::IntoEnumIterator;

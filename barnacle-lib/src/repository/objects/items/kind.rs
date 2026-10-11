@@ -16,19 +16,25 @@ pub enum Kind {
 impl Kind {
     pub fn name(&self, translations: &Translations) -> String {
         match self {
-            Kind::OpenMW(kind) => match kind {
-                openmw::ItemKind::Plugin => translations.items_kind_openmw_plugin("many"),
-                openmw::ItemKind::Archive => translations.items_kind_openmw_archive("many"),
-            },
+            Kind::OpenMW(kind) => kind.name(translations),
         }
-        .to_string()
+    }
+
+    pub fn supports_reordering(&self) -> bool {
+        match self {
+            Kind::OpenMW(kind) => kind.supports_reordering(),
+        }
+    }
+
+    pub fn supports_auto_sort(&self) -> bool {
+        match self {
+            Kind::OpenMW(kind) => kind.supports_auto_sort(),
+        }
     }
 
     pub(crate) fn as_db_key(&self) -> String {
-        use Kind::*;
-
         match self {
-            OpenMW(kind) => format!("openmw.{}", kind.key()),
+            Kind::OpenMW(kind) => format!("openmw.{}", kind.key()),
         }
     }
 

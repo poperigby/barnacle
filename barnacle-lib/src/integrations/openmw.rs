@@ -1,8 +1,11 @@
 use std::path::{Path, PathBuf};
 
+use barnacle_l10n::Translations;
+use futures::future::join_all;
 use openmw_config::OpenMWConfiguration;
 use tokio::process::Command;
 use walkdir::WalkDir;
+use which::which;
 
 use crate::{
     Game, Profile,
@@ -20,6 +23,29 @@ pub enum ItemKind {
 }
 
 impl ItemKind {
+    /// User facing name
+    pub fn name(&self, translations: &Translations) -> String {
+        match self {
+            Self::Plugin => translations.items_kind_openmw_plugin("many"),
+            Self::Archive => translations.items_kind_openmw_archive("many"),
+        }
+        .to_string()
+    }
+
+    pub fn supports_reordering(&self) -> bool {
+        match self {
+            Self::Plugin => true,
+            Self::Archive => false,
+        }
+    }
+
+    pub fn supports_auto_sort(&self) -> bool {
+        match self {
+            Self::Plugin => true,
+            Self::Archive => false,
+        }
+    }
+
     /// Stable database string
     pub(crate) fn key(&self) -> String {
         match self {
@@ -84,6 +110,31 @@ impl OpenMw {
         ]);
 
         program
+    }
+
+    fn install_dir() -> PathBuf {
+        let executable = which("openmw").unwrap().canonicalize().unwrap();
+        executable
+            .parent()
+            .expect("absolute executable path has a parent")
+            .to_path_buf()
+    }
+
+    pub(crate) async fn sort_plugins(profile: &Profile) {
+        let profile_config_dir = profile.generated_dir().await.unwrap();
+
+        let mut loot_game_handle = libloot::Game::with_local_path(
+            libloot::GameType::OpenMW,
+            &Self::install_dir(),
+            &profile_config_dir,
+        )
+        .unwrap();
+
+        let plugin_items = Self::item_entries(profile, ItemKind::Plugin).await;
+        let plugin_path_bufs = join_all(plugin_items.iter().map(|i| i.relative_path())).await;
+        let plugin_paths: Vec<_> = plugin_path_bufs.iter().map(PathBuf::as_path).collect();
+
+        loot_game_handle.load_plugins(&plugin_paths).unwrap();
     }
 
     pub(crate) async fn item_entries(profile: &Profile, kind: ItemKind) -> Vec<ItemEntry> {
