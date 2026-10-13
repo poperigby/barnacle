@@ -4,6 +4,7 @@ use crate::repository::{games, items};
 
 use strum::IntoEnumIterator;
 
+mod loot;
 pub mod openmw;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]

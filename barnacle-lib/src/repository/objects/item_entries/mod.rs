@@ -55,6 +55,12 @@ impl ItemEntry {
             .unwrap()
     }
 
+    async fn item(&self) -> Item {
+        let item_id = self.item_model().await.id;
+
+        Item::from_id(&self.db, &self.cfg, item_id)
+    }
+
     pub async fn enabled(&self) -> bool {
         self.model().await.unwrap().enabled
     }
@@ -83,8 +89,14 @@ impl ItemEntry {
             .to_string()
     }
 
+    /// The [`ItemEntry`]'s path relative to the target path.
     pub async fn relative_path(&self) -> PathBuf {
-        PathBuf::from(self.item_model().await.relative_path)
+        self.item().await.relative_path().await
+    }
+
+    /// The [`ItemEntry`]'s absolute path, within the library directory.
+    pub async fn absolute_path(&self) -> PathBuf {
+        self.item().await.absolute_path().await
     }
 
     pub(crate) async fn add(db: &Db, profile: &Profile, item: &Item) {

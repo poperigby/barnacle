@@ -1,7 +1,9 @@
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use barnacle_l10n::Translations;
-use futures::future::join_all;
 use openmw_config::OpenMWConfiguration;
 use tokio::process::Command;
 use walkdir::WalkDir;
@@ -9,7 +11,7 @@ use which::which;
 
 use crate::{
     Game, Profile,
-    integrations::FoundItem,
+    integrations::{FoundItem, loot},
     repository::{item_entries::ItemEntry, items},
 };
 
@@ -120,7 +122,7 @@ impl OpenMw {
             .to_path_buf()
     }
 
-    pub(crate) async fn sort_plugins(profile: &Profile) {
+    pub async fn sort_plugins(profile: &Profile) {
         let profile_config_dir = profile.generated_dir().await.unwrap();
 
         let mut loot_game_handle = libloot::Game::with_local_path(
@@ -130,11 +132,41 @@ impl OpenMw {
         )
         .unwrap();
 
-        let plugin_items = Self::item_entries(profile, ItemKind::Plugin).await;
-        let plugin_path_bufs = join_all(plugin_items.iter().map(|i| i.relative_path())).await;
-        let plugin_paths: Vec<_> = plugin_path_bufs.iter().map(PathBuf::as_path).collect();
+        let loot_db = loot_game_handle.database();
+        loot_db
+            .write()
+            .unwrap()
+            .load_masterlist(&loot::masterlist(libloot::GameType::Morrowind))
+            .unwrap();
 
-        loot_game_handle.load_plugins(&plugin_paths).unwrap();
+        let items = Self::item_entries(profile, ItemKind::Plugin).await;
+
+        let mut plugins: HashMap<String, loot::Plugin> = HashMap::with_capacity(items.len());
+        for item in items {
+            let name = item.name().await;
+            let plugin = loot::Plugin {
+                absolute_path: item.absolute_path().await,
+                item,
+            };
+
+            plugins.insert(name, plugin);
+        }
+
+        let paths: Vec<_> = plugins
+            .values()
+            .map(|p| p.absolute_path.as_path())
+            .collect();
+        loot_game_handle.load_plugins(&paths).unwrap();
+
+        let names: Vec<_> = plugins.keys().map(String::as_str).collect();
+        let sorted_plugins = loot_game_handle.sort_plugins(&names).unwrap();
+
+        for (index, plugin_name) in sorted_plugins.iter().enumerate() {
+            let item = &plugins.get(plugin_name).unwrap().item;
+
+            let position = i32::try_from(index).unwrap();
+            item.set_position(position).await;
+        }
     }
 
     pub(crate) async fn item_entries(profile: &Profile, kind: ItemKind) -> Vec<ItemEntry> {

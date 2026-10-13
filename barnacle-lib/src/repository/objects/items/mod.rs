@@ -40,8 +40,22 @@ impl Item {
             .ok_or_else(|| LoadModelError::stale(ModelKind::Item, self.id))
     }
 
+    pub async fn parent(&self) -> Mod {
+        let parent_id = self.model().await.unwrap().mod_id;
+
+        Mod::from_id(parent_id, &self.db, &self.cfg)
+    }
+
     pub async fn relative_path(&self) -> PathBuf {
         PathBuf::from(self.model().await.unwrap().relative_path)
+    }
+
+    /// The [`Item`]'s absolute path, nested within its parent [`Mod`] directory in the library.
+    pub async fn absolute_path(&self) -> PathBuf {
+        let parent_dir = self.parent().await.dir().await.unwrap();
+        let relative_path = self.relative_path().await;
+
+        parent_dir.join(relative_path)
     }
 
     pub async fn kind(&self) -> Kind {

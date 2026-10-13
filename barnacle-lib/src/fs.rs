@@ -24,6 +24,16 @@ pub fn change_dir_permissions(path: &Path, permissions: Permissions) {
     }
 }
 
+/// Returns the path to the Barnacle cache directory. If it doesn't exist when this
+/// function is called, it will be created.
+pub fn cache_dir() -> PathBuf {
+    let path = xdg_prefix().get_cache_home().expect("$HOME must exist");
+
+    create_dir_all(&path).unwrap();
+
+    path
+}
+
 /// Returns the path to the Barnacle configuration directory. If it doesn't exist when this
 /// function is called, it will be created.
 pub fn config_dir() -> PathBuf {
