@@ -22,6 +22,9 @@ impl Profile {
         ItemEntry::add(&self.db, self, item).await
     }
 
+    /// A list of all [`ItemEntry`]s of a particular kind. Even if multiple [`Mod`]s provide
+    /// conflicting [`Item`]s, this list will only return one entry per relative path.
+    /// The returned entry will be the one owned by whatever [`ModEntry`] won the conflict.
     pub(crate) async fn item_entries(&self, kind: Kind) -> Vec<ItemEntry> {
         ItemEntry::list_by_kind(&self.db, &self.cfg, self, kind).await
     }

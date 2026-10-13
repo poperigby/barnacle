@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 
-use sea_orm::{ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder};
+use sea_orm::{
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, raw_sql,
+};
 
 use crate::{
     error::{LoadModelError, ModelKind},
@@ -39,6 +41,10 @@ impl ItemEntry {
             .ok_or_else(|| LoadModelError::stale(ModelKind::ItemEntry, self.id))
     }
 
+    async fn active_model(&self) -> Result<ActiveModel, LoadModelError> {
+        Ok(self.model().await?.into())
+    }
+
     async fn item_model(&self) -> items::Model {
         let item_id = self.model().await.unwrap().item_id;
 
@@ -51,6 +57,30 @@ impl ItemEntry {
 
     pub async fn enabled(&self) -> bool {
         self.model().await.unwrap().enabled
+    }
+
+    pub async fn position(&self) -> i32 {
+        self.model().await.unwrap().position
+    }
+
+    pub async fn set_position(&self, new_position: i32) {
+        let mut active_model = self.active_model().await.unwrap();
+
+        active_model.position.set_if_not_equals(new_position);
+
+        active_model.update(self.db.conn()).await.unwrap();
+    }
+
+    pub async fn name(&self) -> String {
+        let relative_path = self.relative_path().await;
+        let file_name = relative_path
+            .file_name()
+            .expect("an Item must always have a valid file name");
+
+        file_name
+            .to_str()
+            .expect("an Item's file name must be valid UTF-8")
+            .to_string()
     }
 
     pub async fn relative_path(&self) -> PathBuf {
@@ -84,11 +114,32 @@ impl ItemEntry {
         profile: &Profile,
         kind: Kind,
     ) -> Vec<ItemEntry> {
+        let profile_id = profile.id;
+        let kind_key = kind.as_db_key();
+
+        // Joins the respective items and mod entries to each item entry. They are then grouped by
+        // relative_path and only the item entry who's mod entry wins the conflict is included.
+        let query = raw_sql!(
+            Sqlite,
+            r#"
+            -- We consider the ModEntry with highest position to be the conflict winner
+            SELECT item_entry.*, MAX(mod_entry.position) AS winning_position
+            FROM item_entries AS item_entry
+            JOIN items AS item ON item.id = item_entry.item_id
+            JOIN mod_entries AS mod_entry
+                ON mod_entry.mod_id = item.mod_id
+                AND mod_entry.profile_id = item_entry.profile_id
+            WHERE item_entry.profile_id = {profile_id}
+                AND item.kind = {kind_key}
+                AND mod_entry.enabled = TRUE
+            -- Group conflicting items, so we can choose the winner based on its ModEntry's position
+            GROUP BY item.relative_path
+            ORDER BY item_entry.position, item_entry.id
+            "#
+        );
+
         Entity::find()
-            .inner_join(items::Entity)
-            .filter(COLUMN.profile_id.eq(profile.id))
-            .filter(items::COLUMN.kind.eq(kind))
-            .order_by_asc(COLUMN.position)
+            .from_raw_sql(query)
             .all(db.conn())
             .await
             .unwrap()
