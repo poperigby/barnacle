@@ -1,8 +1,6 @@
 use std::path::PathBuf;
 
-use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, raw_sql,
-};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, EntityTrait, QueryFilter, QueryOrder, raw_sql};
 
 use crate::{
     error::{LoadModelError, ModelKind},
@@ -15,6 +13,9 @@ use crate::{
     },
 };
 
+pub use group::ItemGroup;
+
+mod group;
 pub(crate) mod model;
 
 #[derive(Debug, Clone)]
@@ -172,25 +173,12 @@ impl ItemEntry {
             let entries = Self::list_by_kind(db, cfg, profile, *kind).await;
 
             groups.push(ItemGroup {
-                cfg: cfg.clone(),
+                profile: profile.clone(),
                 kind: *kind,
                 entries,
             });
         }
 
         groups
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ItemGroup {
-    pub cfg: Cfg,
-    pub kind: Kind,
-    pub entries: Vec<ItemEntry>,
-}
-
-impl PartialEq for ItemGroup {
-    fn eq(&self, other: &Self) -> bool {
-        self.kind == other.kind
     }
 }

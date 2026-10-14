@@ -303,11 +303,11 @@ impl ItemGroupRecord {
     }
 
     async fn load(item_entry_group: &ItemGroup) -> Self {
-        let entries = join_all(item_entry_group.entries.iter().map(ItemRecord::load)).await;
+        let entries = join_all(item_entry_group.entries().iter().map(ItemRecord::load)).await;
 
         Self {
             object: item_entry_group.clone(),
-            kind: item_entry_group.kind,
+            kind: item_entry_group.kind(),
             entries,
         }
     }
