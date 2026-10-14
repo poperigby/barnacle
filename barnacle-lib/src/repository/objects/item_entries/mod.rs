@@ -66,6 +66,14 @@ impl ItemEntry {
         self.model().await.unwrap().enabled
     }
 
+    pub async fn set_enabled(&self, enabled: bool) {
+        let mut active_model = self.active_model().await.unwrap();
+
+        active_model.enabled.set_if_not_equals(enabled);
+
+        active_model.update(self.db.conn()).await.unwrap();
+    }
+
     pub async fn position(&self) -> i32 {
         self.model().await.unwrap().position
     }

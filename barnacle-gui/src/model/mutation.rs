@@ -3,7 +3,10 @@ use std::path::PathBuf;
 use barnacle_lib::{
     Repository,
     games::Kind,
-    repository::{Game, Mod, ModEntry, Profile},
+    repository::{
+        Game, Mod, ModEntry, Profile,
+        item_entries::{ItemEntry, ItemGroup},
+    },
 };
 
 #[derive(Debug)]
@@ -28,6 +31,10 @@ pub enum Mutation {
     // Mod entries
     SetModEntryEnabled { entry: ModEntry, enabled: bool },
     DeleteModEntry(ModEntry),
+
+    // Items
+    SetItemEntryEnabled { entry: ItemEntry, enabled: bool },
+    AutoSortItemGroup { group: ItemGroup },
 }
 
 impl Mutation {
@@ -105,6 +112,12 @@ impl Mutation {
             DeleteModEntry(entry) => {
                 entry.remove().await.unwrap();
             }
+
+            // Items
+            SetItemEntryEnabled { entry, enabled } => {
+                entry.set_enabled(enabled).await;
+            }
+            AutoSortItemGroup { group } => group.auto_sort().await,
         }
     }
 }

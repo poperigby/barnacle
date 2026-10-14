@@ -273,7 +273,7 @@ impl ModEntryRecord {
 
 #[derive(Debug, Clone)]
 pub struct ItemRecord {
-    object: ItemEntry,
+    pub object: ItemEntry,
     pub relative_path: PathBuf,
     pub enabled: bool,
 }
@@ -290,7 +290,7 @@ impl ItemRecord {
 
 #[derive(Debug, Clone)]
 pub struct ItemGroupRecord {
-    object: ItemGroup,
+    pub object: ItemGroup,
     pub kind: items::Kind,
     pub entries: Vec<ItemRecord>,
 }

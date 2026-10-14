@@ -228,7 +228,7 @@ impl Ui {
                     .iter()
                     .find(|g| g.kind == *kind)
                     .unwrap();
-                ItemGroupTab::view(group).map(Message::ItemGroup)
+                ItemGroupTab::view(group, translations).map(Message::ItemGroup)
             }
         };
 
