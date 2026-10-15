@@ -29,7 +29,7 @@ fn masterlist_path(kind: libloot::GameType) -> PathBuf {
 }
 
 fn fetch_masterlist(kind: libloot::GameType) {
-    let slug = kind_slug(kind);
+    let slug = game_kind_slug(kind);
     let url = format!(
         "https://raw.githubusercontent.com/loot/{slug}/refs/heads/v{MASTERLIST_VERSION}/masterlist.yaml",
     );
@@ -46,7 +46,7 @@ fn fetch_masterlist(kind: libloot::GameType) {
 }
 
 fn loot_dir(kind: libloot::GameType) -> PathBuf {
-    let slug = kind_slug(kind);
+    let slug = game_kind_slug(kind);
     let path = cache_dir().join("loot").join(slug);
 
     create_dir_all(&path).unwrap();
@@ -54,7 +54,7 @@ fn loot_dir(kind: libloot::GameType) -> PathBuf {
     path
 }
 
-fn kind_slug(kind: libloot::GameType) -> String {
+fn game_kind_slug(kind: libloot::GameType) -> String {
     use libloot::GameType::*;
     match kind {
         Morrowind | OpenMW => "morrowind",

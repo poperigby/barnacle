@@ -1,21 +1,21 @@
 use barnacle_gui::{
     model::{ModEntryRecord, Model, Mutation},
     persistence::state::UiStateStore,
+    widgets::table::{self, table},
 };
 use iced::{
     Element, Length, Task,
-    widget::{checkbox, column, scrollable, table, text},
+    widget::{checkbox, column, scrollable, text},
 };
 
 pub mod add_mod_menu;
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    ToggleModEntry {
+    ModEntryToggled {
         entry_record: ModEntryRecord,
         enabled: bool,
     },
-    ModEntryToggled,
     ModEntryDeleted(ModEntryRecord),
 }
 
@@ -39,12 +39,9 @@ impl ModsTab {
     pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::ModEntryDeleted(entry) => {
-                println!("Deletion of {:?}", entry);
-                // entry.remove().unwrap();
-                Action::None
+                Action::Mutate(Mutation::DeleteModEntry(entry.object()))
             }
-            Message::ModEntryToggled => Action::None,
-            Message::ToggleModEntry {
+            Message::ModEntryToggled {
                 entry_record,
                 enabled,
             } => Action::Mutate(Mutation::SetModEntryEnabled {
@@ -60,7 +57,7 @@ impl ModsTab {
                 text(entry_record.name.clone())
             }),
             table::column(text("Status"), |entry_record: ModEntryRecord| {
-                checkbox(entry_record.enabled).on_toggle(move |state| Message::ToggleModEntry {
+                checkbox(entry_record.enabled).on_toggle(move |state| Message::ModEntryToggled {
                     entry_record: entry_record.clone(),
                     enabled: state,
                 })
