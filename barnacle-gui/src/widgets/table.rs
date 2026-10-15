@@ -1,7 +1,8 @@
 //! Display tables.
-use iced::advanced::{layout, overlay, renderer, widget, Clipboard, Layout, Shell, Widget};
+use iced::advanced::{Clipboard, Layout, Shell, Widget, layout, overlay, renderer, widget};
 use iced::{
-    alignment, mouse, Alignment, Background, Element, Event, Length, Pixels, Rectangle, Size, Vector,
+    Alignment, Background, Element, Event, Length, Pixels, Rectangle, Size, Vector, alignment,
+    mouse,
 };
 
 /// Creates a new [`Table`] with the given columns and rows.
@@ -219,6 +220,18 @@ where
         tree.diff_children(&self.cells);
     }
 
+    #[expect(
+        clippy::integer_division,
+        reason = "Cells form complete rows, integer division computes row counts and indices."
+    )]
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "Cell indices determine rows and columns, metric arrays are sized to that same grid."
+    )]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "Grid dimensions are converted to approximate f32 pixel coordinates for layout."
+    )]
     fn layout(
         &mut self,
         tree: &mut widget::Tree,
@@ -227,9 +240,16 @@ where
     ) -> layout::Node {
         let metrics = tree.state.downcast_mut::<Metrics>();
         let columns = self.columns.len();
+        let limits = limits.width(self.width).height(self.height);
+
+        if columns == 0 {
+            metrics.columns.clear();
+            metrics.rows.clear();
+            return layout::Node::new(limits.resolve(self.width, self.height, Size::ZERO));
+        }
+
         let rows = self.cells.len() / columns;
 
-        let limits = limits.width(self.width).height(self.height);
         let available = limits.max();
         let table_fluid = self.width.fluid();
 
@@ -485,7 +505,11 @@ where
         if self.separator_x > 0.0 {
             let mut x = self.padding_x;
 
-            for width in &metrics.columns[..metrics.columns.len().saturating_sub(1)] {
+            for width in metrics
+                .columns
+                .iter()
+                .take(metrics.columns.len().saturating_sub(1))
+            {
                 x += width + self.padding_x;
 
                 renderer.fill_quad(
@@ -509,7 +533,11 @@ where
         if self.separator_y > 0.0 {
             let mut y = self.padding_y;
 
-            for height in &metrics.rows[..metrics.rows.len().saturating_sub(1)] {
+            for height in metrics
+                .rows
+                .iter()
+                .take(metrics.rows.len().saturating_sub(1))
+            {
                 y += height + self.padding_y;
 
                 renderer.fill_quad(
