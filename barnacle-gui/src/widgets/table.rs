@@ -1,8 +1,8 @@
 //! Display tables.
 use iced::advanced::{Clipboard, Layout, Shell, Widget, layout, overlay, renderer, widget};
 use iced::{
-    Alignment, Background, Element, Event, Length, Pixels, Rectangle, Size, Vector, alignment,
-    mouse,
+    Alignment, Background, Element, Event, Length, Pixels, Point, Rectangle, Size, Vector,
+    alignment, mouse,
 };
 
 /// Creates a new [`Table`] with the given columns and rows.
@@ -56,6 +56,7 @@ where
     separator_x: f32,
     separator_y: f32,
     class: Theme::Class<'a>,
+    on_right_click_row: Option<Box<dyn Fn(usize, Point) -> Message + 'a>>,
 }
 
 struct Column_ {
@@ -132,7 +133,16 @@ where
             separator_x: 1.0,
             separator_y: 1.0,
             class: Theme::default(),
+            on_right_click_row: None,
         }
+    }
+
+    pub fn on_right_click_row<F>(mut self, f: F) -> Self
+    where
+        F: 'a + Fn(usize, Point) -> Message,
+    {
+        self.on_right_click_row = Some(Box::new(f));
+        self
     }
 
     /// Sets the width of the [`Table`].
@@ -183,6 +193,8 @@ where
 struct Metrics {
     columns: Vec<f32>,
     rows: Vec<f32>,
+    /// Bounds the cover the entirety of row, for hit testing
+    row_bounds: Vec<Rectangle>,
 }
 
 impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
@@ -206,6 +218,7 @@ where
         widget::tree::State::new(Metrics {
             columns: Vec::new(),
             rows: Vec::new(),
+            row_bounds: Vec::new(),
         })
     }
 
@@ -456,6 +469,23 @@ where
             ),
         );
 
+        let mut y = 0.0;
+        metrics.row_bounds = metrics
+            .rows
+            .iter()
+            .map(|height| {
+                let bounds = Rectangle {
+                    x: 0.0,
+                    y,
+                    width: intrinsic.width,
+                    height: height + self.padding_y * 2.0,
+                };
+
+                y += bounds.height + self.separator_y;
+                bounds
+            })
+            .collect();
+
         layout::Node::with_children(intrinsic, cells)
     }
 
@@ -470,6 +500,24 @@ where
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
     ) {
+        if *event == Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right))
+            && let Some(cursor_pos) = cursor.position_in(layout.bounds())
+        {
+            let metrics = tree.state.downcast_ref::<Metrics>();
+            let index = metrics
+                .row_bounds
+                .iter()
+                .position(|bounds| bounds.contains(cursor_pos))
+                // The first index is the header
+                .and_then(|index| index.checked_sub(1));
+
+            if let Some(index) = index
+                && let Some(on_right_click_row) = &self.on_right_click_row
+            {
+                shell.publish((on_right_click_row)(index, cursor_pos));
+            }
+        }
+
         for ((cell, tree), layout) in self
             .cells
             .iter_mut()

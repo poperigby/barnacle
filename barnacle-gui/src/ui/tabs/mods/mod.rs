@@ -4,7 +4,7 @@ use barnacle_gui::{
     widgets::table::{self, table},
 };
 use iced::{
-    Element, Length, Task,
+    Element, Length, Point, Task,
     widget::{checkbox, column, scrollable, text},
 };
 
@@ -17,6 +17,10 @@ pub enum Message {
         enabled: bool,
     },
     ModEntryDeleted(ModEntryRecord),
+    ShowContextMenu {
+        index: usize,
+        starting_pos: Point,
+    },
 }
 
 #[derive(Debug)]
@@ -48,6 +52,13 @@ impl ModsTab {
                 entry: entry_record.object(),
                 enabled,
             }),
+            Message::ShowContextMenu {
+                index,
+                starting_pos,
+            } => {
+                dbg!(index, starting_pos);
+                Action::None
+            }
         }
     }
 
@@ -65,7 +76,12 @@ impl ModsTab {
         ];
 
         column![scrollable(
-            table(columns, model.mod_entries()).width(Length::Fill)
+            table(columns, model.mod_entries())
+                .width(Length::Fill)
+                .on_right_click_row(|index, cursor_pos| Message::ShowContextMenu {
+                    index,
+                    starting_pos: cursor_pos
+                })
         )]
         .into()
     }

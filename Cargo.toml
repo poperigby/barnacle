@@ -23,7 +23,6 @@ unused_must_use = "deny"
 [workspace.lints.clippy]
 cast_possible_truncation = "deny"
 cast_possible_wrap = "deny"
-cast_precision_loss = "deny"
 cast_sign_loss = "deny"
 checked_conversions = "deny"
 fallible_impl_from = "deny"
