@@ -169,14 +169,10 @@ impl Ui {
         }
     }
 
-    pub fn view<'a>(
-        &'a self,
-        model: &'a Model,
-        translations: &'a Translations,
-    ) -> Element<'a, Message> {
+    pub fn view<'a>(&'a self, model: &'a Model, t: &'a Translations) -> Element<'a, Message> {
         let profile_selector: Element<'a, Message> = match &self.profile_selector_state {
             Some(state) => row![
-                translations.main_top_bar_add_mod().element(),
+                t.main_top_bar_add_mod().element(),
                 combo_box(
                     state,
                     "...",
@@ -189,8 +185,7 @@ impl Ui {
         };
 
         let top_bar = row![
-            button(translations.main_top_bar_launch().element())
-                .on_press(Message::LaunchButtonPressed),
+            button(t.main_top_bar_launch().element()).on_press(Message::LaunchButtonPressed),
             button(Icon::Wrench),
             profile_selector,
             space::horizontal(),
@@ -199,12 +194,11 @@ impl Ui {
             button(Icon::Notifications)
         ];
 
-        let mut tab_bar =
-            row![self.tab_button(translations, Tab::Mods, Message::TabSelected(Tab::Mods))];
+        let mut tab_bar = row![self.tab_button(t, Tab::Mods, Message::TabSelected(Tab::Mods))];
 
         for group in model.item_groups() {
             tab_bar = tab_bar.push(self.tab_button(
-                translations,
+                t,
                 Tab::ItemGroup(group.kind),
                 Message::TabSelected(Tab::ItemGroup(group.kind)),
             ));
@@ -221,14 +215,14 @@ impl Ui {
         ];
 
         let main_pane: Element<'_, Message> = match &self.selected_tab {
-            Tab::Mods => column![self.mods_tab.view(model).map(Message::ModList)].into(),
+            Tab::Mods => column![self.mods_tab.view(model, t).map(Message::ModList)].into(),
             Tab::ItemGroup(kind) => {
                 let group = model
                     .item_groups()
                     .iter()
                     .find(|g| g.kind == *kind)
                     .unwrap();
-                ItemGroupTab::view(group, translations).map(Message::ItemGroup)
+                ItemGroupTab::view(group, t).map(Message::ItemGroup)
             }
         };
 
@@ -246,16 +240,14 @@ impl Ui {
             modal(
                 content,
                 self.library_manager
-                    .view(model, translations)
+                    .view(model, t)
                     .map(Message::LibraryManager),
                 None,
             )
         } else if self.show_add_mod_dialog {
             modal(
                 content,
-                self.add_mod_dialog
-                    .view(translations)
-                    .map(Message::AddModDialog),
+                self.add_mod_dialog.view(t).map(Message::AddModDialog),
                 None,
             )
         } else {

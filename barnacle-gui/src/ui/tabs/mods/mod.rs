@@ -3,24 +3,30 @@ use barnacle_gui::{
     persistence::state::UiStateStore,
     widgets::table::{self, table},
 };
+use barnacle_l10n::Translations;
 use iced::{
     Element, Length, Point, Task,
-    widget::{checkbox, column, scrollable, text},
+    widget::{checkbox, mouse_area, opaque, pin, stack, text},
 };
 
+use crate::ui::tabs::mods::context_menu::ContextMenu;
+
 pub mod add_mod_menu;
+pub mod context_menu;
 
 #[derive(Debug, Clone)]
 pub enum Message {
     ModEntryToggled {
-        entry_record: ModEntryRecord,
+        record: ModEntryRecord,
         enabled: bool,
     },
     ModEntryDeleted(ModEntryRecord),
     ShowContextMenu {
-        index: usize,
-        starting_pos: Point,
+        record: ModEntryRecord,
+        position: Point,
     },
+    ClickedOutsideContextMenu,
+    ContextMenu(context_menu::Message),
 }
 
 #[derive(Debug)]
@@ -33,11 +39,15 @@ pub enum Action {
 #[derive(Debug, Clone)]
 pub struct ModsTab {
     ui_state: UiStateStore,
+    context_menu: Option<ContextMenu>,
 }
 
 impl ModsTab {
     pub fn new(ui_state: UiStateStore) -> Self {
-        Self { ui_state }
+        Self {
+            ui_state,
+            context_menu: None,
+        }
     }
 
     pub fn update(&mut self, message: Message) -> Action {
@@ -46,43 +56,65 @@ impl ModsTab {
                 Action::Mutate(Mutation::DeleteModEntry(entry.object()))
             }
             Message::ModEntryToggled {
-                entry_record,
+                record: entry_record,
                 enabled,
             } => Action::Mutate(Mutation::SetModEntryEnabled {
                 entry: entry_record.object(),
                 enabled,
             }),
-            Message::ShowContextMenu {
-                index,
-                starting_pos,
-            } => {
-                dbg!(index, starting_pos);
+            Message::ShowContextMenu { record, position } => {
+                self.context_menu = Some(ContextMenu::new(position, record));
                 Action::None
+            }
+            Message::ClickedOutsideContextMenu => {
+                self.context_menu = None;
+                Action::None
+            }
+            Message::ContextMenu(message) => {
+                if let Some(context_menu) = &self.context_menu {
+                    match context_menu.update(message) {
+                        context_menu::Action::Mutate(mutation) => Action::Mutate(mutation),
+                    }
+                } else {
+                    Action::None
+                }
             }
         }
     }
 
-    pub fn view<'a>(&'a self, model: &'a Model) -> Element<'a, Message> {
+    pub fn view<'a>(&'a self, model: &'a Model, t: &Translations) -> Element<'a, Message> {
         let columns = [
             table::column(text("Name"), |entry_record: ModEntryRecord| {
                 text(entry_record.name.clone())
             }),
             table::column(text("Status"), |entry_record: ModEntryRecord| {
                 checkbox(entry_record.enabled).on_toggle(move |state| Message::ModEntryToggled {
-                    entry_record: entry_record.clone(),
+                    record: entry_record.clone(),
                     enabled: state,
                 })
             }),
         ];
 
-        column![scrollable(
-            table(columns, model.mod_entries())
-                .width(Length::Fill)
-                .on_right_click_row(|index, cursor_pos| Message::ShowContextMenu {
-                    index,
-                    starting_pos: cursor_pos
-                })
-        )]
-        .into()
+        let table_view = table(columns, model.mod_entries())
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .on_right_click_row(|index, cursor_pos| Message::ShowContextMenu {
+                record: model.mod_entries().get(index).unwrap().clone(),
+                position: cursor_pos,
+            });
+
+        if let Some(context_menu) = &self.context_menu {
+            let context_menu =
+                pin(context_menu.view(t).map(Message::ContextMenu)).position(context_menu.position);
+
+            stack![
+                table_view,
+                mouse_area(context_menu).on_press(Message::ClickedOutsideContextMenu)
+            ]
+            .height(Length::Fill)
+            .into()
+        } else {
+            table_view.into()
+        }
     }
 }

@@ -151,6 +151,11 @@ where
         self
     }
 
+    pub fn height(mut self, height: impl Into<Length>) -> Self {
+        self.height = height.into();
+        self
+    }
+
     /// Sets the padding of the cells of the [`Table`].
     pub fn padding(self, padding: impl Into<Pixels>) -> Self {
         let padding = padding.into();
