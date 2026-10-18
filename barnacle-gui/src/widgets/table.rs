@@ -1,7 +1,7 @@
 //! Display tables.
 use iced::advanced::{Clipboard, Layout, Shell, Widget, layout, overlay, renderer, widget};
 use iced::{
-    Alignment, Background, Color, Element, Event, Length, Pixels, Point, Rectangle, Size, Vector,
+    Alignment, Background, Element, Event, Length, Pixels, Point, Rectangle, Size, Vector,
     alignment, mouse,
 };
 
@@ -555,6 +555,7 @@ where
     ) {
         let bounds = layout.bounds();
         let state = tree.state.downcast_ref::<State>();
+        let table_style = theme.style(&self.class);
 
         if let Some(selected_row) = state.selected_row
             // Exclude the header
@@ -569,7 +570,7 @@ where
                     },
                     ..renderer::Quad::default()
                 },
-                Color::from_rgb(0.15, 0.35, 0.70),
+                table_style.selected_row,
             );
         }
 
@@ -578,8 +579,6 @@ where
             cell.as_widget()
                 .draw(state, renderer, theme, style, layout, cursor, viewport);
         }
-
-        let style = theme.style(&self.class);
 
         if self.separator_x > 0.0 {
             let mut x = self.padding_x;
@@ -602,7 +601,7 @@ where
                         snap: true,
                         ..renderer::Quad::default()
                     },
-                    style.separator_x,
+                    table_style.separator_x,
                 );
 
                 x += self.separator_x + self.padding_x;
@@ -626,7 +625,7 @@ where
                         snap: true,
                         ..renderer::Quad::default()
                     },
-                    style.separator_y,
+                    table_style.separator_y,
                 );
 
                 y += self.separator_y + self.padding_y;
@@ -739,6 +738,8 @@ pub struct Style {
     pub separator_x: Background,
     /// The background color of the vertical line separator between cells.
     pub separator_y: Background,
+    /// The background color of the selected row
+    pub selected_row: Background,
 }
 
 /// The theme catalog of a [`Table`].
@@ -782,5 +783,6 @@ pub fn default(theme: &iced::Theme) -> Style {
     Style {
         separator_x: separator,
         separator_y: separator,
+        selected_row: palette.primary.strong.color.into(),
     }
 }
