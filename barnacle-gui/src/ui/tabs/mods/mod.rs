@@ -6,7 +6,7 @@ use barnacle_gui::{
 use barnacle_l10n::Translations;
 use iced::{
     Element, Length, Point, Task,
-    widget::{checkbox, mouse_area, opaque, pin, stack, text},
+    widget::{checkbox, mouse_area, pin, stack, text},
 };
 
 use crate::ui::tabs::mods::context_menu::ContextMenu;

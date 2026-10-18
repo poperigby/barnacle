@@ -1,7 +1,7 @@
 //! Display tables.
 use iced::advanced::{Clipboard, Layout, Shell, Widget, layout, overlay, renderer, widget};
 use iced::{
-    Alignment, Background, Element, Event, Length, Pixels, Point, Rectangle, Size, Vector,
+    Alignment, Background, Color, Element, Event, Length, Pixels, Point, Rectangle, Size, Vector,
     alignment, mouse,
 };
 
@@ -195,11 +195,13 @@ where
     }
 }
 
-struct Metrics {
+#[derive(Debug, Clone, Default)]
+struct State {
     columns: Vec<f32>,
     rows: Vec<f32>,
     /// Bounds the cover the entirety of row, for hit testing
     row_bounds: Vec<Rectangle>,
+    selected_row: Option<usize>,
 }
 
 impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
@@ -216,15 +218,11 @@ where
     }
 
     fn tag(&self) -> widget::tree::Tag {
-        widget::tree::Tag::of::<Metrics>()
+        widget::tree::Tag::of::<State>()
     }
 
     fn state(&self) -> widget::tree::State {
-        widget::tree::State::new(Metrics {
-            columns: Vec::new(),
-            rows: Vec::new(),
-            row_bounds: Vec::new(),
-        })
+        widget::tree::State::new(State::default())
     }
 
     fn children(&self) -> Vec<widget::Tree> {
@@ -256,7 +254,7 @@ where
         renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
-        let metrics = tree.state.downcast_mut::<Metrics>();
+        let metrics = tree.state.downcast_mut::<State>();
         let columns = self.columns.len();
         let limits = limits.width(self.width).height(self.height);
 
@@ -505,21 +503,31 @@ where
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
     ) {
-        if *event == Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right))
+        if let Event::Mouse(mouse::Event::ButtonPressed(
+            button @ (mouse::Button::Left | mouse::Button::Right),
+        )) = event
             && let Some(cursor_pos) = cursor.position_in(layout.bounds())
         {
-            let metrics = tree.state.downcast_ref::<Metrics>();
-            let index = metrics
+            let state = tree.state.downcast_mut::<State>();
+            let index = state
                 .row_bounds
                 .iter()
-                .position(|bounds| bounds.contains(cursor_pos))
-                // The first index is the header
-                .and_then(|index| index.checked_sub(1));
+                .skip(1) // Exclude the header.
+                .position(|bounds| bounds.contains(cursor_pos));
 
-            if let Some(index) = index
-                && let Some(on_right_click_row) = &self.on_right_click_row
-            {
-                shell.publish((on_right_click_row)(index, cursor_pos));
+            match button {
+                mouse::Button::Left => {
+                    state.selected_row = index;
+                    shell.request_redraw();
+                }
+                mouse::Button::Right => {
+                    if let Some(index) = index
+                        && let Some(callback) = &self.on_right_click_row
+                    {
+                        shell.publish(callback(index, cursor_pos));
+                    }
+                }
+                _ => {}
             }
         }
 
@@ -545,23 +553,41 @@ where
         cursor: mouse::Cursor,
         viewport: &Rectangle,
     ) {
+        let bounds = layout.bounds();
+        let state = tree.state.downcast_ref::<State>();
+
+        if let Some(selected_row) = state.selected_row
+            // Exclude the header
+            && let Some(row_bounds) = state.row_bounds.get(selected_row + 1)
+        {
+            renderer.fill_quad(
+                renderer::Quad {
+                    bounds: Rectangle {
+                        x: bounds.x + row_bounds.x,
+                        y: bounds.y + row_bounds.y,
+                        ..*row_bounds
+                    },
+                    ..renderer::Quad::default()
+                },
+                Color::from_rgb(0.15, 0.35, 0.70),
+            );
+        }
+
         for ((cell, state), layout) in self.cells.iter().zip(&tree.children).zip(layout.children())
         {
             cell.as_widget()
                 .draw(state, renderer, theme, style, layout, cursor, viewport);
         }
 
-        let bounds = layout.bounds();
-        let metrics = tree.state.downcast_ref::<Metrics>();
         let style = theme.style(&self.class);
 
         if self.separator_x > 0.0 {
             let mut x = self.padding_x;
 
-            for width in metrics
+            for width in state
                 .columns
                 .iter()
-                .take(metrics.columns.len().saturating_sub(1))
+                .take(state.columns.len().saturating_sub(1))
             {
                 x += width + self.padding_x;
 
@@ -586,11 +612,7 @@ where
         if self.separator_y > 0.0 {
             let mut y = self.padding_y;
 
-            for height in metrics
-                .rows
-                .iter()
-                .take(metrics.rows.len().saturating_sub(1))
-            {
+            for height in state.rows.iter().take(state.rows.len().saturating_sub(1)) {
                 y += height + self.padding_y;
 
                 renderer.fill_quad(
