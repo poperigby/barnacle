@@ -1,9 +1,13 @@
 //! Display tables.
 use iced::advanced::{Clipboard, Layout, Shell, Widget, layout, overlay, renderer, widget};
 use iced::{
-    Alignment, Background, Element, Event, Length, Pixels, Point, Rectangle, Size, Vector,
+    Alignment, Background, Color, Element, Event, Length, Pixels, Point, Rectangle, Size, Vector,
     alignment, mouse,
 };
+
+use crate::widgets::table::state::{DraggingState, State};
+
+mod state;
 
 /// Creates a new [`Table`] with the given columns and rows.
 ///
@@ -193,15 +197,6 @@ where
         self.separator_y = separator.into().0;
         self
     }
-}
-
-#[derive(Debug, Clone, Default)]
-struct State {
-    columns: Vec<f32>,
-    rows: Vec<f32>,
-    /// Bounds the cover the entirety of row, for hit testing
-    row_bounds: Vec<Rectangle>,
-    selected_row: Option<usize>,
 }
 
 impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
@@ -503,32 +498,67 @@ where
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
     ) {
-        if let Event::Mouse(mouse::Event::ButtonPressed(
-            button @ (mouse::Button::Left | mouse::Button::Right),
-        )) = event
-            && let Some(cursor_pos) = cursor.position_in(layout.bounds())
-        {
-            let state = tree.state.downcast_mut::<State>();
-            let index = state
-                .row_bounds
-                .iter()
-                .skip(1) // Exclude the header.
-                .position(|bounds| bounds.contains(cursor_pos));
+        let state = tree.state.downcast_mut::<State>();
 
-            match button {
-                mouse::Button::Left => {
-                    state.selected_row = index;
+        match event {
+            Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
+                state.dragging = DraggingState::Idle;
+                shell.request_redraw();
+            }
+            Event::Mouse(mouse::Event::CursorMoved { position }) => match state.dragging {
+                DraggingState::Held { row, origin } => {
+                    state.dragging = DraggingState::Dragging {
+                        row,
+                        origin,
+                        current: *position,
+                    };
                     shell.request_redraw();
                 }
-                mouse::Button::Right => {
-                    if let Some(index) = index
-                        && let Some(callback) = &self.on_right_click_row
-                    {
-                        shell.publish(callback(index, cursor_pos));
-                    }
+                DraggingState::Dragging { row, origin, .. } => {
+                    state.dragging = DraggingState::Dragging {
+                        row,
+                        origin,
+                        current: *position,
+                    };
+                    shell.request_redraw();
                 }
                 _ => {}
+            },
+            Event::Mouse(mouse::Event::ButtonPressed(
+                button @ (mouse::Button::Left | mouse::Button::Right),
+            )) => {
+                if let Some(position) = cursor.position_in(layout.bounds()) {
+                    let row = state
+                        .row_bounds
+                        .iter()
+                        .skip(1)
+                        .position(|bounds| bounds.contains(position));
+
+                    match button {
+                        mouse::Button::Left => {
+                            state.dragging = match row {
+                                Some(row) => DraggingState::Held {
+                                    row,
+                                    origin: position,
+                                },
+                                None => DraggingState::Idle,
+                            };
+
+                            state.selected_row = row;
+                            shell.request_redraw();
+                        }
+                        mouse::Button::Right => {
+                            if let Some(row) = row
+                                && let Some(callback) = &self.on_right_click_row
+                            {
+                                shell.publish(callback(row, position));
+                            }
+                        }
+                        _ => {}
+                    }
+                }
             }
+            _ => {}
         }
 
         for ((cell, tree), layout) in self
@@ -630,6 +660,21 @@ where
 
                 y += self.separator_y + self.padding_y;
             }
+        }
+
+        if let DraggingState::Dragging { current, .. } = state.dragging {
+            renderer.fill_quad(
+                renderer::Quad {
+                    bounds: Rectangle {
+                        x: current.x,
+                        y: current.y,
+                        width: layout.bounds().width * 0.75,
+                        height: 30.0,
+                    },
+                    ..renderer::Quad::default()
+                },
+                table_style.selected_row,
+            );
         }
     }
 
