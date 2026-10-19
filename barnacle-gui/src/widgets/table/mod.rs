@@ -682,8 +682,25 @@ where
         if self.separator_y > 0.0 {
             let mut y = self.padding_y;
 
-            for height in state.rows.iter().take(state.rows.len().saturating_sub(1)) {
+            for (row_index, height) in state
+                .rows
+                .iter()
+                .enumerate()
+                .take(state.rows.len().saturating_sub(1))
+            {
                 y += height + self.padding_y;
+
+                let background = match &state.dragging {
+                    DraggingState::Dragging {
+                        over: Some(Over::Top(index)),
+                        ..
+                    } if row_index == *index => table_style.seperator_hovering,
+                    DraggingState::Dragging {
+                        over: Some(Over::Bottom(index)),
+                        ..
+                    } if row_index == *index + 1 => table_style.seperator_hovering,
+                    _ => table_style.separator_y,
+                };
 
                 renderer.fill_quad(
                     Quad {
@@ -696,7 +713,7 @@ where
                         snap: true,
                         ..Quad::default()
                     },
-                    table_style.separator_y,
+                    background,
                 );
 
                 y += self.separator_y + self.padding_y;
@@ -823,11 +840,13 @@ impl<'a, 'b, T, Message, Theme, Renderer> Column<'a, 'b, T, Message, Theme, Rend
 /// The appearance of a [`Table`].
 #[derive(Debug, Clone, Copy)]
 pub struct Style {
-    /// The background color of the horizontal line separator between cells.
-    pub separator_x: Background,
     /// The background color of the vertical line separator between cells.
+    pub separator_x: Background,
+    /// The background color of the horizontal line separator between cells.
     pub separator_y: Background,
-    /// The background color of the selected row
+    /// The background color of the horizontal separator when hovering near it.
+    pub seperator_hovering: Background,
+    /// The background color of the selected row.
     pub selected_row: Background,
 }
 
@@ -872,6 +891,7 @@ pub fn default(theme: &iced::Theme) -> Style {
     Style {
         separator_x: separator,
         separator_y: separator,
-        selected_row: palette.primary.strong.color.into(),
+        selected_row: palette.primary.weak.color.into(),
+        seperator_hovering: palette.success.strong.color.into(),
     }
 }
