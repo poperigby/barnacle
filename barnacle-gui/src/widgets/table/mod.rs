@@ -1,7 +1,7 @@
 //! Display tables.
 use iced::advanced::{Clipboard, Layout, Shell, Widget, layout, overlay, renderer, widget};
 use iced::{
-    Alignment, Background, Color, Element, Event, Length, Pixels, Point, Rectangle, Size, Vector,
+    Alignment, Background, Element, Event, Length, Pixels, Point, Rectangle, Size, Vector,
     alignment, mouse,
 };
 
@@ -46,6 +46,12 @@ where
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct RowMoved {
+    index: usize,
+    new_position: usize,
+}
+
 /// A grid-like visual representation of data distributed in columns and rows.
 pub struct Table<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>
 where
@@ -61,6 +67,7 @@ where
     separator_y: f32,
     class: Theme::Class<'a>,
     on_right_click_row: Option<Box<dyn Fn(usize, Point) -> Message + 'a>>,
+    on_row_moved: Option<Box<dyn Fn(RowMoved) -> Message + 'a>>,
 }
 
 struct Column_ {
@@ -138,6 +145,7 @@ where
             separator_y: 1.0,
             class: Theme::default(),
             on_right_click_row: None,
+            on_row_moved: None,
         }
     }
 
@@ -146,6 +154,14 @@ where
         F: 'a + Fn(usize, Point) -> Message,
     {
         self.on_right_click_row = Some(Box::new(f));
+        self
+    }
+
+    pub fn on_row_moved<F>(mut self, f: F) -> Self
+    where
+        F: 'a + Fn(RowMoved) -> Message,
+    {
+        self.on_row_moved = Some(Box::new(f));
         self
     }
 
@@ -499,10 +515,48 @@ where
         viewport: &Rectangle,
     ) {
         let state = tree.state.downcast_mut::<State>();
+        let cursor_pos = cursor.position_in(layout.bounds());
 
         match event {
             Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
+                // While dragging, if cursor is over top half of another row, insert above. If bottom half,
+                // below.
+                if let DraggingState::Dragging { row, .. } = state.dragging
+                    && let Some(position) = cursor_pos
+                {
+                    // The bounds of the row we're currently hovering over
+                    if let Some((hovered_index, hovered_bounds)) = state
+                        .row_bounds
+                        .iter()
+                        .skip(1)
+                        .enumerate()
+                        .find(|(_, bounds)| bounds.contains(position))
+                    {
+                        let mut top_bounds = *hovered_bounds;
+                        top_bounds.height = hovered_bounds.height / 2.0;
+
+                        let mut bottom_bounds = *hovered_bounds;
+                        bottom_bounds.y = hovered_bounds.y + (hovered_bounds.height / 2.0);
+                        bottom_bounds.height /= 2.0;
+
+                        if let Some(callback) = &self.on_row_moved {
+                            if top_bounds.contains(position) {
+                                shell.publish(callback(RowMoved {
+                                    index: row,
+                                    new_position: hovered_index,
+                                }));
+                            } else if bottom_bounds.contains(position) {
+                                shell.publish(callback(RowMoved {
+                                    index: row,
+                                    new_position: hovered_index + 1,
+                                }));
+                            }
+                        }
+                    };
+                }
+
                 state.dragging = DraggingState::Idle;
+
                 shell.request_redraw();
             }
             Event::Mouse(mouse::Event::CursorMoved { position }) => match state.dragging {
@@ -527,7 +581,7 @@ where
             Event::Mouse(mouse::Event::ButtonPressed(
                 button @ (mouse::Button::Left | mouse::Button::Right),
             )) => {
-                if let Some(position) = cursor.position_in(layout.bounds()) {
+                if let Some(position) = cursor_pos {
                     let row = state
                         .row_bounds
                         .iter()
