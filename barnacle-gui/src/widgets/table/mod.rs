@@ -1,11 +1,15 @@
 //! Display tables.
-use iced::advanced::{Clipboard, Layout, Shell, Widget, layout, overlay, renderer, widget};
+use iced::advanced::{
+    Clipboard, Layout, Shell, Widget, layout, overlay,
+    renderer::{self, Quad},
+    widget,
+};
 use iced::{
     Alignment, Background, Element, Event, Length, Pixels, Point, Rectangle, Size, Vector,
     alignment, mouse,
 };
 
-use crate::widgets::table::state::{DraggingState, State};
+use crate::widgets::table::state::{DraggingState, Over, State};
 
 mod state;
 
@@ -515,104 +519,87 @@ where
         viewport: &Rectangle,
     ) {
         let state = tree.state.downcast_mut::<State>();
-        let cursor_pos = cursor.position_in(layout.bounds());
 
-        match event {
-            Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
-                // While dragging, if cursor is over top half of another row, insert above. If bottom half,
-                // below.
-                if let DraggingState::Dragging { row, .. } = state.dragging
-                    && let Some(position) = cursor_pos
-                {
-                    // The bounds of the row we're currently hovering over
-                    if let Some((hovered_index, hovered_bounds)) = state
-                        .row_bounds
-                        .iter()
-                        .skip(1)
-                        .enumerate()
-                        .find(|(_, bounds)| bounds.contains(position))
-                    {
-                        let mut top_bounds = *hovered_bounds;
-                        top_bounds.height = hovered_bounds.height / 2.0;
-
-                        let mut bottom_bounds = *hovered_bounds;
-                        bottom_bounds.y = hovered_bounds.y + (hovered_bounds.height / 2.0);
-                        bottom_bounds.height /= 2.0;
-
-                        if let Some(callback) = &self.on_row_moved {
-                            if top_bounds.contains(position) {
-                                shell.publish(callback(RowMoved {
-                                    index: row,
-                                    new_position: hovered_index,
-                                }));
-                            } else if bottom_bounds.contains(position) {
-                                shell.publish(callback(RowMoved {
-                                    index: row,
-                                    new_position: hovered_index + 1,
-                                }));
-                            }
-                        }
-                    };
-                }
-
-                state.dragging = DraggingState::Idle;
-
-                shell.request_redraw();
-            }
-            Event::Mouse(mouse::Event::CursorMoved { position }) => match state.dragging {
-                DraggingState::Held { row, origin } => {
-                    state.dragging = DraggingState::Dragging {
-                        row,
-                        origin,
-                        current: *position,
-                    };
-                    shell.request_redraw();
-                }
-                DraggingState::Dragging { row, origin, .. } => {
-                    state.dragging = DraggingState::Dragging {
-                        row,
-                        origin,
-                        current: *position,
-                    };
-                    shell.request_redraw();
-                }
-                _ => {}
-            },
-            Event::Mouse(mouse::Event::ButtonPressed(
-                button @ (mouse::Button::Left | mouse::Button::Right),
-            )) => {
-                if let Some(position) = cursor_pos {
-                    let row = state
-                        .row_bounds
-                        .iter()
-                        .skip(1)
-                        .position(|bounds| bounds.contains(position));
+        if let Some(cursor_local_pos) = cursor.position_in(layout.bounds()) {
+            match event {
+                Event::Mouse(mouse::Event::ButtonPressed(
+                    button @ (mouse::Button::Left | mouse::Button::Right),
+                )) => {
+                    let row_index = state.row_at(cursor_local_pos).map(|r| r.index);
 
                     match button {
                         mouse::Button::Left => {
-                            state.dragging = match row {
-                                Some(row) => DraggingState::Held {
-                                    row,
-                                    origin: position,
-                                },
+                            state.dragging = match row_index {
+                                Some(row) => DraggingState::Held { row_index: row },
                                 None => DraggingState::Idle,
                             };
 
-                            state.selected_row = row;
+                            state.selected_row = row_index;
                             shell.request_redraw();
                         }
                         mouse::Button::Right => {
-                            if let Some(row) = row
+                            if let Some(row) = row_index
                                 && let Some(callback) = &self.on_right_click_row
                             {
-                                shell.publish(callback(row, position));
+                                shell.publish(callback(row, cursor_local_pos));
                             }
                         }
                         _ => {}
                     }
                 }
+                Event::Mouse(mouse::Event::CursorMoved { position }) => match state.dragging {
+                    DraggingState::Held { row_index: row }
+                    | DraggingState::Dragging { row_index: row, .. } => {
+                        let over = state.row_at(cursor_local_pos).map(|target| {
+                            let midpoint = target.bounds.y + target.bounds.height / 2.0;
+
+                            if cursor_local_pos.y < midpoint {
+                                Over::Top(target.index)
+                            } else {
+                                Over::Bottom(target.index)
+                            }
+                        });
+
+                        state.dragging = DraggingState::Dragging {
+                            row_index: row,
+                            position: *position,
+                            over,
+                        };
+                        shell.request_redraw();
+                    }
+                    DraggingState::Idle => {}
+                },
+                Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
+                    // While dragging, if cursor is over top half of another row, insert above. If bottom half,
+                    // below.
+                    if let DraggingState::Dragging {
+                        row_index, over, ..
+                    } = &state.dragging
+                        && let Some(over) = over
+                        && let Some(callback) = &self.on_row_moved
+                    {
+                        match over {
+                            Over::Top(hovered_index) => {
+                                shell.publish(callback(RowMoved {
+                                    index: *row_index,
+                                    new_position: *hovered_index,
+                                }));
+                            }
+                            Over::Bottom(hovered_index) => {
+                                shell.publish(callback(RowMoved {
+                                    index: *row_index,
+                                    new_position: *hovered_index + 1,
+                                }));
+                            }
+                        };
+                    }
+
+                    state.dragging = DraggingState::Idle;
+
+                    shell.request_redraw();
+                }
+                _ => {}
             }
-            _ => {}
         }
 
         for ((cell, tree), layout) in self
@@ -646,13 +633,13 @@ where
             && let Some(row_bounds) = state.row_bounds.get(selected_row + 1)
         {
             renderer.fill_quad(
-                renderer::Quad {
+                Quad {
                     bounds: Rectangle {
                         x: bounds.x + row_bounds.x,
                         y: bounds.y + row_bounds.y,
                         ..*row_bounds
                     },
-                    ..renderer::Quad::default()
+                    ..Quad::default()
                 },
                 table_style.selected_row,
             );
@@ -675,7 +662,7 @@ where
                 x += width + self.padding_x;
 
                 renderer.fill_quad(
-                    renderer::Quad {
+                    Quad {
                         bounds: Rectangle {
                             x: bounds.x + x,
                             y: bounds.y,
@@ -683,7 +670,7 @@ where
                             height: bounds.height,
                         },
                         snap: true,
-                        ..renderer::Quad::default()
+                        ..Quad::default()
                     },
                     table_style.separator_x,
                 );
@@ -699,7 +686,7 @@ where
                 y += height + self.padding_y;
 
                 renderer.fill_quad(
-                    renderer::Quad {
+                    Quad {
                         bounds: Rectangle {
                             x: bounds.x,
                             y: bounds.y + y,
@@ -707,7 +694,7 @@ where
                             height: self.separator_y,
                         },
                         snap: true,
-                        ..renderer::Quad::default()
+                        ..Quad::default()
                     },
                     table_style.separator_y,
                 );
@@ -716,16 +703,19 @@ where
             }
         }
 
-        if let DraggingState::Dragging { current, .. } = state.dragging {
+        if let DraggingState::Dragging {
+            position: current, ..
+        } = state.dragging
+        {
             renderer.fill_quad(
-                renderer::Quad {
+                Quad {
                     bounds: Rectangle {
                         x: current.x,
                         y: current.y,
                         width: layout.bounds().width * 0.75,
                         height: 30.0,
                     },
-                    ..renderer::Quad::default()
+                    ..Quad::default()
                 },
                 table_style.selected_row,
             );

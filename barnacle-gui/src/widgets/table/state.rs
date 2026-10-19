@@ -16,11 +16,35 @@ pub enum DraggingState {
     /// No iteraction
     Idle,
     /// Selection button is held over row, but hasn't moved
-    Held { row: usize, origin: Point },
+    Held { row_index: usize },
     /// Selection button is held and cursor is moving
     Dragging {
-        row: usize,
-        origin: Point,
-        current: Point,
+        row_index: usize,
+        position: Point,
+        over: Option<Over>,
     },
+}
+
+#[derive(Debug, Clone)]
+pub enum Over {
+    Top(usize),
+    Bottom(usize),
+}
+
+#[derive(Debug, Clone)]
+pub struct Row {
+    pub index: usize,
+    pub bounds: Rectangle,
+}
+
+impl State {
+    pub fn row_at(&self, relative_position: Point) -> Option<Row> {
+        self.row_bounds
+            .iter()
+            .copied()
+            .skip(1)
+            .enumerate()
+            .find(|(_, bounds)| bounds.contains(relative_position))
+            .map(|(index, bounds)| Row { index, bounds })
+    }
 }
