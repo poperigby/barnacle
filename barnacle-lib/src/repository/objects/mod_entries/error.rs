@@ -75,6 +75,8 @@ pub enum RemoveError {
     ProfileName(#[source] GetFieldError),
     #[error("could not delete mod entry")]
     Delete(#[source] sea_orm::DbErr),
+    #[error("could not decrement the position of the entries following this one")]
+    DecrementFollowing(#[source] sea_orm::DbErr),
 }
 
 #[derive(Debug, Error)]

@@ -1,3 +1,5 @@
+use sea_orm::{ExprTrait, sea_query::Expr};
+
 use super::*;
 
 impl ModEntry {
@@ -68,10 +70,22 @@ impl ModEntry {
             .await
             .map_err(RemoveError::ProfileName)?;
 
+        let position = self.position().await;
+
+        let conn = self.db.conn();
+
         Entity::delete_by_id(self.id)
-            .exec(self.db.conn())
+            .exec(conn)
             .await
             .map_err(RemoveError::Delete)?;
+
+        // Decrement position of entries that come after this one to fill the space
+        Entity::update_many()
+            .col_expr(COLUMN.position, Expr::col(COLUMN.position).sub(1))
+            .filter(COLUMN.position.gt(position))
+            .exec(conn)
+            .await
+            .map_err(RemoveError::DecrementFollowing)?;
 
         info!(
             "Removed mod entry for mod '{}' from profile '{}'",
