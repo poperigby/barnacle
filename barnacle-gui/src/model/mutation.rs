@@ -72,27 +72,25 @@ impl Mutation {
 
             // Mods
             AddEmptyMod { name } => {
-                let active_game = repo.active_game().await?;
+                if let Some(game) = repo.active_game().await? {
+                    let mod_ = game.new_mod(&name).empty().await;
 
-                let mod_ = active_game.new_mod(&name).empty().await;
-
-                if let Some(active_profile) = active_game.active_profile().await? {
-                    active_profile.add_mod_entry(mod_).await?;
+                    if let Some(profile) = game.active_profile().await? {
+                        profile.add_mod_entry(mod_).await?;
+                    }
                 }
             }
             AddModFromDir { name, path } => {
-                let active_game = repo.active_game().await?;
+                if let Some(game) = repo.active_game().await? {
+                    let mod_ = game.new_mod(&name).from_dir(&path, None).await;
 
-                let mod_ = active_game.new_mod(&name).from_dir(&path, None).await;
-
-                if let Some(active_profile) = active_game.active_profile().await? {
-                    active_profile.add_mod_entry(mod_).await?;
+                    if let Some(profile) = game.active_profile().await? {
+                        profile.add_mod_entry(mod_).await?;
+                    }
                 }
             }
             AddModFromArchive { name, path } => {
-                let active_game = repo.active_game().await?;
-
-                if let Some(game) = active_game {
+                if let Some(game) = repo.active_game().await? {
                     let mod_ = game
                         .new_mod(&name)
                         .from_archive(&path)
@@ -100,8 +98,8 @@ impl Mutation {
                         .intall(None)
                         .await;
 
-                    if let Some(active_profile) = active_game.active_profile().await? {
-                        active_profile.add_mod_entry(mod_).await?;
+                    if let Some(profile) = game.active_profile().await? {
+                        profile.add_mod_entry(mod_).await?;
                     }
                 }
             }

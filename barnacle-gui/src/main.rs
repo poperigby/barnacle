@@ -147,17 +147,15 @@ impl App {
 
                         Task::perform(
                             async move {
-                                mutation.run(&repo).await;
+                                mutation.run(&repo).await.map_err(|e| AppError {
+                                    message: e.to_string(),
+                                })?;
 
                                 match Model::load(&repo).await {
                                     Ok(model) => Ok(model),
-                                    Err(error) => {
-                                        error!("failed to initialize app: {error:#}");
-
-                                        Err(AppError {
-                                            message: error.to_string(),
-                                        })
-                                    }
+                                    Err(error) => Err(AppError {
+                                        message: error.to_string(),
+                                    }),
                                 }
                             },
                             Message::Mutated,
