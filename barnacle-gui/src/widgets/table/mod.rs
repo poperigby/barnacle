@@ -52,8 +52,8 @@ where
 
 #[derive(Debug, Clone)]
 pub struct RowMoved {
-    index: usize,
-    new_position: usize,
+    pub index: usize,
+    pub new_position: usize,
 }
 
 /// A grid-like visual representation of data distributed in columns and rows.

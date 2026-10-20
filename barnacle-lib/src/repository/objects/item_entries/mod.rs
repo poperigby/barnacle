@@ -15,6 +15,7 @@ use crate::{
 
 pub use group::ItemGroup;
 
+mod error;
 mod group;
 pub(crate) mod model;
 

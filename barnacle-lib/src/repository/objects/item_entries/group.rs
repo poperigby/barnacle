@@ -1,7 +1,9 @@
 use crate::{
     Profile,
     integrations::openmw::{self, ItemKind as OpenMwKind},
-    repository::{item_entries::ItemEntry, items::Kind},
+    repository::{
+        item_entries::ItemEntry, items::Kind, objects::item_entries::error::AutoSortError,
+    },
 };
 
 #[derive(Debug, Clone)]
@@ -28,15 +30,17 @@ impl ItemGroup {
         self.kind.supports_auto_sort()
     }
 
-    pub async fn auto_sort(&self) {
+    pub async fn auto_sort(&self) -> Result<(), AutoSortError> {
         if !self.supports_auto_sort() {
-            panic!("Not supported");
+            return Err(AutoSortError::NotSupported(self.kind));
         }
 
         match self.kind {
             Kind::OpenMW(OpenMwKind::Plugin) => openmw::OpenMw::sort_plugins(&self.profile).await,
             _ => unreachable!(),
         };
+
+        Ok(())
     }
 }
 

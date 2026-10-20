@@ -8,6 +8,7 @@ use barnacle_lib::{
         item_entries::{ItemEntry, ItemGroup},
     },
 };
+use iced::application::UpdateFn;
 
 #[derive(Debug)]
 pub enum Mutation {
@@ -30,6 +31,7 @@ pub enum Mutation {
 
     // Mod entries
     SetModEntryEnabled { entry: ModEntry, enabled: bool },
+    MoveModEntry { entry: ModEntry, new_position: i32 },
     DeleteModEntry(ModEntry),
 
     // Items
@@ -38,86 +40,97 @@ pub enum Mutation {
 }
 
 impl Mutation {
-    pub async fn run(self, repo: &Repository) {
+    pub async fn run(self, repo: &Repository) -> anyhow::Result<()> {
         use Mutation::*;
 
         match self {
             // Games
             CreateGame { name, deploy_kind } => {
-                let game = repo.add_game(&name, deploy_kind).await.unwrap();
-                game.add_profile("Default").await.unwrap();
+                let game = repo.add_game(&name, deploy_kind).await?;
+                game.add_profile("Default").await?;
             }
             DeleteGame(game) => {
-                game.remove().await.unwrap();
+                game.remove().await?;
             }
             ActivateGame(game) => {
-                game.activate().await.unwrap();
+                game.activate().await?;
             }
 
             // Profiles
             CreateProfile { game, name } => {
-                game.add_profile(&name).await.unwrap();
+                game.add_profile(&name).await?;
             }
             DeleteProfile(profile) => {
-                profile.remove().await.unwrap();
+                profile.remove().await?;
             }
             ActivateProfile(profile) => {
-                profile.activate().await.unwrap();
+                profile.activate().await?;
             }
             EditProfile { profile, new_name } => {
-                profile.set_name(&new_name).await.unwrap();
+                profile.set_name(&new_name).await?;
             }
 
             // Mods
             AddEmptyMod { name } => {
-                let active_game = repo.active_game().await.unwrap().unwrap();
+                let active_game = repo.active_game().await?;
 
                 let mod_ = active_game.new_mod(&name).empty().await;
 
-                if let Some(active_profile) = active_game.active_profile().await.unwrap() {
-                    active_profile.add_mod_entry(mod_).await.unwrap();
+                if let Some(active_profile) = active_game.active_profile().await? {
+                    active_profile.add_mod_entry(mod_).await?;
                 }
             }
             AddModFromDir { name, path } => {
-                let active_game = repo.active_game().await.unwrap().unwrap();
+                let active_game = repo.active_game().await?;
 
                 let mod_ = active_game.new_mod(&name).from_dir(&path, None).await;
 
-                if let Some(active_profile) = active_game.active_profile().await.unwrap() {
-                    active_profile.add_mod_entry(mod_).await.unwrap();
+                if let Some(active_profile) = active_game.active_profile().await? {
+                    active_profile.add_mod_entry(mod_).await?;
                 }
             }
             AddModFromArchive { name, path } => {
-                let active_game = repo.active_game().await.unwrap().unwrap();
+                let active_game = repo.active_game().await?;
 
-                let mod_ = active_game
-                    .new_mod(&name)
-                    .from_archive(&path)
-                    .with_root(&PathBuf::from("PerksOfMorrowind"))
-                    .intall(None)
-                    .await;
+                if let Some(game) = active_game {
+                    let mod_ = game
+                        .new_mod(&name)
+                        .from_archive(&path)
+                        .with_root(&PathBuf::from("PerksOfMorrowind"))
+                        .intall(None)
+                        .await;
 
-                if let Some(active_profile) = active_game.active_profile().await.unwrap() {
-                    active_profile.add_mod_entry(mod_).await.unwrap();
+                    if let Some(active_profile) = active_game.active_profile().await? {
+                        active_profile.add_mod_entry(mod_).await?;
+                    }
                 }
             }
             DeleteMod(mod_) => {
-                mod_.remove().await.unwrap();
+                mod_.remove().await?;
             }
 
             // Mod entries
             SetModEntryEnabled { entry, enabled } => {
-                entry.set_enabled(enabled).await.unwrap();
+                entry.set_enabled(enabled).await?;
+            }
+            MoveModEntry {
+                entry,
+                new_position,
+            } => {
+                dbg!(&entry, new_position);
+                entry.set_position(new_position).await;
             }
             DeleteModEntry(entry) => {
-                entry.remove().await.unwrap();
+                entry.remove().await?;
             }
 
             // Items
             SetItemEntryEnabled { entry, enabled } => {
                 entry.set_enabled(enabled).await;
             }
-            AutoSortItemGroup { group } => group.auto_sort().await,
+            AutoSortItemGroup { group } => group.auto_sort().await?,
         }
+
+        Ok(())
     }
 }

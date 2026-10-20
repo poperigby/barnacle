@@ -11,13 +11,7 @@ impl ModEntry {
     ) -> Result<Self, AddError> {
         let conn = db.conn();
 
-        let next_position = Entity::find()
-            .filter(COLUMN.profile_id.eq(profile.id))
-            .order_by_desc(COLUMN.position)
-            .one(conn)
-            .await
-            .map_err(AddError::NextPriority)?
-            .map_or(0, |e| e.position + 1);
+        let next_position = ModEntry::next_position(db, profile).await.unwrap();
 
         let model = ActiveModel {
             profile_id: Set(profile.id),
@@ -37,6 +31,7 @@ impl ModEntry {
                 }
             })?
             .last_insert_id;
+
         let mod_entry = ModEntry::from_id(id, db, cfg);
 
         for item in mod_.items().await {
@@ -79,7 +74,7 @@ impl ModEntry {
             .await
             .map_err(RemoveError::Delete)?;
 
-        // Decrement position of entries that come after this one to fill the space
+        // Decrement position of entries that come after this one to reclaim the space
         Entity::update_many()
             .col_expr(COLUMN.position, Expr::col(COLUMN.position).sub(1))
             .filter(COLUMN.position.gt(position))

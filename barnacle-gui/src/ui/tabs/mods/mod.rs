@@ -1,7 +1,7 @@
 use barnacle_gui::{
     model::{ModEntryRecord, Model, Mutation},
     persistence::state::UiStateStore,
-    widgets::table::{self, RowMoved, table},
+    widgets::table::{self, table},
 };
 use barnacle_l10n::Translations;
 use iced::{
@@ -25,7 +25,10 @@ pub enum Message {
         record: ModEntryRecord,
         position: Point,
     },
-    RowMoved(RowMoved),
+    ModEntryMoved {
+        record: ModEntryRecord,
+        new_position: i32,
+    },
     ClickedOutsideContextMenu,
     ContextMenu(context_menu::Message),
 }
@@ -67,10 +70,13 @@ impl ModsTab {
                 self.context_menu = Some(ContextMenu::new(position, record));
                 Action::None
             }
-            Message::RowMoved(row_moved) => {
-                dbg!(row_moved);
-                Action::None
-            }
+            Message::ModEntryMoved {
+                record,
+                new_position,
+            } => Action::Mutate(Mutation::MoveModEntry {
+                entry: record.object(),
+                new_position,
+            }),
             Message::ClickedOutsideContextMenu => {
                 self.context_menu = None;
                 Action::None
@@ -107,7 +113,10 @@ impl ModsTab {
                 record: model.mod_entries().get(index).unwrap().clone(),
                 position: cursor_pos,
             })
-            .on_row_moved(|row_moved| Message::RowMoved(row_moved));
+            .on_row_moved(|movement| Message::ModEntryMoved {
+                record: model.mod_entries().get(movement.index).unwrap().clone(),
+                new_position: i32::try_from(movement.new_position).unwrap(),
+            });
 
         if let Some(context_menu) = &self.context_menu {
             let context_menu =

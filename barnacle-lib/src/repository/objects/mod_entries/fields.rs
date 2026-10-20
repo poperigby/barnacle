@@ -47,6 +47,15 @@ impl ModEntry {
         self.model(self.db.conn()).await.unwrap().position
     }
 
+    pub(crate) async fn next_position(db: &Db, profile: &Profile) -> Result<i32, sea_orm::DbErr> {
+        Ok(Entity::find()
+            .filter(COLUMN.profile_id.eq(profile.id))
+            .order_by_desc(COLUMN.position)
+            .one(db.conn())
+            .await?
+            .map_or(0, |e| e.position + 1))
+    }
+
     pub async fn set_position(&self, new_position: i32) {
         let conn = self.db.conn();
 
@@ -62,6 +71,7 @@ impl ModEntry {
             Entity::update_many()
                 .col_expr(COLUMN.position, Expr::col(COLUMN.position).add(1))
                 .filter(COLUMN.position.gte(existing.position))
+                .filter(COLUMN.id.eq(self.id))
                 .exec(conn)
                 .await
                 .unwrap();
@@ -69,6 +79,7 @@ impl ModEntry {
 
         let mut active_model = self.active_model(conn).await.unwrap();
         active_model.position.set_if_not_equals(new_position);
+        active_model.update(conn).await.unwrap();
     }
 
     pub async fn notes(&self) -> Result<String, GetFieldError> {
