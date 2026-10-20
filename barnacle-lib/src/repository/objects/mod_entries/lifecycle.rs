@@ -65,7 +65,7 @@ impl ModEntry {
             .await
             .map_err(RemoveError::ProfileName)?;
 
-        let position = self.position().await;
+        let position = self.position().await.map_err(RemoveError::Position)?;
 
         let conn = self.db.conn();
 

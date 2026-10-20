@@ -11,7 +11,9 @@ pub struct Model {
 
     #[sea_orm(default_value = true)]
     pub enabled: bool,
-    pub position: i32,
+    // Match the public API's u32 range, which excludes negative positions.
+    #[sea_orm(extra = "CHECK (position BETWEEN 0 AND 4294967295)")]
+    pub position: i64,
     #[sea_orm(default_value = "")]
     pub notes: String,
 

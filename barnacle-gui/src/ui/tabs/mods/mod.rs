@@ -27,7 +27,7 @@ pub enum Message {
     },
     ModEntryMoved {
         record: ModEntryRecord,
-        new_position: i32,
+        new_position: u32,
     },
     ClickedOutsideContextMenu,
     ContextMenu(context_menu::Message),
@@ -115,7 +115,7 @@ impl ModsTab {
             })
             .on_row_moved(|movement| Message::ModEntryMoved {
                 record: model.mod_entries().get(movement.index).unwrap().clone(),
-                new_position: i32::try_from(movement.new_position).unwrap(),
+                new_position: movement.new_position.try_into().unwrap(),
             });
 
         if let Some(context_menu) = &self.context_menu {

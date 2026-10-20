@@ -44,6 +44,22 @@ pub enum SetEnabledError {
 }
 
 #[derive(Debug, Error)]
+pub enum SetPositionError {
+    #[error("could not load the entry's parent profile")]
+    Parent(#[source] ParentError),
+    #[error("could not load the entry's old position")]
+    OldPosition(#[source] GetFieldError),
+    #[error("could not find the last position in the list of entries")]
+    LastPosition(#[source] sea_orm::DbErr),
+    #[error("could not load mod entry")]
+    Load(#[source] LoadModelError),
+    #[error("could not update mod entry position")]
+    Update(#[source] sea_orm::DbErr),
+    #[error("could not update positions of other entries")]
+    UpdatePositions(#[source] sea_orm::DbErr),
+}
+
+#[derive(Debug, Error)]
 pub enum ParentError {
     #[error("could not load mod entry")]
     Load(#[source] LoadModelError),
@@ -73,6 +89,8 @@ pub enum RemoveError {
     Profile(#[source] ParentError),
     #[error("could not get parent profile's name")]
     ProfileName(#[source] GetFieldError),
+    #[error("could not get the entry's position")]
+    Position(#[source] GetFieldError),
     #[error("could not delete mod entry")]
     Delete(#[source] sea_orm::DbErr),
     #[error("could not decrement the position of the entries following this one")]

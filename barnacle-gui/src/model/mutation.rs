@@ -8,7 +8,6 @@ use barnacle_lib::{
         item_entries::{ItemEntry, ItemGroup},
     },
 };
-use iced::application::UpdateFn;
 
 #[derive(Debug)]
 pub enum Mutation {
@@ -31,7 +30,7 @@ pub enum Mutation {
 
     // Mod entries
     SetModEntryEnabled { entry: ModEntry, enabled: bool },
-    MoveModEntry { entry: ModEntry, new_position: i32 },
+    MoveModEntry { entry: ModEntry, new_position: u32 },
     DeleteModEntry(ModEntry),
 
     // Items
@@ -116,7 +115,7 @@ impl Mutation {
                 new_position,
             } => {
                 dbg!(&entry, new_position);
-                entry.set_position(new_position).await;
+                entry.set_position(new_position).await.unwrap();
             }
             DeleteModEntry(entry) => {
                 entry.remove().await?;
