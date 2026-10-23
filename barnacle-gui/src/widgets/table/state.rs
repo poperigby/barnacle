@@ -42,6 +42,7 @@ impl State {
         self.row_bounds
             .iter()
             .copied()
+            // Skip the header row
             .skip(1)
             .enumerate()
             .find(|(_, bounds)| bounds.contains(relative_position))

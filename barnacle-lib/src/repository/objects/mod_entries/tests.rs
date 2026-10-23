@@ -15,6 +15,8 @@ async fn test_add() {
     profile.add_mod_entry(mod2).await.unwrap();
 
     assert_eq!(profile.mod_entries().await.unwrap().len(), 2);
+
+    todo!("test positions")
 }
 
 #[tokio::test]
@@ -62,6 +64,8 @@ async fn test_remove() {
             .collect::<Vec<_>>(),
         remaining
     );
+
+    todo!("test positions")
 }
 
 #[tokio::test]

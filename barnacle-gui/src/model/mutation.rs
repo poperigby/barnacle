@@ -114,7 +114,6 @@ impl Mutation {
                 entry,
                 new_position,
             } => {
-                dbg!(&entry, new_position);
                 entry.set_position(new_position).await.unwrap();
             }
             DeleteModEntry(entry) => {

@@ -13,6 +13,8 @@ use crate::widgets::table::state::{DraggingState, Over, State};
 
 mod state;
 
+// TODO: Keep the header in a separate field so we don't have to skip it for all the operations
+
 /// Creates a new [`Table`] with the given columns and rows.
 ///
 /// Columns can be created using the [`column()`] function, while rows can be any
@@ -548,23 +550,36 @@ where
                     }
                 }
                 Event::Mouse(mouse::Event::CursorMoved { position }) => match state.dragging {
-                    DraggingState::Held { row_index: row }
-                    | DraggingState::Dragging { row_index: row, .. } => {
-                        let over = state.row_at(cursor_local_pos).map(|target| {
-                            let midpoint = target.bounds.y + target.bounds.height / 2.0;
-
-                            if cursor_local_pos.y < midpoint {
-                                Over::Top(target.index)
-                            } else {
-                                Over::Bottom(target.index)
+                    DraggingState::Held { row_index }
+                    | DraggingState::Dragging { row_index, .. } => {
+                        let over = state.row_at(cursor_local_pos).and_then(|hovered_row| {
+                            if hovered_row.index == row_index {
+                                return None;
                             }
+
+                            let midpoint = hovered_row.bounds.y + hovered_row.bounds.height / 2.0;
+                            let is_top = cursor_local_pos.y < midpoint;
+
+                            // Ignore drop positions that would leave the dragged row in place.
+                            if (is_top && row_index.checked_add(1) == Some(hovered_row.index))
+                                || (!is_top && hovered_row.index.checked_add(1) == Some(row_index))
+                            {
+                                return None;
+                            }
+
+                            Some(if is_top {
+                                Over::Top(hovered_row.index)
+                            } else {
+                                Over::Bottom(hovered_row.index)
+                            })
                         });
 
                         state.dragging = DraggingState::Dragging {
-                            row_index: row,
+                            row_index,
                             position: *position,
                             over,
                         };
+
                         shell.request_redraw();
                     }
                     DraggingState::Idle => {}
@@ -588,7 +603,7 @@ where
                             Over::Bottom(hovered_index) => {
                                 shell.publish(callback(RowMoved {
                                     index: *row_index,
-                                    new_position: *hovered_index + 1,
+                                    new_position: *hovered_index,
                                 }));
                             }
                         };
