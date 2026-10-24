@@ -10,7 +10,8 @@ use iced::{
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    DeleteButtonPressed,
+    DeleteEntryButtonPressed,
+    DeleteModButtonPressed,
 }
 
 #[derive(Debug)]
@@ -31,8 +32,10 @@ impl ContextMenu {
 
     pub fn view<'a>(&self, t: &Translations) -> Element<'a, Message> {
         let contents = column![
-            button(t.mods_tab_context_menu_delete().element())
-                .on_press(Message::DeleteButtonPressed)
+            button(t.mods_tab_context_menu_delete_entry().element())
+                .on_press(Message::DeleteEntryButtonPressed),
+            button(t.mods_tab_context_menu_delete_mod().element())
+                .on_press(Message::DeleteModButtonPressed)
         ];
 
         container(contents).style(container::rounded_box).into()
@@ -40,8 +43,11 @@ impl ContextMenu {
 
     pub(crate) fn update(&self, message: Message) -> Action {
         match message {
-            Message::DeleteButtonPressed => {
+            Message::DeleteEntryButtonPressed => {
                 Action::Mutate(Mutation::DeleteModEntry(self.record.object().clone()))
+            }
+            Message::DeleteModButtonPressed => {
+                Action::Mutate(Mutation::DeleteMod(self.record.mod_object.clone()))
             }
         }
     }

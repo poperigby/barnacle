@@ -1,7 +1,7 @@
 use super::*;
 
 impl ModEntry {
-    pub(super) async fn mod_(&self) -> Result<Mod, ModError> {
+    pub async fn mod_(&self) -> Result<Mod, ModError> {
         let id = self
             .model(self.db.conn())
             .await

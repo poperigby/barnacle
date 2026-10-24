@@ -11,12 +11,16 @@ async fn test_add() {
     let mod1 = game.new_mod("Super Duper Mod").empty().await;
     let mod2 = game.new_mod("Super Duper Mod: 2").empty().await;
 
-    profile.add_mod_entry(mod1).await.unwrap();
-    profile.add_mod_entry(mod2).await.unwrap();
+    let entry1 = profile.add_mod_entry(mod1).await.unwrap();
+
+    assert_eq!(entry1.position().await.unwrap(), 0);
+
+    let entry2 = profile.add_mod_entry(mod2).await.unwrap();
+
+    assert_eq!(entry1.position().await.unwrap(), 0);
+    assert_eq!(entry2.position().await.unwrap(), 1);
 
     assert_eq!(profile.mod_entries().await.unwrap().len(), 2);
-
-    todo!("test positions")
 }
 
 #[tokio::test]
@@ -38,6 +42,14 @@ async fn test_remove() {
         entry.clone().remove().await.unwrap();
         let entries = profile.mod_entries().await.unwrap();
         assert!(!entries.contains(entry));
+
+        for (position, remaining_entry) in entries.iter().enumerate() {
+            assert_eq!(
+                remaining_entry.position().await.unwrap(),
+                u32::try_from(position).unwrap(),
+                "remaining entries should have contiguous positions after removal",
+            );
+        }
     }
 
     remove_and_check(mod_entries.first().unwrap(), &profile).await; // first
@@ -55,6 +67,7 @@ async fn test_remove() {
             _ => Some(e),
         })
         .collect();
+
     assert_eq!(
         profile
             .mod_entries()
@@ -64,8 +77,6 @@ async fn test_remove() {
             .collect::<Vec<_>>(),
         remaining
     );
-
-    todo!("test positions")
 }
 
 #[tokio::test]

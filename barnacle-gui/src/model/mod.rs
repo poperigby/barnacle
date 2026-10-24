@@ -247,6 +247,7 @@ impl ModRecord {
 #[derive(Debug, Clone)]
 pub struct ModEntryRecord {
     object: ModEntry,
+    pub mod_object: Mod,
     pub name: String,
     pub enabled: bool,
 }
@@ -258,6 +259,7 @@ impl ModEntryRecord {
 
     async fn load(mod_entry: ModEntry) -> anyhow::Result<Self> {
         Ok(Self {
+            mod_object: mod_entry.mod_().await?,
             name: mod_entry.name().await?,
             enabled: mod_entry.enabled().await?,
             object: mod_entry,

@@ -537,11 +537,12 @@ where
                             };
 
                             state.selected_row = row_index;
+
                             shell.request_redraw();
                         }
                         mouse::Button::Right => {
-                            if let Some(row) = row_index
-                                && let Some(callback) = &self.on_right_click_row
+                            if let Some(callback) = &self.on_right_click_row
+                                && let Some(row) = row_index
                             {
                                 shell.publish(callback(row, cursor_local_pos));
                             }
@@ -552,27 +553,9 @@ where
                 Event::Mouse(mouse::Event::CursorMoved { position }) => match state.dragging {
                     DraggingState::Held { row_index }
                     | DraggingState::Dragging { row_index, .. } => {
-                        let over = state.row_at(cursor_local_pos).and_then(|hovered_row| {
-                            if hovered_row.index == row_index {
-                                return None;
-                            }
-
-                            let midpoint = hovered_row.bounds.y + hovered_row.bounds.height / 2.0;
-                            let is_top = cursor_local_pos.y < midpoint;
-
-                            // Ignore drop positions that would leave the dragged row in place.
-                            if (is_top && row_index.checked_add(1) == Some(hovered_row.index))
-                                || (!is_top && hovered_row.index.checked_add(1) == Some(row_index))
-                            {
-                                return None;
-                            }
-
-                            Some(if is_top {
-                                Over::Top(hovered_row.index)
-                            } else {
-                                Over::Bottom(hovered_row.index)
-                            })
-                        });
+                        let over = state
+                            .over_at(cursor_local_pos)
+                            .filter(|over| over.destination(row_index).is_some());
 
                         state.dragging = DraggingState::Dragging {
                             row_index,
@@ -590,23 +573,14 @@ where
                     if let DraggingState::Dragging {
                         row_index, over, ..
                     } = &state.dragging
-                        && let Some(over) = over
                         && let Some(callback) = &self.on_row_moved
+                        && let Some(over) = over
+                        && let Some(new_position) = over.destination(*row_index)
                     {
-                        match over {
-                            Over::Top(hovered_index) => {
-                                shell.publish(callback(RowMoved {
-                                    index: *row_index,
-                                    new_position: *hovered_index,
-                                }));
-                            }
-                            Over::Bottom(hovered_index) => {
-                                shell.publish(callback(RowMoved {
-                                    index: *row_index,
-                                    new_position: *hovered_index,
-                                }));
-                            }
-                        };
+                        shell.publish(callback(RowMoved {
+                            index: *row_index,
+                            new_position,
+                        }));
                     }
 
                     state.dragging = DraggingState::Idle;
