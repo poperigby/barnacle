@@ -531,12 +531,16 @@ where
 
                     match button {
                         mouse::Button::Left => {
-                            state.dragging = match row_index {
-                                Some(row) => DraggingState::Held { row_index: row },
-                                None => DraggingState::Idle,
-                            };
+                            if let Some(row_index) = row_index {
+                                state.dragging = DraggingState::Held { row_index };
 
-                            state.selected_row = row_index;
+                                // TODO: If Ctrl is held don't clear
+                                state.selected_rows.clear();
+                                state.selected_rows.insert(row_index);
+                            } else {
+                                state.dragging = DraggingState::Idle;
+                                state.selected_rows.clear();
+                            }
 
                             shell.request_redraw();
                         }
@@ -617,9 +621,10 @@ where
         let state = tree.state.downcast_ref::<State>();
         let table_style = theme.style(&self.class);
 
-        if let Some(selected_row) = state.selected_row
-            // Exclude the header
-            && let Some(row_bounds) = state.row_bounds.get(selected_row + 1)
+        for row_bounds in state
+            .selected_rows
+            .iter()
+            .filter_map(|i| state.row_bounds.get(*i + 1))
         {
             renderer.fill_quad(
                 Quad {
@@ -736,16 +741,22 @@ where
         viewport: &Rectangle,
         renderer: &Renderer,
     ) -> mouse::Interaction {
-        self.cells
-            .iter()
-            .zip(&tree.children)
-            .zip(layout.children())
-            .map(|((cell, tree), layout)| {
-                cell.as_widget()
-                    .mouse_interaction(tree, layout, cursor, viewport, renderer)
-            })
-            .max()
-            .unwrap_or_default()
+        let state = tree.state.downcast_ref::<State>();
+
+        match state.dragging {
+            DraggingState::Idle | DraggingState::Held { .. } => self
+                .cells
+                .iter()
+                .zip(&tree.children)
+                .zip(layout.children())
+                .map(|((cell, tree), layout)| {
+                    cell.as_widget()
+                        .mouse_interaction(tree, layout, cursor, viewport, renderer)
+                })
+                .max()
+                .unwrap_or_default(),
+            DraggingState::Dragging { .. } => mouse::Interaction::Grabbing,
+        }
     }
 
     fn operate(

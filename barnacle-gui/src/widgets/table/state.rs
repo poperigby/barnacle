@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use iced::{Point, Rectangle};
 
 #[derive(Debug, Clone, Default)]
@@ -6,7 +8,7 @@ pub struct State {
     pub rows: Vec<f32>,
     /// Bounds the cover the entirety of row, for hit testing
     pub row_bounds: Vec<Rectangle>,
-    pub selected_row: Option<usize>,
+    pub selected_rows: BTreeSet<usize>,
     pub dragging: DraggingState,
 }
 
