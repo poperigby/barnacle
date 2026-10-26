@@ -7,7 +7,8 @@ use barnacle_gui::{
     persistence::{config::ConfigStore, state::UiStateStore},
 };
 use barnacle_l10n::Translations;
-use barnacle_lib::Repository;
+use barnacle_lib::{Repository, mods::builder::FileProgress};
+use futures::channel::mpsc;
 use iced::{Element, Task, Theme, application, widget::text, window::Settings};
 use tracing::error;
 
@@ -33,7 +34,8 @@ fn main() -> iced::Result {
 enum Message {
     Initialized(Result<(Repository, Model, Translations), AppError>),
     Ui(ui::Message),
-    Mutated(Result<Model, AppError>),
+    MutationProgress(FileProgress),
+    MutationFinished(Result<Model, AppError>),
     Launched,
 }
 
@@ -122,7 +124,7 @@ impl App {
                     Task::none()
                 }
             },
-            Message::Mutated(result) => match (&mut self.state, result) {
+            Message::MutationFinished(result) => match (&mut self.state, result) {
                 (State::Ready { model, ui, .. }, Ok(new_model)) => {
                     ui.sync(&new_model);
 
@@ -132,12 +134,19 @@ impl App {
                     Task::none()
                 }
                 (State::Ready { .. }, Err(error)) => {
-                    // TODO: Store this in app/ui error state
+                    // TODO: Display the error in a popup
 
                     Task::none()
                 }
                 _ => Task::none(),
             },
+            Message::MutationProgress(progress) => {
+                if let State::Ready { .. } = &mut self.state {
+                    dbg!(progress);
+                }
+
+                Task::none()
+            }
             Message::Ui(message) => match &mut self.state {
                 State::Ready { repo, ui, .. } => match ui.update(message) {
                     ui::Action::None => Task::none(),
@@ -145,10 +154,20 @@ impl App {
                     ui::Action::Mutate(mutation) => {
                         let repo = repo.clone();
 
-                        Task::perform(
+                        let (progress_sender, progress_receiver) = mpsc::unbounded();
+
+                        let progress_task = Task::run(progress_receiver, Message::MutationProgress);
+                        let mutation_task = Task::perform(
                             async move {
-                                mutation.run(&repo).await.map_err(|e| AppError {
-                                    message: e.to_string(),
+                                let report = move |progress| {
+                                    // We don't want to panic if the receiver disappears
+                                    let _ = progress_sender.unbounded_send(progress);
+                                };
+
+                                mutation.run(&repo, Box::new(report)).await.map_err(|e| {
+                                    AppError {
+                                        message: e.to_string(),
+                                    }
                                 })?;
 
                                 match Model::load(&repo).await {
@@ -158,8 +177,10 @@ impl App {
                                     }),
                                 }
                             },
-                            Message::Mutated,
-                        )
+                            Message::MutationFinished,
+                        );
+
+                        Task::batch([progress_task, mutation_task])
                     }
                     ui::Action::Launch => {
                         let repo = repo.clone();

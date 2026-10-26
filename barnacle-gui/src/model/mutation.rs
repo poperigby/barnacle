@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use barnacle_lib::{
     Repository,
     games::Kind,
+    mods::builder::ProgressCallback,
     repository::{
         Game, Mod, ModEntry, Profile,
         item_entries::{ItemEntry, ItemGroup},
@@ -39,7 +40,7 @@ pub enum Mutation {
 }
 
 impl Mutation {
-    pub async fn run(self, repo: &Repository) -> anyhow::Result<()> {
+    pub async fn run(self, repo: &Repository, progress: ProgressCallback) -> anyhow::Result<()> {
         use Mutation::*;
 
         match self {
@@ -81,7 +82,7 @@ impl Mutation {
             }
             AddModFromDir { name, path } => {
                 if let Some(game) = repo.active_game().await? {
-                    let mod_ = game.new_mod(&name).from_dir(&path, None).await;
+                    let mod_ = game.new_mod(&name).from_dir(&path, Some(progress)).await;
 
                     if let Some(profile) = game.active_profile().await? {
                         profile.add_mod_entry(mod_).await?;
@@ -94,7 +95,7 @@ impl Mutation {
                         .new_mod(&name)
                         .from_archive(&path)
                         .with_root(&PathBuf::from("PerksOfMorrowind"))
-                        .intall(None)
+                        .install(Some(progress))
                         .await;
 
                     if let Some(profile) = game.active_profile().await? {

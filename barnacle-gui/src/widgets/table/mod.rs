@@ -743,20 +743,20 @@ where
     ) -> mouse::Interaction {
         let state = tree.state.downcast_ref::<State>();
 
-        match state.dragging {
-            DraggingState::Idle | DraggingState::Held { .. } => self
-                .cells
-                .iter()
-                .zip(&tree.children)
-                .zip(layout.children())
-                .map(|((cell, tree), layout)| {
-                    cell.as_widget()
-                        .mouse_interaction(tree, layout, cursor, viewport, renderer)
-                })
-                .max()
-                .unwrap_or_default(),
-            DraggingState::Dragging { .. } => mouse::Interaction::Grabbing,
+        if let DraggingState::Dragging { .. } = state.dragging {
+            return mouse::Interaction::Grabbing;
         }
+
+        self.cells
+            .iter()
+            .zip(&tree.children)
+            .zip(layout.children())
+            .map(|((cell, tree), layout)| {
+                cell.as_widget()
+                    .mouse_interaction(tree, layout, cursor, viewport, renderer)
+            })
+            .max()
+            .unwrap_or_default()
     }
 
     fn operate(

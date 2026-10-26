@@ -11,6 +11,7 @@ use fs_more::directory::{
 };
 use sea_orm::{ActiveValue::Set, EntityTrait};
 use tempfile::tempdir;
+use tokio::task::spawn_blocking;
 
 use crate::{
     Game, Mod,
@@ -24,34 +25,12 @@ use crate::{
     },
 };
 
-pub type ProgressCallback<'a> = &'a mut (dyn FnMut(FileProgress) + Send);
+pub type ProgressCallback = Box<dyn FnMut(FileProgress) + Send + 'static>;
 
 #[derive(Debug, Clone, Copy)]
 pub struct FileProgress {
     current: u64,
     total: u64,
-}
-
-pub struct ProgressReporter<'a> {
-    callback: Option<&'a mut dyn FnMut(FileProgress)>,
-}
-
-impl<'a> ProgressReporter<'a> {
-    pub fn none() -> Self {
-        Self { callback: None }
-    }
-
-    pub fn new(callback: &'a mut dyn FnMut(FileProgress)) -> Self {
-        Self {
-            callback: Some(callback),
-        }
-    }
-
-    pub fn report(&mut self, progress: FileProgress) {
-        if let Some(callback) = &mut self.callback {
-            callback(progress);
-        }
-    }
 }
 
 #[must_use]
@@ -124,7 +103,7 @@ impl NewMod {
     }
 
     /// Create a new [`Mod`], copying the contents from the given path
-    pub async fn from_dir(&self, path: &Path, progress: Option<ProgressCallback<'_>>) -> Mod {
+    pub async fn from_dir(&self, path: &Path, progress: Option<ProgressCallback>) -> Mod {
         if !path.is_dir() {
             panic!("Not a directory");
         }
@@ -134,33 +113,38 @@ impl NewMod {
 
         let dest = mod_.dir().await.unwrap();
 
-        if let Some(progress) = progress {
-            copy_directory_with_progress(
-                path,
-                dest,
-                DirectoryCopyWithProgressOptions {
-                    symlink_behaviour: SymlinkBehaviour::Follow,
-                    ..Default::default()
-                },
-                |p| {
-                    progress(FileProgress {
-                        current: p.bytes_finished,
-                        total: p.bytes_total,
-                    })
-                },
-            )
-            .unwrap();
-        } else {
-            copy_directory(
-                path,
-                dest,
-                DirectoryCopyOptions {
-                    symlink_behaviour: SymlinkBehaviour::Follow,
-                    ..Default::default()
-                },
-            )
-            .unwrap();
-        };
+        let path = path.to_path_buf();
+        spawn_blocking(move || {
+            if let Some(mut progress) = progress {
+                copy_directory_with_progress(
+                    path,
+                    dest,
+                    DirectoryCopyWithProgressOptions {
+                        symlink_behaviour: SymlinkBehaviour::Follow,
+                        ..Default::default()
+                    },
+                    |p| {
+                        progress(FileProgress {
+                            current: p.bytes_finished,
+                            total: p.bytes_total,
+                        })
+                    },
+                )
+                .unwrap();
+            } else {
+                copy_directory(
+                    path,
+                    dest,
+                    DirectoryCopyOptions {
+                        symlink_behaviour: SymlinkBehaviour::Follow,
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+            };
+        })
+        .await
+        .unwrap();
 
         self.add_items(&mod_).await;
 
@@ -213,38 +197,43 @@ impl ImportArchive {
     }
 
     // TODO: Wrap in transaction
-    pub async fn intall(&self, progress: Option<ProgressCallback<'_>>) -> Mod {
+    pub async fn install(&self, progress: Option<ProgressCallback>) -> Mod {
         let mod_ = self.builder.add().await;
 
         let archive_file = File::open(&self.archive_path).unwrap();
         let dest = mod_.dir().await.unwrap();
 
-        if let Some(root) = &self.root {
-            let staging_dir = tempdir().unwrap();
+        let root = self.root.clone();
+        spawn_blocking(move || {
+            if let Some(root) = root {
+                let staging_dir = tempdir().unwrap();
 
-            uncompress_archive(archive_file, staging_dir.path(), Ownership::Ignore).unwrap();
+                uncompress_archive(archive_file, staging_dir.path(), Ownership::Ignore).unwrap();
 
-            let source_path = staging_dir.path().join(root);
+                let source_path = staging_dir.path().join(root);
 
-            if let Some(progress) = progress {
-                move_directory_with_progress(
-                    source_path,
-                    dest,
-                    DirectoryMoveWithProgressOptions::default(),
-                    |p| {
-                        progress(FileProgress {
-                            current: p.bytes_finished,
-                            total: p.bytes_total,
-                        })
-                    },
-                )
-                .unwrap();
+                if let Some(mut progress) = progress {
+                    move_directory_with_progress(
+                        source_path,
+                        dest,
+                        DirectoryMoveWithProgressOptions::default(),
+                        |p| {
+                            progress(FileProgress {
+                                current: p.bytes_finished,
+                                total: p.bytes_total,
+                            })
+                        },
+                    )
+                    .unwrap();
+                } else {
+                    move_directory(source_path, dest, DirectoryMoveOptions::default()).unwrap();
+                };
             } else {
-                move_directory(source_path, dest, DirectoryMoveOptions::default()).unwrap();
-            };
-        } else {
-            uncompress_archive(archive_file, &dest, Ownership::Ignore).unwrap();
-        }
+                uncompress_archive(archive_file, &dest, Ownership::Ignore).unwrap();
+            }
+        })
+        .await
+        .unwrap();
 
         self.builder.add_items(&mod_).await;
 
@@ -318,7 +307,7 @@ mod test {
 
         import.with_root(Path::new("FooMod"));
 
-        let mod_ = import.intall(None).await;
+        let mod_ = import.install(None).await;
         let dir = mod_.dir().await.unwrap();
 
         assert!(dir.join("meshes").join("marker.nif").is_file());
