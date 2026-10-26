@@ -24,7 +24,6 @@ pub struct NewGame {
     pub deploy_kind: Kind,
 }
 
-#[derive(Debug)]
 pub enum Action {
     None,
     Run(Task<Message>),
@@ -74,7 +73,7 @@ impl Menu {
 
                 self.clear();
 
-                Action::Mutate(Mutation::CreateGame { name, deploy_kind })
+                Action::Mutate(Mutation::create_game(name, deploy_kind))
             }
         }
     }

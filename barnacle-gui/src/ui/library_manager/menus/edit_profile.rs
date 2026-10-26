@@ -60,10 +60,7 @@ impl Menu {
 
                     self.clear();
 
-                    Action::Mutate(Mutation::EditProfile {
-                        profile,
-                        new_name: name,
-                    })
+                    Action::Mutate(Mutation::edit_profile(profile, name))
                 }
                 None => Action::None,
             },

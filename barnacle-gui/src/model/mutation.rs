@@ -9,125 +9,190 @@ use barnacle_lib::{
         item_entries::{ItemEntry, ItemGroup},
     },
 };
+use futures::future::BoxFuture;
+use iced::Task;
 
-#[derive(Debug)]
-pub enum Mutation {
-    // Games
-    CreateGame { name: String, deploy_kind: Kind },
-    DeleteGame(Game),
-    ActivateGame(Game),
+type Work = Box<dyn FnOnce(Repository) -> BoxFuture<'static, anyhow::Result<()>>>;
 
-    // Profiles
-    CreateProfile { game: Game, name: String },
-    DeleteProfile(Profile),
-    ActivateProfile(Profile),
-    EditProfile { profile: Profile, new_name: String },
-
-    // Mods
-    AddEmptyMod { name: String },
-    AddModFromDir { name: String, path: PathBuf },
-    AddModFromArchive { name: String, path: PathBuf },
-    DeleteMod(Mod),
-
-    // Mod entries
-    SetModEntryEnabled { entry: ModEntry, enabled: bool },
-    MoveModEntry { entry: ModEntry, new_position: u32 },
-    DeleteModEntry(ModEntry),
-
-    // Items
-    SetItemEntryEnabled { entry: ItemEntry, enabled: bool },
-    AutoSortItemGroup { group: ItemGroup },
+#[must_use]
+pub struct Mutation {
+    work: Work,
 }
 
 impl Mutation {
-    pub async fn run(self, repo: &Repository, progress: ProgressCallback) -> anyhow::Result<()> {
-        use Mutation::*;
+    fn new<F, Fut>(f: F) -> Self
+    where
+        F: FnOnce(Repository) -> Fut + 'static,
+        Fut: Future<Output = anyhow::Result<()>> + 'static + Send,
+    {
+        let work: Work = Box::new(|repo: Repository| Box::pin(f(repo)));
 
-        match self {
-            // Games
-            CreateGame { name, deploy_kind } => {
-                let game = repo.add_game(&name, deploy_kind).await?;
-                game.add_profile("Default").await?;
-            }
-            DeleteGame(game) => {
-                game.remove().await?;
-            }
-            ActivateGame(game) => {
-                game.activate().await?;
-            }
+        Self { work }
+    }
 
-            // Profiles
-            CreateProfile { game, name } => {
-                game.add_profile(&name).await?;
-            }
-            DeleteProfile(profile) => {
-                profile.remove().await?;
-            }
-            ActivateProfile(profile) => {
-                profile.activate().await?;
-            }
-            EditProfile { profile, new_name } => {
-                profile.set_name(&new_name).await?;
-            }
+    pub fn run<F, Message>(self, repo: &Repository, on_completion: F) -> Task<Message>
+    where
+        F: FnOnce(anyhow::Result<()>) -> Message + Send + 'static,
+        Message: Send + 'static,
+    {
+        Task::perform((self.work)(repo.clone()), on_completion)
+    }
 
-            // Mods
-            AddEmptyMod { name } => {
-                if let Some(game) = repo.active_game().await? {
-                    let mod_ = game.new_mod(&name).empty().await;
+    // Games
 
-                    if let Some(profile) = game.active_profile().await? {
-                        profile.add_mod_entry(mod_).await?;
-                    }
+    pub fn create_game(name: String, kind: Kind) -> Self {
+        Self::new(async move |repo: Repository| {
+            let game = repo.add_game(&name, kind).await?;
+            game.add_profile("Default").await?;
+
+            Ok(())
+        })
+    }
+
+    pub fn delete_game(game: Game) -> Self {
+        Self::new(move |_repo: Repository| async move {
+            game.remove().await?;
+            Ok(())
+        })
+    }
+
+    pub fn activate_game(game: Game) -> Self {
+        Self::new(move |_repo: Repository| async move {
+            game.activate().await?;
+            Ok(())
+        })
+    }
+
+    // Profiles
+
+    pub fn create_profile(game: Game, name: String) -> Self {
+        Self::new(move |_repo: Repository| async move {
+            game.add_profile(&name).await?;
+            Ok(())
+        })
+    }
+
+    pub fn delete_profile(profile: Profile) -> Self {
+        Self::new(move |_repo: Repository| async move {
+            profile.remove().await?;
+            Ok(())
+        })
+    }
+
+    pub fn activate_profile(profile: Profile) -> Self {
+        Self::new(move |_repo: Repository| async move {
+            profile.activate().await?;
+            Ok(())
+        })
+    }
+
+    pub fn edit_profile(profile: Profile, new_name: String) -> Self {
+        Self::new(move |_repo: Repository| async move {
+            profile.set_name(&new_name).await?;
+            Ok(())
+        })
+    }
+
+    // Mods
+
+    pub fn add_empty_mod(name: String) -> Self {
+        Self::new(move |repo: Repository| async move {
+            if let Some(game) = repo.active_game().await? {
+                let mod_ = game.new_mod(&name).empty().await;
+
+                if let Some(profile) = game.active_profile().await? {
+                    profile.add_mod_entry(mod_).await?;
                 }
             }
-            AddModFromDir { name, path } => {
-                if let Some(game) = repo.active_game().await? {
-                    let mod_ = game.new_mod(&name).from_dir(&path, Some(progress)).await;
 
-                    if let Some(profile) = game.active_profile().await? {
-                        profile.add_mod_entry(mod_).await?;
-                    }
+            Ok(())
+        })
+    }
+
+    pub fn add_mod_from_dir(
+        name: String,
+        path: PathBuf,
+        progress: Option<ProgressCallback>,
+    ) -> Self {
+        Self::new(move |repo: Repository| async move {
+            if let Some(game) = repo.active_game().await? {
+                let mod_ = game.new_mod(&name).from_dir(&path, progress).await;
+
+                if let Some(profile) = game.active_profile().await? {
+                    profile.add_mod_entry(mod_).await?;
                 }
             }
-            AddModFromArchive { name, path } => {
-                if let Some(game) = repo.active_game().await? {
-                    let mod_ = game
-                        .new_mod(&name)
-                        .from_archive(&path)
-                        .with_root(&PathBuf::from("PerksOfMorrowind"))
-                        .install(Some(progress))
-                        .await;
 
-                    if let Some(profile) = game.active_profile().await? {
-                        profile.add_mod_entry(mod_).await?;
-                    }
+            Ok(())
+        })
+    }
+
+    pub fn add_mod_from_archive(
+        name: String,
+        path: PathBuf,
+        progress: Option<ProgressCallback>,
+    ) -> Self {
+        Self::new(move |repo: Repository| async move {
+            if let Some(game) = repo.active_game().await? {
+                let mod_ = game
+                    .new_mod(&name)
+                    .from_archive(&path)
+                    .with_root(&PathBuf::from("PerksOfMorrowind"))
+                    .install(progress)
+                    .await;
+
+                if let Some(profile) = game.active_profile().await? {
+                    profile.add_mod_entry(mod_).await?;
                 }
             }
-            DeleteMod(mod_) => {
-                mod_.remove().await?;
-            }
 
-            // Mod entries
-            SetModEntryEnabled { entry, enabled } => {
-                entry.set_enabled(enabled).await?;
-            }
-            MoveModEntry {
-                entry,
-                new_position,
-            } => {
-                entry.set_position(new_position).await.unwrap();
-            }
-            DeleteModEntry(entry) => {
-                entry.remove().await?;
-            }
+            Ok(())
+        })
+    }
 
-            // Items
-            SetItemEntryEnabled { entry, enabled } => {
-                entry.set_enabled(enabled).await;
-            }
-            AutoSortItemGroup { group } => group.auto_sort().await?,
-        }
+    pub fn delete_mod(mod_: Mod) -> Self {
+        Self::new(move |_repo: Repository| async move {
+            mod_.remove().await?;
+            Ok(())
+        })
+    }
 
-        Ok(())
+    // Mod entries
+
+    pub fn set_mod_entry_enabled(entry: ModEntry, enabled: bool) -> Self {
+        Self::new(move |_repo: Repository| async move {
+            entry.set_enabled(enabled).await?;
+            Ok(())
+        })
+    }
+
+    pub fn move_mod_entry(entry: ModEntry, new_position: u32) -> Self {
+        Self::new(move |_repo: Repository| async move {
+            entry.set_position(new_position).await.unwrap();
+            Ok(())
+        })
+    }
+
+    pub fn delete_mod_entry(entry: ModEntry) -> Self {
+        Self::new(move |_repo: Repository| async move {
+            entry.remove().await?;
+            Ok(())
+        })
+    }
+
+    // Items
+
+    pub fn set_item_entry_enabled(entry: ItemEntry, enabled: bool) -> Self {
+        Self::new(move |_repo: Repository| async move {
+            entry.set_enabled(enabled).await;
+            Ok(())
+        })
+    }
+
+    pub fn auto_sort_item_group(group: ItemGroup) -> Self {
+        Self::new(move |_repo: Repository| async move {
+            group.auto_sort().await?;
+            Ok(())
+        })
     }
 }

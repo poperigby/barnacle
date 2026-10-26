@@ -14,7 +14,6 @@ pub enum Message {
     DeleteModButtonPressed,
 }
 
-#[derive(Debug)]
 pub enum Action {
     Mutate(Mutation),
 }
@@ -44,10 +43,10 @@ impl ContextMenu {
     pub(crate) fn update(&self, message: Message) -> Action {
         match message {
             Message::DeleteEntryButtonPressed => {
-                Action::Mutate(Mutation::DeleteModEntry(self.record.object().clone()))
+                Action::Mutate(Mutation::delete_mod_entry(self.record.object().clone()))
             }
             Message::DeleteModButtonPressed => {
-                Action::Mutate(Mutation::DeleteMod(self.record.mod_object.clone()))
+                Action::Mutate(Mutation::delete_mod(self.record.mod_object.clone()))
             }
         }
     }

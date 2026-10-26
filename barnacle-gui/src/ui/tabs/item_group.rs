@@ -16,7 +16,6 @@ pub enum Message {
     AutoSortButtonPressed { group: ItemGroup },
 }
 
-#[derive(Debug)]
 pub enum Action {
     None,
     Run(Task<Message>),
@@ -30,10 +29,10 @@ impl ItemGroupTab {
     pub fn update(message: Message) -> Action {
         match message {
             Message::ToggleItemEntry { entry, enabled } => {
-                Action::Mutate(Mutation::SetItemEntryEnabled { entry, enabled })
+                Action::Mutate(Mutation::set_item_entry_enabled(entry, enabled))
             }
             Message::AutoSortButtonPressed { group } => {
-                Action::Mutate(Mutation::AutoSortItemGroup { group })
+                Action::Mutate(Mutation::auto_sort_item_group(group))
             }
         }
     }

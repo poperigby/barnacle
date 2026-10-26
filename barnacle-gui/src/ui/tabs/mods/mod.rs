@@ -33,7 +33,6 @@ pub enum Message {
     ContextMenu(context_menu::Message),
 }
 
-#[derive(Debug)]
 pub enum Action {
     None,
     Run(Task<Message>),
@@ -57,15 +56,15 @@ impl ModsTab {
     pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::ModEntryDeleted(entry) => {
-                Action::Mutate(Mutation::DeleteModEntry(entry.object()))
+                Action::Mutate(Mutation::delete_mod_entry(entry.object()))
             }
             Message::ModEntryToggled {
                 record: entry_record,
                 enabled,
-            } => Action::Mutate(Mutation::SetModEntryEnabled {
-                entry: entry_record.object(),
+            } => Action::Mutate(Mutation::set_mod_entry_enabled(
+                entry_record.object(),
                 enabled,
-            }),
+            )),
             Message::ShowContextMenu { record, position } => {
                 self.context_menu = Some(ContextMenu::new(position, record));
                 Action::None
@@ -73,10 +72,7 @@ impl ModsTab {
             Message::ModEntryMoved {
                 record,
                 new_position,
-            } => Action::Mutate(Mutation::MoveModEntry {
-                entry: record.object(),
-                new_position,
-            }),
+            } => Action::Mutate(Mutation::move_mod_entry(record.object(), new_position)),
             Message::ClickedOutsideContextMenu => {
                 self.context_menu = None;
                 Action::None

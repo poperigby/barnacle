@@ -19,12 +19,22 @@ pub enum Message {
     AddButtonPressed,
 }
 
-#[derive(Debug)]
 pub enum Action {
     None,
     Run(Task<Message>),
     Mutate(Mutation),
-    Cancel,
+    Close,
+}
+
+#[derive(Debug, Clone, Default)]
+pub enum Page {
+    #[default]
+    ChooseSource,
+    Preparing,
+    // Transferring {
+    //     progress: FileProgress,
+    // },
+    Configure,
 }
 
 #[derive(Debug, Clone)]
@@ -35,6 +45,7 @@ pub enum PickPathKind {
 
 #[derive(Debug, Clone)]
 pub struct AddModDialog {
+    page: Page,
     name: String,
     path: Option<PathBuf>,
 }
@@ -42,6 +53,7 @@ pub struct AddModDialog {
 impl AddModDialog {
     pub fn new() -> Self {
         Self {
+            page: Page::default(),
             name: "".into(),
             path: None,
         }
@@ -87,7 +99,7 @@ impl AddModDialog {
             Message::CancelButtonPressed => {
                 self.clear();
 
-                Action::Cancel
+                Action::Close
             }
             Message::AddButtonPressed => {
                 let name = self.name.clone();
@@ -95,59 +107,72 @@ impl AddModDialog {
 
                 match path {
                     Some(path) if path.is_dir() => {
-                        Action::Mutate(Mutation::AddModFromDir { name, path })
+                        self.page = Page::Preparing;
+
+                        Action::Mutate(Mutation::add_mod_from_dir(name, path, None))
                     }
-                    Some(path) => Action::Mutate(Mutation::AddModFromArchive { name, path }),
-                    None => Action::Mutate(Mutation::AddEmptyMod { name }),
+                    Some(path) => {
+                        self.page = Page::Preparing;
+
+                        Action::Mutate(Mutation::add_mod_from_archive(name, path, None))
+                    }
+                    None => {
+                        self.page = Page::Preparing;
+
+                        Action::Mutate(Mutation::add_empty_mod(name))
+                    }
                 }
             }
         }
     }
 
-    pub fn view(
-        &self,
-        file_progress: &Option<FileProgress>,
-        translations: &Translations,
-    ) -> Element<'_, Message> {
-        let path_str = &self
-            .path
-            .as_ref()
-            .map_or_else(String::new, |path| path.display().to_string());
+    pub fn view(&self, translations: &Translations) -> Element<'_, Message> {
+        let content: Element<'_, Message> = match self.page {
+            Page::ChooseSource => {
+                let path_str = &self
+                    .path
+                    .as_ref()
+                    .map_or_else(String::new, |path| path.display().to_string());
 
-        let progress_bar: Element<'_, Message> = if let Some(progress) = file_progress {
-            let range = 0.0..=(progress.total() as f32);
-            let current = progress.current() as f32;
-
-            progress_bar(range, current).into()
-        } else {
-            space().into()
+                column![
+                    row![
+                        translations.name().element(),
+                        text_input("...", &self.name).on_input(Message::NameChanged)
+                    ],
+                    row![
+                        translations.path().element(),
+                        text_input("...", path_str).on_input(Message::PathChanged),
+                        button(Icon::Archive).on_press(Message::PickPath(PickPathKind::Archive)),
+                        button(Icon::Directory)
+                            .on_press(Message::PickPath(PickPathKind::Directory))
+                    ],
+                    space::vertical(),
+                    row![
+                        space::horizontal(),
+                        button(translations.cancel().element())
+                            .on_press(Message::CancelButtonPressed),
+                        button(translations.add().element())
+                            .on_press_maybe(self.validate().then_some(Message::AddButtonPressed))
+                    ]
+                ]
+                .into()
+            }
+            Page::Preparing => "Preparing".into(),
+            // Page::Transferring => {
+            //     let range = 0.0..=(progress.total() as f32);
+            //     let current = progress.current() as f32;
+            //
+            //     progress_bar(range, current).into()
+            // }
+            Page::Configure => "Editing".into(),
         };
 
-        container(column![
-            row![
-                translations.name().element(),
-                text_input("...", &self.name).on_input(Message::NameChanged)
-            ],
-            row![
-                translations.path().element(),
-                text_input("...", path_str).on_input(Message::PathChanged),
-                button(Icon::Archive).on_press(Message::PickPath(PickPathKind::Archive)),
-                button(Icon::Directory).on_press(Message::PickPath(PickPathKind::Directory))
-            ],
-            space::vertical(),
-            progress_bar,
-            row![
-                space::horizontal(),
-                button(translations.cancel().element()).on_press(Message::CancelButtonPressed),
-                button(translations.add().element())
-                    .on_press_maybe(self.validate().then_some(Message::AddButtonPressed))
-            ]
-        ])
-        .padding(20)
-        .width(400)
-        .height(600)
-        .style(container::rounded_box)
-        .into()
+        container(content)
+            .padding(20)
+            .width(400)
+            .height(400)
+            .style(container::rounded_box)
+            .into()
     }
 
     fn validate(&self) -> bool {

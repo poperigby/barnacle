@@ -6,7 +6,7 @@ use barnacle_gui::{
     widgets::modal,
 };
 use barnacle_l10n::Translations;
-use barnacle_lib::{mods::builder::FileProgress, repository::items};
+use barnacle_lib::repository::items;
 use iced::{
     Element, Length, Task,
     widget::{Button, button, column, combo_box, row, rule, space, text},
@@ -38,7 +38,6 @@ pub enum Message {
     LibraryManager(library_manager::Message),
 }
 
-#[derive(Debug)]
 pub enum Action {
     None,
     Run(Task<Message>),
@@ -118,7 +117,7 @@ impl Ui {
                 Action::None
             }
             Message::ProfileSelected(record) => {
-                Action::Mutate(Mutation::ActivateProfile(record.object()))
+                Action::Mutate(Mutation::activate_profile(record.object()))
             }
 
             // Children
@@ -128,7 +127,7 @@ impl Ui {
                     Action::Run(task.map(Message::AddModDialog))
                 }
                 tabs::mods::add_mod_menu::Action::Mutate(mutation) => Action::Mutate(mutation),
-                tabs::mods::add_mod_menu::Action::Cancel => {
+                tabs::mods::add_mod_menu::Action::Close => {
                     self.show_add_mod_dialog = false;
 
                     Action::None
@@ -159,12 +158,7 @@ impl Ui {
         }
     }
 
-    pub fn view<'a>(
-        &'a self,
-        model: &'a Model,
-        file_progress: &Option<FileProgress>,
-        t: &'a Translations,
-    ) -> Element<'a, Message> {
+    pub fn view<'a>(&'a self, model: &'a Model, t: &'a Translations) -> Element<'a, Message> {
         let profile_selector: Element<'a, Message> = match &self.profile_selector_state {
             Some(state) => row![
                 t.main_top_bar_add_mod().element(),
@@ -242,9 +236,7 @@ impl Ui {
         } else if self.show_add_mod_dialog {
             modal(
                 content,
-                self.add_mod_dialog
-                    .view(file_progress, t)
-                    .map(Message::AddModDialog),
+                self.add_mod_dialog.view(t).map(Message::AddModDialog),
                 None,
             )
         } else {

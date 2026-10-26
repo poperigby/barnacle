@@ -42,10 +42,10 @@ impl GameDetails {
     pub fn update(&mut self, message: Message) -> Action {
         match message {
             Message::ActivateGameButtonPressed(game) => {
-                Action::Mutate(Mutation::ActivateGame(game))
+                Action::Mutate(Mutation::activate_game(game))
             }
             Message::DeleteProfileButtonPressed(profile) => {
-                Action::Mutate(Mutation::DeleteProfile(profile))
+                Action::Mutate(Mutation::delete_profile(profile))
             }
             Message::NewProfileButtonPressed => Action::NewProfile,
             Message::EditProfileButtonPressed {

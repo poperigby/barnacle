@@ -7,8 +7,7 @@ use barnacle_gui::{
     persistence::{config::ConfigStore, state::UiStateStore},
 };
 use barnacle_l10n::Translations;
-use barnacle_lib::{Repository, mods::builder::FileProgress};
-use futures::channel::mpsc;
+use barnacle_lib::Repository;
 use iced::{Element, Task, Theme, application, widget::text, window::Settings};
 use tracing::error;
 
@@ -33,10 +32,10 @@ fn main() -> iced::Result {
 #[derive(Debug, Clone)]
 enum Message {
     Initialized(Result<(Repository, Model, Translations), AppError>),
-    Ui(ui::Message),
-    MutationProgress(FileProgress),
-    MutationFinished(Result<Model, AppError>),
+    Reloaded(Result<Model, AppError>),
+    Mutated(Result<(), String>),
     Launched,
+    Ui(ui::Message),
 }
 
 #[derive(Debug, Clone)]
@@ -51,7 +50,6 @@ enum State {
     Ready {
         repo: Repository,
         model: Model,
-        file_progress: Option<FileProgress>,
         translations: Translations,
         ui: Ui,
     },
@@ -113,7 +111,6 @@ impl App {
                     self.state = State::Ready {
                         repo,
                         model,
-                        file_progress: None,
                         translations,
                         ui,
                     };
@@ -126,35 +123,48 @@ impl App {
                     Task::none()
                 }
             },
-            Message::MutationFinished(result) => match (&mut self.state, result) {
-                (
-                    State::Ready {
-                        model,
-                        file_progress,
-                        ui,
-                        ..
-                    },
-                    Ok(new_model),
-                ) => {
+            Message::Reloaded(result) => match (&mut self.state, result) {
+                (State::Ready { model, ui, .. }, Ok(new_model)) => {
                     ui.sync(&new_model);
 
-                    // Reload the model with the fresh data
                     *model = new_model;
-                    *file_progress = None;
 
                     Task::none()
                 }
-                (State::Ready { .. }, Err(error)) => {
-                    // TODO: Display the error in a popup
-
-                    Task::none()
-                }
-                _ => Task::none(),
+                (State::Loading, Ok(_)) => todo!(),
+                (State::Loading, Err(_)) => todo!(),
+                (State::Error(app_error), Ok(_)) => todo!(),
+                (State::Error(app_error), Err(_)) => todo!(),
+                (
+                    State::Ready {
+                        repo,
+                        model,
+                        translations,
+                        ui,
+                    },
+                    Err(_),
+                ) => todo!(),
             },
-            Message::MutationProgress(progress) => {
-                if let State::Ready { file_progress, .. } = &mut self.state {
-                    *file_progress = Some(progress);
+            Message::Mutated(result) => match result {
+                Ok(()) => {
+                    let State::Ready { repo, .. } = &self.state else {
+                        return Task::none();
+                    };
+
+                    let repo = repo.clone();
+                    Task::perform(
+                        async move {
+                            Model::load(&repo).await.map_err(|e| AppError {
+                                message: e.to_string(),
+                            })
+                        },
+                        Message::Reloaded,
+                    )
                 }
+                Err(e) => todo!("Store somewhere"),
+            },
+            Message::Launched => {
+                println!("Launched!");
 
                 Task::none()
             }
@@ -162,37 +172,9 @@ impl App {
                 State::Ready { repo, ui, .. } => match ui.update(message) {
                     ui::Action::None => Task::none(),
                     ui::Action::Run(task) => task.map(Message::Ui),
-                    ui::Action::Mutate(mutation) => {
-                        let repo = repo.clone();
-
-                        let (progress_sender, progress_receiver) = mpsc::unbounded();
-
-                        let progress_task = Task::run(progress_receiver, Message::MutationProgress);
-                        let mutation_task = Task::perform(
-                            async move {
-                                let report = move |progress| {
-                                    // We don't want to panic if the receiver disappears
-                                    let _ = progress_sender.unbounded_send(progress);
-                                };
-
-                                mutation.run(&repo, Box::new(report)).await.map_err(|e| {
-                                    AppError {
-                                        message: e.to_string(),
-                                    }
-                                })?;
-
-                                match Model::load(&repo).await {
-                                    Ok(model) => Ok(model),
-                                    Err(error) => Err(AppError {
-                                        message: error.to_string(),
-                                    }),
-                                }
-                            },
-                            Message::MutationFinished,
-                        );
-
-                        Task::batch([progress_task, mutation_task])
-                    }
+                    ui::Action::Mutate(mutation) => mutation.run(repo, |result| {
+                        Message::Mutated(result.map_err(|e| e.to_string()))
+                    }),
                     ui::Action::Launch => {
                         let repo = repo.clone();
 
@@ -208,11 +190,6 @@ impl App {
                 },
                 _ => Task::none(),
             },
-            Message::Launched => {
-                println!("Launched!");
-
-                Task::none()
-            }
         }
     }
 
@@ -222,11 +199,10 @@ impl App {
             State::Error(_) => panic!("ERROR"),
             State::Ready {
                 model,
-                file_progress,
                 translations,
                 ui,
                 ..
-            } => ui.view(model, file_progress, translations).map(Message::Ui),
+            } => ui.view(model, translations).map(Message::Ui),
         }
     }
 

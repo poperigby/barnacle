@@ -29,7 +29,6 @@ pub enum Message {
     EditProfileMenu(edit_profile::Message),
 }
 
-#[derive(Debug)]
 pub enum Action {
     None,
     Run(Task<Message>),
@@ -97,7 +96,7 @@ impl LibraryManager {
 
                 Action::None
             }
-            Message::ActivateButtonPressed(game) => Action::Mutate(Mutation::ActivateGame(game)),
+            Message::ActivateButtonPressed(game) => Action::Mutate(Mutation::activate_game(game)),
             Message::GameRowSelected(game) => {
                 self.selected_game = Some(game.clone());
 
@@ -125,14 +124,7 @@ impl LibraryManager {
             Message::NewGameMenu(message) => match self.new_game_menu.update(message) {
                 new_game::Action::None => Action::None,
                 new_game::Action::Run(task) => Action::Run(task.map(Message::NewGameMenu)),
-                new_game::Action::Mutate(mutation) => match mutation {
-                    Mutation::CreateGame { .. } => {
-                        self.menu_visiblity = MenuVisibility::None;
-
-                        Action::Mutate(mutation)
-                    }
-                    _ => Action::Mutate(mutation),
-                },
+                new_game::Action::Mutate(mutation) => Action::Mutate(mutation),
                 new_game::Action::Cancel => {
                     self.menu_visiblity = MenuVisibility::None;
                     Action::None
@@ -145,10 +137,7 @@ impl LibraryManager {
                     self.menu_visiblity = MenuVisibility::None;
 
                     if let Some(game) = &self.selected_game {
-                        Action::Mutate(Mutation::CreateProfile {
-                            game: game.object(),
-                            name,
-                        })
+                        Action::Mutate(Mutation::create_profile(game.object(), name))
                     } else {
                         Action::None
                     }
