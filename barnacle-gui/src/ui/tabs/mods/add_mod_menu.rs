@@ -1,10 +1,11 @@
 use std::{env, path::PathBuf};
 
-use barnacle_gui::{TranslationElementExt, icons::Icon};
+use barnacle_gui::{TranslationElementExt, icons::Icon, model::Mutation};
 use barnacle_l10n::Translations;
+use barnacle_lib::mods::builder::FileProgress;
 use iced::{
     Element, Task,
-    widget::{button, column, container, row, space, text_input},
+    widget::{button, column, container, progress_bar, row, space, text_input},
 };
 use rfd::AsyncFileDialog;
 
@@ -22,7 +23,7 @@ pub enum Message {
 pub enum Action {
     None,
     Run(Task<Message>),
-    Submit { name: String, path: Option<PathBuf> },
+    Mutate(Mutation),
     Cancel,
 }
 
@@ -92,18 +93,35 @@ impl AddModDialog {
                 let name = self.name.clone();
                 let path = self.path.clone();
 
-                self.clear();
-
-                Action::Submit { name, path }
+                match path {
+                    Some(path) if path.is_dir() => {
+                        Action::Mutate(Mutation::AddModFromDir { name, path })
+                    }
+                    Some(path) => Action::Mutate(Mutation::AddModFromArchive { name, path }),
+                    None => Action::Mutate(Mutation::AddEmptyMod { name }),
+                }
             }
         }
     }
 
-    pub fn view(&self, translations: &Translations) -> Element<'_, Message> {
+    pub fn view(
+        &self,
+        file_progress: &Option<FileProgress>,
+        translations: &Translations,
+    ) -> Element<'_, Message> {
         let path_str = &self
             .path
             .as_ref()
             .map_or_else(String::new, |path| path.display().to_string());
+
+        let progress_bar: Element<'_, Message> = if let Some(progress) = file_progress {
+            let range = 0.0..=(progress.total() as f32);
+            let current = progress.current() as f32;
+
+            progress_bar(range, current).into()
+        } else {
+            space().into()
+        };
 
         container(column![
             row![
@@ -117,6 +135,7 @@ impl AddModDialog {
                 button(Icon::Directory).on_press(Message::PickPath(PickPathKind::Directory))
             ],
             space::vertical(),
+            progress_bar,
             row![
                 space::horizontal(),
                 button(translations.cancel().element()).on_press(Message::CancelButtonPressed),

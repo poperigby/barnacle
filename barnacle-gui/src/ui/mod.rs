@@ -6,7 +6,7 @@ use barnacle_gui::{
     widgets::modal,
 };
 use barnacle_l10n::Translations;
-use barnacle_lib::repository::items;
+use barnacle_lib::{mods::builder::FileProgress, repository::items};
 use iced::{
     Element, Length, Task,
     widget::{Button, button, column, combo_box, row, rule, space, text},
@@ -127,17 +127,7 @@ impl Ui {
                 tabs::mods::add_mod_menu::Action::Run(task) => {
                     Action::Run(task.map(Message::AddModDialog))
                 }
-                tabs::mods::add_mod_menu::Action::Submit { name, path } => {
-                    self.show_add_mod_dialog = false;
-
-                    match path {
-                        Some(path) if path.is_dir() => {
-                            Action::Mutate(Mutation::AddModFromDir { name, path })
-                        }
-                        Some(path) => Action::Mutate(Mutation::AddModFromArchive { name, path }),
-                        None => Action::Mutate(Mutation::AddEmptyMod { name }),
-                    }
-                }
+                tabs::mods::add_mod_menu::Action::Mutate(mutation) => Action::Mutate(mutation),
                 tabs::mods::add_mod_menu::Action::Cancel => {
                     self.show_add_mod_dialog = false;
 
@@ -169,7 +159,12 @@ impl Ui {
         }
     }
 
-    pub fn view<'a>(&'a self, model: &'a Model, t: &'a Translations) -> Element<'a, Message> {
+    pub fn view<'a>(
+        &'a self,
+        model: &'a Model,
+        file_progress: &Option<FileProgress>,
+        t: &'a Translations,
+    ) -> Element<'a, Message> {
         let profile_selector: Element<'a, Message> = match &self.profile_selector_state {
             Some(state) => row![
                 t.main_top_bar_add_mod().element(),
@@ -247,7 +242,9 @@ impl Ui {
         } else if self.show_add_mod_dialog {
             modal(
                 content,
-                self.add_mod_dialog.view(t).map(Message::AddModDialog),
+                self.add_mod_dialog
+                    .view(file_progress, t)
+                    .map(Message::AddModDialog),
                 None,
             )
         } else {

@@ -33,6 +33,16 @@ pub struct FileProgress {
     total: u64,
 }
 
+impl FileProgress {
+    pub fn current(&self) -> u64 {
+        self.current
+    }
+
+    pub fn total(&self) -> u64 {
+        self.total
+    }
+}
+
 #[must_use]
 #[derive(Debug, Clone)]
 pub struct NewMod {

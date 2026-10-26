@@ -51,6 +51,7 @@ enum State {
     Ready {
         repo: Repository,
         model: Model,
+        file_progress: Option<FileProgress>,
         translations: Translations,
         ui: Ui,
     },
@@ -112,6 +113,7 @@ impl App {
                     self.state = State::Ready {
                         repo,
                         model,
+                        file_progress: None,
                         translations,
                         ui,
                     };
@@ -125,11 +127,20 @@ impl App {
                 }
             },
             Message::MutationFinished(result) => match (&mut self.state, result) {
-                (State::Ready { model, ui, .. }, Ok(new_model)) => {
+                (
+                    State::Ready {
+                        model,
+                        file_progress,
+                        ui,
+                        ..
+                    },
+                    Ok(new_model),
+                ) => {
                     ui.sync(&new_model);
 
                     // Reload the model with the fresh data
                     *model = new_model;
+                    *file_progress = None;
 
                     Task::none()
                 }
@@ -141,8 +152,8 @@ impl App {
                 _ => Task::none(),
             },
             Message::MutationProgress(progress) => {
-                if let State::Ready { .. } = &mut self.state {
-                    dbg!(progress);
+                if let State::Ready { file_progress, .. } = &mut self.state {
+                    *file_progress = Some(progress);
                 }
 
                 Task::none()
@@ -211,10 +222,11 @@ impl App {
             State::Error(_) => panic!("ERROR"),
             State::Ready {
                 model,
+                file_progress,
                 translations,
                 ui,
                 ..
-            } => ui.view(model, translations).map(Message::Ui),
+            } => ui.view(model, file_progress, translations).map(Message::Ui),
         }
     }
 
