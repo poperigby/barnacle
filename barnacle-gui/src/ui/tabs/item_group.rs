@@ -1,12 +1,13 @@
 use barnacle_gui::{
     TranslationElementExt,
     model::{ItemGroupRecord, ItemRecord, Mutation},
+    widgets::table::{self, table},
 };
 use barnacle_l10n::Translations;
 use barnacle_lib::repository::item_entries::{ItemEntry, ItemGroup};
 use iced::{
     Element, Length, Task,
-    widget::{button, checkbox, column, scrollable, space, table, text},
+    widget::{button, checkbox, column, space, text},
 };
 
 #[derive(Debug, Clone)]
@@ -65,7 +66,7 @@ impl ItemGroupTab {
 
         column![
             action_bar,
-            scrollable(table(columns, group.entries.clone()).width(Length::Fill))
+            table(columns, group.entries.clone()).width(Length::Fill)
         ]
         .into()
     }

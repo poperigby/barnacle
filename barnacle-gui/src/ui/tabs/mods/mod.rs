@@ -84,7 +84,11 @@ impl ModsTab {
             Message::ContextMenu(message) => {
                 if let Some(context_menu) = &self.context_menu {
                     match context_menu.update(message) {
-                        context_menu::Action::Mutate(mutation) => Action::Mutate(mutation),
+                        context_menu::Action::Mutate(mutation) => {
+                            self.context_menu = None;
+
+                            Action::Mutate(mutation)
+                        }
                     }
                 } else {
                     Action::None
