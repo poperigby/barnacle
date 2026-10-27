@@ -1,4 +1,4 @@
-use std::{fmt, path::PathBuf};
+use std::path::PathBuf;
 
 use barnacle_lib::{
     Repository,
@@ -11,7 +11,7 @@ use barnacle_lib::{
 use derive_more::Display;
 use futures::future::{join_all, try_join_all};
 
-pub use mutation::Mutation;
+pub use mutation::{Done, Event, Mutation};
 
 mod mutation;
 

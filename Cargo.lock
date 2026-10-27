@@ -617,6 +617,7 @@ dependencies = [
  "quote",
  "rfd",
  "serde",
+ "sipper",
  "strum",
  "sys-locale",
  "tokio",

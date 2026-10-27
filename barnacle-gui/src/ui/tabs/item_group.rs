@@ -19,7 +19,7 @@ pub enum Message {
 pub enum Action {
     None,
     Run(Task<Message>),
-    Mutate(Mutation),
+    Mutate(Mutation<Message>),
 }
 
 #[derive(Debug, Clone)]

@@ -1,47 +1,84 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use barnacle_lib::{
     Repository,
     games::Kind,
-    mods::builder::ProgressCallback,
+    mods::builder::FileProgress,
     repository::{
         Game, Mod, ModEntry, Profile,
         item_entries::{ItemEntry, ItemGroup},
     },
 };
-use futures::future::BoxFuture;
-use iced::Task;
+use futures::executor::block_on;
+use iced::{Task, task::sipper};
 
-type Work = Box<dyn FnOnce(Repository) -> BoxFuture<'static, anyhow::Result<()>>>;
-
-#[must_use]
-pub struct Mutation {
-    work: Work,
+pub enum Event<Message> {
+    Progress(Message),
+    Done(Done<Message>),
 }
 
-impl Mutation {
-    fn new<F, Fut>(f: F) -> Self
-    where
-        F: FnOnce(Repository) -> Fut + 'static,
-        Fut: Future<Output = anyhow::Result<()>> + 'static + Send,
-    {
-        let work: Work = Box::new(|repo: Repository| Box::pin(f(repo)));
+type Error = Arc<anyhow::Error>;
+#[derive(Debug, Clone)]
+pub struct Done<Message> {
+    /// The result of running the [`Work`]. This will let the App know if the [`Mutation`] succeeded or
+    /// not. If it did, the App can reload the model.
+    pub result: Result<(), Error>,
+    /// An optional message to let the original child component know that the [`Mutation`]
+    /// succeeded.
+    pub notify: Option<Message>,
+}
 
-        Self { work }
+#[must_use]
+pub struct Mutation<Message> {
+    work: Box<dyn FnOnce(Repository) -> Task<Event<Message>>>,
+}
+
+impl<Message> Mutation<Message>
+where
+    Message: Send + 'static,
+{
+    pub fn run(self, repo: &Repository) -> Task<Event<Message>> {
+        (self.work)(repo.clone())
     }
 
-    pub fn run<F, Message>(self, repo: &Repository, on_completion: F) -> Task<Message>
+    pub fn map<Other>(self, f: impl Fn(Message) -> Other + Send + 'static) -> Mutation<Other>
     where
-        F: FnOnce(anyhow::Result<()>) -> Message + Send + 'static,
-        Message: Send + 'static,
+        Other: Send + 'static,
     {
-        Task::perform((self.work)(repo.clone()), on_completion)
+        Mutation {
+            work: Box::new(move |repo| {
+                (self.work)(repo).map(move |event| match event {
+                    Event::Progress(m) => Event::Progress(f(m)),
+                    Event::Done(d) => Event::Done(Done {
+                        result: d.result,
+                        notify: d.notify.map(&f),
+                    }),
+                })
+            }),
+        }
+    }
+
+    fn perform<F, Fut>(f: F) -> Self
+    where
+        F: FnOnce(Repository) -> Fut + 'static,
+        Fut: Future<Output = anyhow::Result<()>> + Send + 'static,
+    {
+        Self {
+            work: Box::new(move |repo| {
+                Task::perform(f(repo), |result| {
+                    Event::Done(Done {
+                        result: result.map_err(Arc::new),
+                        notify: None,
+                    })
+                })
+            }),
+        }
     }
 
     // Games
 
     pub fn create_game(name: String, kind: Kind) -> Self {
-        Self::new(async move |repo: Repository| {
+        Self::perform(async move |repo| {
             let game = repo.add_game(&name, kind).await?;
             game.add_profile("Default").await?;
 
@@ -50,14 +87,14 @@ impl Mutation {
     }
 
     pub fn delete_game(game: Game) -> Self {
-        Self::new(move |_repo: Repository| async move {
+        Self::perform(async move |_| {
             game.remove().await?;
             Ok(())
         })
     }
 
     pub fn activate_game(game: Game) -> Self {
-        Self::new(move |_repo: Repository| async move {
+        Self::perform(async move |_| {
             game.activate().await?;
             Ok(())
         })
@@ -66,28 +103,28 @@ impl Mutation {
     // Profiles
 
     pub fn create_profile(game: Game, name: String) -> Self {
-        Self::new(move |_repo: Repository| async move {
+        Self::perform(async move |_| {
             game.add_profile(&name).await?;
             Ok(())
         })
     }
 
     pub fn delete_profile(profile: Profile) -> Self {
-        Self::new(move |_repo: Repository| async move {
+        Self::perform(async move |_| {
             profile.remove().await?;
             Ok(())
         })
     }
 
     pub fn activate_profile(profile: Profile) -> Self {
-        Self::new(move |_repo: Repository| async move {
+        Self::perform(async move |_| {
             profile.activate().await?;
             Ok(())
         })
     }
 
     pub fn edit_profile(profile: Profile, new_name: String) -> Self {
-        Self::new(move |_repo: Repository| async move {
+        Self::perform(async move |_| {
             profile.set_name(&new_name).await?;
             Ok(())
         })
@@ -96,7 +133,7 @@ impl Mutation {
     // Mods
 
     pub fn add_empty_mod(name: String) -> Self {
-        Self::new(move |repo: Repository| async move {
+        Self::perform(async move |repo| {
             if let Some(game) = repo.active_game().await? {
                 let mod_ = game.new_mod(&name).empty().await;
 
@@ -112,47 +149,81 @@ impl Mutation {
     pub fn add_mod_from_dir(
         name: String,
         path: PathBuf,
-        progress: Option<ProgressCallback>,
+        on_progress: impl Fn(FileProgress) -> Message + Send + 'static,
     ) -> Self {
-        Self::new(move |repo: Repository| async move {
-            if let Some(game) = repo.active_game().await? {
-                let mod_ = game.new_mod(&name).from_dir(&path, progress).await;
+        Self {
+            work: Box::new(move |repo| {
+                Task::sip(
+                    sipper(async move |mut progress| {
+                        let report = Box::new(move |file_progress| {
+                            block_on(progress.send(file_progress));
+                        });
 
-                if let Some(profile) = game.active_profile().await? {
-                    profile.add_mod_entry(mod_).await?;
-                }
-            }
+                        if let Some(game) = repo.active_game().await? {
+                            let mod_ = game.new_mod(&name).from_dir(&path, Some(report)).await;
 
-            Ok(())
-        })
+                            if let Some(profile) = game.active_profile().await? {
+                                profile.add_mod_entry(mod_).await?;
+                            }
+                        }
+
+                        anyhow::Ok(())
+                    }),
+                    move |progress| Event::Progress(on_progress(progress)),
+                    move |result| {
+                        Event::Done(Done {
+                            result: result.map_err(Arc::new),
+                            notify: None,
+                        })
+                    },
+                )
+            }),
+        }
     }
 
     pub fn add_mod_from_archive(
         name: String,
         path: PathBuf,
-        progress: Option<ProgressCallback>,
+        on_progress: impl Fn(FileProgress) -> Message + Send + 'static,
     ) -> Self {
-        Self::new(move |repo: Repository| async move {
-            if let Some(game) = repo.active_game().await? {
-                let mod_ = game
-                    .new_mod(&name)
-                    .from_archive(&path)
-                    .with_root(&PathBuf::from("PerksOfMorrowind"))
-                    .install(progress)
-                    .await;
+        Self {
+            work: Box::new(move |repo| {
+                Task::sip(
+                    sipper(async move |mut progress| {
+                        let report = Box::new(move |file_progress| {
+                            block_on(progress.send(file_progress));
+                        });
 
-                if let Some(profile) = game.active_profile().await? {
-                    profile.add_mod_entry(mod_).await?;
-                }
-            }
+                        if let Some(game) = repo.active_game().await? {
+                            let mod_ = game
+                                .new_mod(&name)
+                                .from_archive(&path)
+                                .install(Some(report))
+                                .await;
 
-            Ok(())
-        })
+                            if let Some(profile) = game.active_profile().await? {
+                                profile.add_mod_entry(mod_).await?;
+                            }
+                        }
+
+                        anyhow::Ok(())
+                    }),
+                    move |progress| Event::Progress(on_progress(progress)),
+                    move |result| {
+                        Event::Done(Done {
+                            result: result.map_err(Arc::new),
+                            notify: None,
+                        })
+                    },
+                )
+            }),
+        }
     }
 
     pub fn delete_mod(mod_: Mod) -> Self {
-        Self::new(move |_repo: Repository| async move {
+        Self::perform(async move |_| {
             mod_.remove().await?;
+
             Ok(())
         })
     }
@@ -160,22 +231,25 @@ impl Mutation {
     // Mod entries
 
     pub fn set_mod_entry_enabled(entry: ModEntry, enabled: bool) -> Self {
-        Self::new(move |_repo: Repository| async move {
+        Self::perform(async move |_| {
             entry.set_enabled(enabled).await?;
+
             Ok(())
         })
     }
 
     pub fn move_mod_entry(entry: ModEntry, new_position: u32) -> Self {
-        Self::new(move |_repo: Repository| async move {
-            entry.set_position(new_position).await.unwrap();
+        Self::perform(async move |_| {
+            entry.set_position(new_position).await?;
+
             Ok(())
         })
     }
 
     pub fn delete_mod_entry(entry: ModEntry) -> Self {
-        Self::new(move |_repo: Repository| async move {
+        Self::perform(async move |_| {
             entry.remove().await?;
+
             Ok(())
         })
     }
@@ -183,15 +257,17 @@ impl Mutation {
     // Items
 
     pub fn set_item_entry_enabled(entry: ItemEntry, enabled: bool) -> Self {
-        Self::new(move |_repo: Repository| async move {
+        Self::perform(async move |_| {
             entry.set_enabled(enabled).await;
+
             Ok(())
         })
     }
 
     pub fn auto_sort_item_group(group: ItemGroup) -> Self {
-        Self::new(move |_repo: Repository| async move {
+        Self::perform(async move |_| {
             group.auto_sort().await?;
+
             Ok(())
         })
     }

@@ -15,7 +15,7 @@ pub enum Message {
 }
 
 pub enum Action {
-    Mutate(Mutation),
+    Mutate(Mutation<Message>),
 }
 
 #[derive(Debug, Clone)]

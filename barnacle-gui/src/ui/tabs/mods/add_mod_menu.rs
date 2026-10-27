@@ -5,7 +5,7 @@ use barnacle_l10n::Translations;
 use barnacle_lib::mods::builder::FileProgress;
 use iced::{
     Element, Task,
-    widget::{button, column, container, progress_bar, row, space, text_input},
+    widget::{button, column, container, row, space, text_input},
 };
 use rfd::AsyncFileDialog;
 
@@ -13,6 +13,7 @@ use rfd::AsyncFileDialog;
 pub enum Message {
     NameChanged(String),
     PathChanged(String),
+    ImportProgress(FileProgress),
     PickPath(PickPathKind),
     PathPicked(Option<PathBuf>),
     CancelButtonPressed,
@@ -22,7 +23,7 @@ pub enum Message {
 pub enum Action {
     None,
     Run(Task<Message>),
-    Mutate(Mutation),
+    Mutate(Mutation<Message>),
     Close,
 }
 
@@ -74,6 +75,10 @@ impl AddModDialog {
                 self.path = Some(PathBuf::from(path));
                 Action::None
             }
+            Message::ImportProgress(progress) => {
+                dbg!(progress);
+                Action::None
+            }
             Message::PickPath(kind) => Action::Run(Task::perform(
                 async move {
                     let picker = AsyncFileDialog::new().set_directory(env::home_dir().unwrap());
@@ -109,12 +114,20 @@ impl AddModDialog {
                     Some(path) if path.is_dir() => {
                         self.page = Page::Preparing;
 
-                        Action::Mutate(Mutation::add_mod_from_dir(name, path, None))
+                        Action::Mutate(Mutation::add_mod_from_dir(
+                            name,
+                            path,
+                            Message::ImportProgress,
+                        ))
                     }
                     Some(path) => {
                         self.page = Page::Preparing;
 
-                        Action::Mutate(Mutation::add_mod_from_archive(name, path, None))
+                        Action::Mutate(Mutation::add_mod_from_archive(
+                            name,
+                            path,
+                            Message::ImportProgress,
+                        ))
                     }
                     None => {
                         self.page = Page::Preparing;

@@ -36,7 +36,7 @@ pub enum Message {
 pub enum Action {
     None,
     Run(Task<Message>),
-    Mutate(Mutation),
+    Mutate(Mutation<Message>),
 }
 
 #[derive(Debug, Clone)]
@@ -83,7 +83,7 @@ impl ModsTab {
                         context_menu::Action::Mutate(mutation) => {
                             self.context_menu = None;
 
-                            Action::Mutate(mutation)
+                            Action::Mutate(mutation.map(Message::ContextMenu))
                         }
                     }
                 } else {

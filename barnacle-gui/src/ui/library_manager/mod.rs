@@ -32,7 +32,7 @@ pub enum Message {
 pub enum Action {
     None,
     Run(Task<Message>),
-    Mutate(Mutation),
+    Mutate(Mutation<Message>),
     Close,
 }
 
@@ -119,12 +119,16 @@ impl LibraryManager {
 
                     Action::None
                 }
-                game_details::Action::Mutate(mutation) => Action::Mutate(mutation),
+                game_details::Action::Mutate(mutation) => {
+                    Action::Mutate(mutation.map(Message::GameDetails))
+                }
             },
             Message::NewGameMenu(message) => match self.new_game_menu.update(message) {
                 new_game::Action::None => Action::None,
                 new_game::Action::Run(task) => Action::Run(task.map(Message::NewGameMenu)),
-                new_game::Action::Mutate(mutation) => Action::Mutate(mutation),
+                new_game::Action::Mutate(mutation) => {
+                    Action::Mutate(mutation.map(Message::NewGameMenu))
+                }
                 new_game::Action::Cancel => {
                     self.menu_visiblity = MenuVisibility::None;
                     Action::None
@@ -151,7 +155,9 @@ impl LibraryManager {
             Message::EditProfileMenu(message) => match self.edit_profile_menu.update(message) {
                 edit_profile::Action::None => Action::None,
                 edit_profile::Action::Run(task) => Action::Run(task.map(Message::EditProfileMenu)),
-                edit_profile::Action::Mutate(mutation) => Action::Mutate(mutation),
+                edit_profile::Action::Mutate(mutation) => {
+                    Action::Mutate(mutation.map(Message::EditProfileMenu))
+                }
                 edit_profile::Action::Cancel => Action::None,
             },
         }

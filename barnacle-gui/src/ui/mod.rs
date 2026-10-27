@@ -16,7 +16,10 @@ use crate::ui::{
     library_manager::LibraryManager,
     tabs::{
         item_group::ItemGroupTab,
-        mods::{ModsTab, add_mod_menu::AddModDialog},
+        mods::{
+            ModsTab,
+            add_mod_menu::{self, AddModDialog},
+        },
     },
 };
 
@@ -41,7 +44,7 @@ pub enum Message {
 pub enum Action {
     None,
     Run(Task<Message>),
-    Mutate(Mutation),
+    Mutate(Mutation<Message>),
     Launch,
 }
 
@@ -126,7 +129,9 @@ impl Ui {
                 tabs::mods::add_mod_menu::Action::Run(task) => {
                     Action::Run(task.map(Message::AddModDialog))
                 }
-                tabs::mods::add_mod_menu::Action::Mutate(mutation) => Action::Mutate(mutation),
+                tabs::mods::add_mod_menu::Action::Mutate(mutation) => {
+                    Action::Mutate(mutation.map(Message::AddModDialog))
+                }
                 tabs::mods::add_mod_menu::Action::Close => {
                     self.show_add_mod_dialog = false;
 
@@ -136,19 +141,25 @@ impl Ui {
             Message::ModList(message) => match self.mods_tab.update(message) {
                 tabs::mods::Action::None => Action::None,
                 tabs::mods::Action::Run(task) => Action::Run(task.map(Message::ModList)),
-                tabs::mods::Action::Mutate(mutation) => Action::Mutate(mutation),
+                tabs::mods::Action::Mutate(mutation) => {
+                    Action::Mutate(mutation.map(Message::ModList))
+                }
             },
             Message::ItemGroup(message) => match ItemGroupTab::update(message) {
                 tabs::item_group::Action::None => Action::None,
                 tabs::item_group::Action::Run(task) => Action::Run(task.map(Message::ItemGroup)),
-                tabs::item_group::Action::Mutate(mutation) => Action::Mutate(mutation),
+                tabs::item_group::Action::Mutate(mutation) => {
+                    Action::Mutate(mutation.map(Message::ItemGroup))
+                }
             },
             Message::LibraryManager(message) => match self.library_manager.update(message) {
                 library_manager::Action::None => Action::None,
                 library_manager::Action::Run(task) => {
                     Action::Run(task.map(Message::LibraryManager))
                 }
-                library_manager::Action::Mutate(mutation) => Action::Mutate(mutation),
+                library_manager::Action::Mutate(mutation) => {
+                    Action::Mutate(mutation.map(Message::LibraryManager))
+                }
                 library_manager::Action::Close => {
                     self.show_library_manager = false;
 

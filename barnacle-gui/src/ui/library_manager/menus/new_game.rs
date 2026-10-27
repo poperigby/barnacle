@@ -2,7 +2,7 @@ use barnacle_l10n::Translations;
 use barnacle_lib::games::Kind;
 use iced::{
     Element, Task,
-    widget::{button, column, combo_box, container, row, space, text, text_input},
+    widget::{button, column, combo_box, container, row, space, text_input},
 };
 use strum::IntoEnumIterator;
 
@@ -27,7 +27,7 @@ pub struct NewGame {
 pub enum Action {
     None,
     Run(Task<Message>),
-    Mutate(Mutation),
+    Mutate(Mutation<Message>),
     Cancel,
 }
 

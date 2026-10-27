@@ -3,7 +3,7 @@
 
 use barnacle_gui::{
     log,
-    model::Model,
+    model::{Done, Event, Model},
     persistence::{config::ConfigStore, state::UiStateStore},
 };
 use barnacle_l10n::Translations;
@@ -33,7 +33,7 @@ fn main() -> iced::Result {
 enum Message {
     Initialized(Result<(Repository, Model, Translations), AppError>),
     Reloaded(Result<Model, AppError>),
-    Mutated(Result<(), String>),
+    Mutated(Done<ui::Message>),
     Launched,
     Ui(ui::Message),
 }
@@ -145,24 +145,38 @@ impl App {
                     Err(_),
                 ) => todo!(),
             },
-            Message::Mutated(result) => match result {
-                Ok(()) => {
-                    let State::Ready { repo, .. } = &self.state else {
-                        return Task::none();
-                    };
+            Message::Mutated(Done { result, notify }) => {
+                let State::Ready { repo, .. } = &self.state else {
+                    return Task::none();
+                };
 
-                    let repo = repo.clone();
-                    Task::perform(
-                        async move {
-                            Model::load(&repo).await.map_err(|e| AppError {
-                                message: e.to_string(),
-                            })
-                        },
-                        Message::Reloaded,
-                    )
-                }
-                Err(e) => todo!("Store somewhere"),
-            },
+                let reload = match result {
+                    Ok(()) => {
+                        let repo = repo.clone();
+                        Task::perform(
+                            async move {
+                                Model::load(&repo).await.map_err(|e| AppError {
+                                    message: e.to_string(),
+                                })
+                            },
+                            Message::Reloaded,
+                        )
+                    }
+                    Err(e) => {
+                        error!("{}", e.to_string());
+                        Task::none()
+                    }
+                };
+
+                // If the calling component wanted to be notified about the result of the
+                // mutation, we can do that here.
+                let forward = match notify {
+                    Some(message) => Task::done(Message::Ui(message)),
+                    None => Task::none(),
+                };
+
+                Task::batch([reload, forward])
+            }
             Message::Launched => {
                 println!("Launched!");
 
@@ -172,8 +186,9 @@ impl App {
                 State::Ready { repo, ui, .. } => match ui.update(message) {
                     ui::Action::None => Task::none(),
                     ui::Action::Run(task) => task.map(Message::Ui),
-                    ui::Action::Mutate(mutation) => mutation.run(repo, |result| {
-                        Message::Mutated(result.map_err(|e| e.to_string()))
+                    ui::Action::Mutate(mutation) => mutation.run(repo).map(|event| match event {
+                        Event::Progress(message) => Message::Ui(message),
+                        Event::Done(done) => Message::Mutated(done),
                     }),
                     ui::Action::Launch => {
                         let repo = repo.clone();
