@@ -150,6 +150,7 @@ where
         name: String,
         path: PathBuf,
         on_progress: impl Fn(FileProgress) -> Message + Send + 'static,
+        on_done: impl Fn() -> Message + Send + 'static,
     ) -> Self {
         Self {
             work: Box::new(move |repo| {
@@ -173,7 +174,7 @@ where
                     move |result| {
                         Event::Done(Done {
                             result: result.map_err(Arc::new),
-                            notify: None,
+                            notify: Some(on_done()),
                         })
                     },
                 )

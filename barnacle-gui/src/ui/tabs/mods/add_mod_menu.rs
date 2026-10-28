@@ -5,7 +5,7 @@ use barnacle_l10n::Translations;
 use barnacle_lib::mods::builder::FileProgress;
 use iced::{
     Element, Task,
-    widget::{button, column, container, row, space, text_input},
+    widget::{button, column, container, progress_bar, row, space, text_input},
 };
 use rfd::AsyncFileDialog;
 
@@ -14,6 +14,7 @@ pub enum Message {
     NameChanged(String),
     PathChanged(String),
     ImportProgress(FileProgress),
+    ImportDone,
     PickPath(PickPathKind),
     PathPicked(Option<PathBuf>),
     CancelButtonPressed,
@@ -32,9 +33,9 @@ pub enum Page {
     #[default]
     ChooseSource,
     Preparing,
-    // Transferring {
-    //     progress: FileProgress,
-    // },
+    Importing {
+        progress: FileProgress,
+    },
     Configure,
 }
 
@@ -69,14 +70,22 @@ impl AddModDialog {
         match message {
             Message::NameChanged(name) => {
                 self.name = name;
+
                 Action::None
             }
             Message::PathChanged(path) => {
                 self.path = Some(PathBuf::from(path));
+
                 Action::None
             }
             Message::ImportProgress(progress) => {
-                dbg!(progress);
+                self.page = Page::Importing { progress };
+
+                Action::None
+            }
+            Message::ImportDone => {
+                self.page = Page::Configure;
+
                 Action::None
             }
             Message::PickPath(kind) => Action::Run(Task::perform(
@@ -99,6 +108,7 @@ impl AddModDialog {
             )),
             Message::PathPicked(path) => {
                 self.path = path;
+
                 Action::None
             }
             Message::CancelButtonPressed => {
@@ -118,6 +128,7 @@ impl AddModDialog {
                             name,
                             path,
                             Message::ImportProgress,
+                            || Message::ImportDone,
                         ))
                     }
                     Some(path) => {
@@ -171,12 +182,12 @@ impl AddModDialog {
                 .into()
             }
             Page::Preparing => "Preparing".into(),
-            // Page::Transferring => {
-            //     let range = 0.0..=(progress.total() as f32);
-            //     let current = progress.current() as f32;
-            //
-            //     progress_bar(range, current).into()
-            // }
+            Page::Importing { progress } => {
+                let range = 0.0..=(progress.total() as f32);
+                let current = progress.current() as f32;
+
+                progress_bar(range, current).into()
+            }
             Page::Configure => "Editing".into(),
         };
 
