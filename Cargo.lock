@@ -583,6 +583,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "barnacle-archive"
+version = "0.1.0"
+dependencies = [
+ "compress-tools",
+ "infer",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "barnacle-cli"
 version = "0.1.0"
 dependencies = [
@@ -990,6 +999,17 @@ dependencies = [
  "jobserver",
  "libc",
  "shlex",
+]
+
+[[package]]
+name = "cfb"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a347dcabdae9c31b0825fd6a8bed285ec9c2acb89c47827126d52fa4f59cece3"
+dependencies = [
+ "fnv",
+ "uuid",
+ "web-time",
 ]
 
 [[package]]
@@ -3441,6 +3461,15 @@ checksum = "07aa2048142242915a31d35844fb311e0e53fcca590c3a0a40dcf1b841fa09eb"
 dependencies = [
  "equivalent",
  "hashbrown 0.17.1",
+]
+
+[[package]]
+name = "infer"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f4200d433cbd5178df7797c9c2e75b348b728e39631cf14520d1e2fc424201f4"
+dependencies = [
+ "cfb",
 ]
 
 [[package]]

@@ -1,0 +1,13 @@
+[package]
+name = "barnacle-archive"
+version.workspace = true
+edition.workspace = true
+homepage.workspace = true
+
+[dependencies]
+compress-tools = { version = "0.16.1", default-features = false }
+infer = "0.22.0"
+thiserror = "2.0.21"
+
+[lints]
+workspace = true
