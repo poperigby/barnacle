@@ -11,12 +11,15 @@ use rfd::AsyncFileDialog;
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    NameChanged(String),
-    PathChanged(String),
-    ImportProgress(FileProgress),
-    ImportDone,
     PickPath(PickPathKind),
     PathPicked(Option<PathBuf>),
+    PathChanged(String),
+
+    ImportProgress(FileProgress),
+    ImportDone,
+
+    NameChanged(String),
+
     CancelButtonPressed,
     AddButtonPressed,
 }
@@ -160,10 +163,6 @@ impl AddModDialog {
 
                 column![
                     row![
-                        translations.name().element(),
-                        text_input("...", &self.name).on_input(Message::NameChanged)
-                    ],
-                    row![
                         translations.path().element(),
                         text_input("...", path_str).on_input(Message::PathChanged),
                         button(Icon::Archive).on_press(Message::PickPath(PickPathKind::Archive)),
@@ -188,7 +187,11 @@ impl AddModDialog {
 
                 progress_bar(range, current).into()
             }
-            Page::Configure => "Editing".into(),
+            Page::Configure => column![row![
+                translations.name().element(),
+                text_input("...", &self.name).on_input(Message::NameChanged)
+            ]]
+            .into(),
         };
 
         container(content)
