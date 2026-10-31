@@ -25,8 +25,6 @@ use crate::{
     },
 };
 
-pub type ProgressCallback = Box<dyn FnMut(FileProgress) + Send + 'static>;
-
 #[derive(Debug, Clone, Copy)]
 pub struct FileProgress {
     current: u64,
@@ -49,23 +47,21 @@ pub struct NewMod {
     db: Db,
     cfg: Cfg,
     game: Game,
-    name: String,
 }
 
 impl NewMod {
-    pub(crate) fn new(db: &Db, cfg: &Cfg, game: &Game, name: &str) -> Self {
+    pub(crate) fn new(db: &Db, cfg: &Cfg, game: &Game) -> Self {
         Self {
             db: db.clone(),
             cfg: cfg.clone(),
             game: game.clone(),
-            name: name.to_string(),
         }
     }
 
     /// Insert mod to database and create an empty directory in the library
-    async fn add(&self) -> Mod {
+    async fn add(&self, name: &str) -> Mod {
         let model = ActiveModel {
-            name: Set(self.name.to_string()),
+            name: Set(name.to_string()),
             game_id: Set(self.game.id()),
             ..Default::default()
         };
@@ -84,6 +80,7 @@ impl NewMod {
         mod_
     }
 
+    /// Scan the [`Mod`]'s directory and add any found [`Item`]s to the database
     async fn add_items(&self, mod_: &Mod) {
         let mod_dir = mod_.dir().await.unwrap();
 
@@ -108,12 +105,12 @@ impl NewMod {
     }
 
     /// Create a new [`Mod`] with no contents
-    pub async fn empty(&self) -> Mod {
-        self.add().await
+    pub async fn empty(&self, name: &str) -> Mod {
+        self.add(name).await
     }
 
     /// Create a new [`Mod`], copying the contents from the given path
-    pub async fn from_dir(&self, path: &Path, progress: Option<ProgressCallback>) -> Mod {
+    pub async fn from_dir(&self, path: &Path, progress: Option<impl FnMut(FileProgress)>) -> Mod {
         if !path.is_dir() {
             panic!("Not a directory");
         }
@@ -161,42 +158,50 @@ impl NewMod {
         mod_
     }
 
-    pub fn from_archive(&self, path: &Path) -> ImportArchive {
-        ImportArchive::new(self, path)
+    pub fn from_archive(&self, path: &Path) -> FromArchive {
+        if !path.is_file() {
+            panic!("path doesn't point to a file");
+        }
+
+        FromArchive::new(self, path)
     }
 }
 
 #[must_use]
-pub struct ImportArchive {
+pub struct FromDir {
+    name: String,
+}
+
+impl FromDir {
+    pub fn name(mut self, value: &str) -> Self {
+        self.name = value.to_string();
+
+        self
+    }
+}
+
+#[must_use]
+pub struct FromArchive {
     builder: NewMod,
     archive_path: PathBuf,
     entries: Vec<PathBuf>,
     /// A relative path to the directory that should be the root of the [`Mod`]
     root: Option<PathBuf>,
+    name: String,
 }
 
-impl ImportArchive {
+impl FromArchive {
     fn new(builder: &NewMod, path: &Path) -> Self {
-        if !path.is_file() {
-            panic!("Not a file");
-        }
-
-        let source = File::open(path).unwrap();
-        let entries = list_archive_files(&source)
-            .unwrap()
-            .iter()
-            .map(PathBuf::from)
-            .collect();
-
         Self {
             builder: builder.clone(),
             archive_path: path.to_path_buf(),
             entries,
             root: None,
+            name: "".to_string(),
         }
     }
 
-    pub fn with_root(&mut self, path: &Path) -> &Self {
+    pub fn root(&mut self, path: &Path) -> &Self {
         if !self.entries.iter().any(|e| e.starts_with(path)) {
             panic!("Invalid root path");
         }
@@ -207,9 +212,7 @@ impl ImportArchive {
     }
 
     // TODO: Wrap in transaction
-    pub async fn install(&self, progress: Option<ProgressCallback>) -> Mod {
-        let mod_ = self.builder.add().await;
-
+    pub async fn install(&self, progress: Option<impl FnMut(FileProgress)>) -> Mod {
         let archive_file = File::open(&self.archive_path).unwrap();
         let dest = mod_.dir().await.unwrap();
 
@@ -315,7 +318,7 @@ mod test {
         let builder = NewMod::new(&repo.db, &repo.cfg, &game, "Wrapped Mod");
         let mut import = builder.from_archive(&archive_path);
 
-        import.with_root(Path::new("FooMod"));
+        import.root(Path::new("FooMod"));
 
         let mod_ = import.install(None).await;
         let dir = mod_.dir().await.unwrap();

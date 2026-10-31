@@ -1,5 +1,6 @@
 use std::{env, path::PathBuf};
 
+use anyhow::Context;
 use barnacle_gui::{TranslationElementExt, icons::Icon, model::Mutation};
 use barnacle_l10n::Translations;
 use barnacle_lib::mods::builder::FileProgress;
@@ -127,9 +128,14 @@ impl AddModDialog {
                     Some(path) if path.is_dir() => {
                         self.page = Page::Preparing;
 
-                        Action::Mutate(Mutation::add_mod_from_dir(
-                            name,
-                            path,
+                        Action::Mutate(Mutation::sip(
+                            move |repo, progress| async move {
+                                let game = repo.active_game().await?.context("no active game")?;
+
+                                game.new_mod(&name).from_dir(&path, Some(progress)).await;
+
+                                Ok(())
+                            },
                             Message::ImportProgress,
                             || Message::ImportDone,
                         ))
@@ -137,10 +143,19 @@ impl AddModDialog {
                     Some(path) => {
                         self.page = Page::Preparing;
 
-                        Action::Mutate(Mutation::add_mod_from_archive(
-                            name,
-                            path,
+                        Action::Mutate(Mutation::sip(
+                            move |repo, progress| async move {
+                                let game = repo.active_game().await?.context("no active game")?;
+
+                                game.new_mod(&name)
+                                    .from_archive(&path)
+                                    .install(Some(progress))
+                                    .await;
+
+                                Ok(())
+                            },
                             Message::ImportProgress,
+                            || Message::ImportDone,
                         ))
                     }
                     None => {

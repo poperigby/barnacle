@@ -40,6 +40,7 @@
 
                         nativeBuildInputs = with pkgs; [
                             pkg-config
+                            rustPlatform.bindgenHook
                         ];
 
                         buildInputs = with pkgs; [
@@ -207,10 +208,12 @@
                         ];
 
                         packages = with pkgs; [
+                            cargo-machete
                             sqlite-web
                         ];
 
                         LD_LIBRARY_PATH = libraryPath;
+                        LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
 
                         checks = self.checks.${system};
                     };

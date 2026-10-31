@@ -1,10 +1,11 @@
 //! Filesystem helpers
 
 use std::{
-    fs::{create_dir_all, set_permissions},
+    fs::{File, create_dir_all, set_permissions},
     path::{Path, PathBuf},
 };
 
+use compress_tools::{ArchiveContents, ArchiveIterator};
 use walkdir::WalkDir;
 use xdg::BaseDirectories;
 
@@ -66,4 +67,28 @@ pub fn state_dir() -> PathBuf {
 
 fn xdg_prefix() -> BaseDirectories {
     xdg::BaseDirectories::with_prefix("barnacle")
+}
+
+pub fn uncompress_archive(path: &Path) {
+    let file = File::open(path).unwrap();
+
+    let mut name = String::default();
+    let mut size = 0;
+    let mut iter = ArchiveIterator::from_read(file).unwrap();
+
+    for content in &mut iter {
+        match content {
+            ArchiveContents::StartOfEntry(s, _) => name = s,
+            ArchiveContents::DataChunk(v) => size += v.len(),
+            ArchiveContents::EndOfEntry => {
+                println!("Entry {} was {} bytes", name, size);
+                size = 0;
+            }
+            ArchiveContents::Err(e) => {
+                panic!("ERR");
+            }
+        }
+    }
+
+    iter.close().unwrap();
 }
