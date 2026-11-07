@@ -2,6 +2,7 @@ use std::{
     error::Error,
     ffi::{CStr, c_int},
     fmt::{self, Display, Formatter},
+    panic::Location,
 };
 
 use tracing::warn;
@@ -18,6 +19,7 @@ pub struct ArchiveError {
     kind: ErrorKind,
     errno: c_int,
     details: String,
+    location: &'static Location<'static>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -29,10 +31,15 @@ pub enum ErrorKind {
 }
 
 impl ArchiveError {
-    fn from_handle(archive: *mut archive, errno: i32) -> Self {
+    fn from_handle(
+        archive: *mut archive,
+        errno: i32,
+        location: &'static Location<'static>,
+    ) -> Self {
         let kind = match errno {
             ARCHIVE_RETRY => ErrorKind::Retry,
             ARCHIVE_FAILED => ErrorKind::Failed,
+            // TODO: We need to close the archive if this happens
             ARCHIVE_FATAL => ErrorKind::Fatal,
             unknown => ErrorKind::Unknown(unknown),
         };
@@ -41,6 +48,7 @@ impl ArchiveError {
             kind,
             errno,
             details: error_details(archive),
+            location,
         }
     }
 
@@ -51,7 +59,13 @@ impl ArchiveError {
 
 impl Display for ArchiveError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.details, self.errno)
+        write!(
+            f,
+            "{} ({}) at {}",
+            self.details,
+            self.errno,
+            self.location.line()
+        )
     }
 }
 
@@ -73,6 +87,7 @@ impl Errno for c_int {
 
     #[track_caller]
     fn check(self, archive: *mut archive) -> Result<Status> {
+        let location = Location::caller();
         match self {
             ARCHIVE_OK => Ok(Status::Ok),
             ARCHIVE_EOF => Ok(Status::Eof),
@@ -82,7 +97,7 @@ impl Errno for c_int {
 
                 Ok(Status::Warning)
             }
-            errno => Err(ArchiveError::from_handle(archive, errno)),
+            errno => Err(ArchiveError::from_handle(archive, errno, location)),
         }
     }
 }

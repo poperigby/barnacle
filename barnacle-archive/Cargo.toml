@@ -17,3 +17,7 @@ workspace = true
 
 [build-dependencies]
 bindgen = "0.73.2"
+
+[dev-dependencies]
+tempfile = "3.27.0"
+zip = "9.4.0"
