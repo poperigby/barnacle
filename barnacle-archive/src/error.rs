@@ -14,39 +14,22 @@ use crate::libarchive::{
 
 pub type Result<T> = std::result::Result<T, ArchiveError>;
 
+/// Represents an error that can be returned from `libarchive` functions, converted from return codes.
 #[derive(Debug, Clone)]
 pub struct ArchiveError {
     kind: ErrorKind,
-    errno: c_int,
     details: String,
     location: &'static Location<'static>,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum ErrorKind {
-    Retry,
-    Failed,
-    Fatal,
-    Unknown(c_int),
 }
 
 impl ArchiveError {
     fn from_handle(
         archive: *mut archive,
-        errno: i32,
+        return_code: i32,
         location: &'static Location<'static>,
     ) -> Self {
-        let kind = match errno {
-            ARCHIVE_RETRY => ErrorKind::Retry,
-            ARCHIVE_FAILED => ErrorKind::Failed,
-            // TODO: We need to close the archive if this happens
-            ARCHIVE_FATAL => ErrorKind::Fatal,
-            unknown => ErrorKind::Unknown(unknown),
-        };
-
         Self {
-            kind,
-            errno,
+            kind: return_code.into(),
             details: error_details(archive),
             location,
         }
@@ -63,7 +46,7 @@ impl Display for ArchiveError {
             f,
             "{} ({}) at {}",
             self.details,
-            self.errno,
+            self.kind,
             self.location.line()
         )
     }
@@ -71,18 +54,51 @@ impl Display for ArchiveError {
 
 impl Error for ArchiveError {}
 
-/// Supports turning libarchive error codes into [`ArchiveError`]
-pub trait Errno {
+#[derive(Debug, Clone, Copy)]
+pub enum ErrorKind {
+    Retry,
+    Failed,
+    Fatal,
+    Unknown(c_int),
+}
+
+impl From<i32> for ErrorKind {
+    fn from(value: i32) -> Self {
+        match value {
+            ARCHIVE_RETRY => Self::Retry,
+            ARCHIVE_FAILED => Self::Failed,
+            // TODO: We need to close the archive if this happens
+            ARCHIVE_FATAL => Self::Fatal,
+            unknown => Self::Unknown(unknown),
+        }
+    }
+}
+
+impl Display for ErrorKind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let return_code = match *self {
+            Self::Retry => ARCHIVE_RETRY,
+            Self::Failed => ARCHIVE_FAILED,
+            Self::Fatal => ARCHIVE_FATAL,
+            Self::Unknown(n) => n,
+        };
+
+        write!(f, "{}", return_code)
+    }
+}
+
+/// Supports turning libarchive return codes into [`ArchiveError`]
+pub trait ReturnCode {
     type Output;
 
-    /// Check the returned error code of the `libarchive` function, and returned an error if there's a
+    /// Check the return code of the `libarchive` function, and returned an error if there's a
     /// negative value.
     ///
     /// Safety: `archive` must point to a valid [`archive`] in memory.
     fn check(self, archive: *mut archive) -> Result<Self::Output>;
 }
 
-impl Errno for c_int {
+impl ReturnCode for i32 {
     type Output = Status;
 
     #[track_caller]
@@ -97,7 +113,7 @@ impl Errno for c_int {
 
                 Ok(Status::Warning)
             }
-            errno => Err(ArchiveError::from_handle(archive, errno, location)),
+            other => Err(ArchiveError::from_handle(archive, other, location)),
         }
     }
 }
