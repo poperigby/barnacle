@@ -1,15 +1,21 @@
 use std::{
-    ffi::{CString, c_void},
+    ffi::{CStr, CString, OsString, c_void},
+    fs::File,
     io::{self, Read, Seek},
+    os::unix::ffi::OsStringExt,
+    path::{Path, PathBuf},
     ptr::{self, NonNull},
 };
+
+use nix::fcntl::{RenameFlags, renameat2};
+use tempfile::tempdir_in;
 
 use crate::{
     error::{Result, ReturnCode, Status},
     libarchive::{
-        archive_read_data, archive_read_free, archive_read_new, archive_read_next_header,
-        archive_read_open, archive_read_support_filter_all, archive_read_support_format_all,
-        archive_set_error,
+        archive_entry_pathname_utf8, archive_read_data, archive_read_free, archive_read_new,
+        archive_read_next_header, archive_read_open, archive_read_support_filter_all,
+        archive_read_support_format_all, archive_set_error,
     },
 };
 
@@ -80,6 +86,33 @@ where
             Status::Eof => Ok(None),
         }
     }
+
+    // TODO: Perhaps pass in a library specific staging directory to this function
+    pub fn extract(&self, destination: &Path) -> Result<()> {
+        assert!(destination.is_dir());
+
+        // Extract into a temporary directory alongside the destination (same filesystem),
+        // then atomically swap it into place. If extraction fails, the temporary directory is
+        // discarded, so the destination never contains a partially extracted archive.
+        let staging_dir = tempdir_in(destination.parent().unwrap()).unwrap();
+
+        while let Some(entry) = self.next_entry()? {
+            // TODO: Ensure:
+            // Entry would not escape destination
+            //
+        }
+
+        renameat2(
+            File::open(staging_dir.path()).unwrap(),
+            staging_dir.path(),
+            File::open(destination).unwrap(),
+            destination,
+            RenameFlags::RENAME_EXCHANGE,
+        )
+        .unwrap();
+
+        Ok(())
+    }
 }
 
 impl<R> Drop for Archive<R>
@@ -103,6 +136,27 @@ where
 {
     handle: NonNull<libarchive::archive_entry>,
     archive: &'a Archive<R>,
+}
+
+impl<'a, R> ArchiveEntry<'a, R>
+where
+    R: Read + Seek,
+{
+    pub fn path(&self) -> Option<PathBuf> {
+        let pathname = unsafe {
+            // This will attempt to convert to UTF8, and return NULL if the conversion isn't
+            // possible, or there isn't a pathname.
+            let ptr = archive_entry_pathname_utf8(self.handle.as_ptr());
+
+            if !ptr.is_null() {
+                Some(CStr::from_ptr(ptr).to_bytes().to_owned())
+            } else {
+                None
+            }
+        };
+
+        pathname.map(|p| PathBuf::from(OsString::from_vec(p)))
+    }
 }
 
 impl<'a, R> Read for ArchiveEntry<'a, R>
@@ -189,7 +243,10 @@ extern "C" fn read_callback<R: Read + Seek>(
 
 #[cfg(test)]
 mod test {
-    use std::io::{Cursor, Read, Seek, Write};
+    use std::{
+        io::{Cursor, Read, Seek, Write},
+        path::PathBuf,
+    };
 
     use tempfile::tempfile;
     use zip::{ZipWriter, write::SimpleFileOptions};
@@ -217,6 +274,7 @@ mod test {
         let _test_dir = archive.next_entry().unwrap().unwrap();
         let mut lorem_txt = archive.next_entry().unwrap().unwrap();
 
+        assert_eq!(lorem_txt.path(), Some(PathBuf::from("test/lorem.txt")));
         let mut contents = String::new();
         lorem_txt.read_to_string(&mut contents).unwrap();
 

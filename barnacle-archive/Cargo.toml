@@ -8,7 +8,9 @@ homepage.workspace = true
 compress-tools = { version = "0.16.1", default-features = false }
 infer = "0.22.0"
 libc = "0.2.191"
+nix = { version = "0.31.3", features = ["fs"] }
 path-clean = "1.0.1"
+tempfile = "3.27.0"
 thiserror = "2.0.21"
 tracing = "0.1.44"
 

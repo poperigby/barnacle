@@ -591,6 +591,7 @@ dependencies = [
  "compress-tools",
  "infer",
  "libc",
+ "nix 0.31.3",
  "path-clean",
  "tempfile",
  "thiserror 2.0.21",
