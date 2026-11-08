@@ -2,14 +2,18 @@ use std::{
     error::Error,
     ffi::{CStr, c_int},
     fmt::{self, Display, Formatter},
+    io::{Read, Seek},
     panic::Location,
 };
 
 use tracing::warn;
 
-use crate::libarchive::{
-    ARCHIVE_EOF, ARCHIVE_FAILED, ARCHIVE_FATAL, ARCHIVE_OK, ARCHIVE_RETRY, ARCHIVE_WARN, archive,
-    archive_error_string,
+use crate::{
+    Archive,
+    libarchive::{
+        ARCHIVE_EOF, ARCHIVE_FAILED, ARCHIVE_FATAL, ARCHIVE_OK, ARCHIVE_RETRY, ARCHIVE_WARN,
+        archive, archive_error_string,
+    },
 };
 
 pub type Result<T> = std::result::Result<T, ArchiveError>;
@@ -88,21 +92,29 @@ impl Display for ErrorKind {
 }
 
 /// Supports turning libarchive return codes into [`ArchiveError`]
-pub trait ReturnCode {
+pub trait ReturnCode: Sized {
     type Output;
 
     /// Check the return code of the `libarchive` function, and returned an error if there's a
     /// negative value.
     ///
     /// Safety: `archive` must point to a valid [`archive`] in memory.
-    fn check(self, archive: *mut archive) -> Result<Self::Output>;
+    fn check_from_ptr(self, archive: *mut archive) -> Result<Self::Output>;
+
+    /// Check the return code of the `libarchive` function, and returned an error if there's a
+    /// negative value.
+    #[track_caller]
+    fn check<R: Read + Seek>(self, archive: &Archive<R>) -> Result<Self::Output> {
+        self.check_from_ptr(archive.handle.as_ptr())
+    }
 }
 
+// This value is used by `libarchive` for pure return codes
 impl ReturnCode for i32 {
     type Output = Status;
 
     #[track_caller]
-    fn check(self, archive: *mut archive) -> Result<Status> {
+    fn check_from_ptr(self, archive: *mut archive) -> Result<Status> {
         let location = Location::caller();
         match self {
             ARCHIVE_OK => Ok(Status::Ok),
@@ -114,6 +126,22 @@ impl ReturnCode for i32 {
                 Ok(Status::Warning)
             }
             other => Err(ArchiveError::from_handle(archive, other, location)),
+        }
+    }
+}
+
+// This value is used by `libarchive` for return codes, or an amount of bytes read
+impl ReturnCode for isize {
+    type Output = isize;
+
+    #[track_caller]
+    fn check_from_ptr(self, archive: *mut archive) -> Result<Self::Output> {
+        let location = Location::caller();
+
+        if self < 0 {
+            Err(ArchiveError::from_handle(archive, self as i32, location))
+        } else {
+            Ok(self)
         }
     }
 }

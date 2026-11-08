@@ -7,8 +7,9 @@ use std::{
 use crate::{
     error::{Result, ReturnCode, Status},
     libarchive::{
-        archive_read_free, archive_read_new, archive_read_next_header, archive_read_open,
-        archive_read_support_filter_all, archive_read_support_format_all, archive_set_error,
+        archive_read_data, archive_read_free, archive_read_new, archive_read_next_header,
+        archive_read_open, archive_read_support_filter_all, archive_read_support_format_all,
+        archive_set_error,
     },
 };
 
@@ -33,46 +34,49 @@ where
     R: Read + Seek,
 {
     pub fn open(source: R) -> Result<Self> {
+        let handle = unsafe { archive_read_new() };
+
         let state = NonNull::new(Box::into_raw(Box::new(State {
             reader: source,
-            // Allocate a fixed size buffer so we don't accidentally read the whole stream into memory
+            // Allocate a fixed size buffer so we don't read the whole stream into memory
             buffer: vec![0; 64 * 1024],
         })))
         .expect("the pointer to the newly allocated State will not be null");
 
-        let handle = unsafe {
-            let a = archive_read_new();
-            archive_read_support_filter_all(a).check(a)?;
-            archive_read_support_format_all(a).check(a)?;
+        let archive = Ok(Self {
+            handle: NonNull::new(handle).expect("libarchive won't give us a null pointer"),
+            state,
+        });
+
+        unsafe {
+            archive_read_support_filter_all(handle).check_from_ptr(handle)?;
+            archive_read_support_format_all(handle).check_from_ptr(handle)?;
 
             archive_read_open(
-                a,
+                handle,
                 state.as_ptr().cast(),
                 None,
                 Some(read_callback::<R>),
                 None,
             )
-            .check(a)?;
-
-            a
+            .check_from_ptr(handle)?;
         };
 
-        Ok(Self {
-            handle: NonNull::new(handle).expect("libarchive won't give us a null pointer"),
-            state,
-        })
+        archive
     }
 
-    pub fn next_entry(&'_ mut self) -> Result<Option<ArchiveEntry<'_, R>>> {
+    pub fn next_entry(&self) -> Result<Option<ArchiveEntry<'_, R>>> {
         let mut entry: *mut libarchive::archive_entry = ptr::null_mut();
 
-        let status = unsafe {
-            archive_read_next_header(self.handle.as_ptr(), &mut entry)
-                .check(self.handle.as_ptr())?
-        };
+        let status =
+            unsafe { archive_read_next_header(self.handle.as_ptr(), &mut entry).check(self)? };
 
         match status {
-            Status::Ok | Status::Warning => Ok(Some(ArchiveEntry { archive: self })),
+            Status::Ok | Status::Warning => Ok(Some(ArchiveEntry {
+                handle: NonNull::new(entry)
+                    .expect("libarchive just wrote to our pointer, so it won't be null"),
+                archive: self,
+            })),
             Status::Eof => Ok(None),
         }
     }
@@ -97,18 +101,39 @@ pub struct ArchiveEntry<'a, R>
 where
     R: Read + Seek,
 {
-    archive: &'a mut Archive<R>,
+    handle: NonNull<libarchive::archive_entry>,
+    archive: &'a Archive<R>,
 }
 
-impl<'a, R> ArchiveEntry<'a, R> where R: Read + Seek {}
+impl<'a, R> Read for ArchiveEntry<'a, R>
+where
+    R: Read + Seek,
+{
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        let bytes_read = unsafe {
+            archive_read_data(
+                self.archive.handle.as_ptr(),
+                buf.as_mut_ptr().cast(),
+                buf.len(),
+            )
+        }
+        .check(self.archive)
+        .map_err(io::Error::other)?;
+
+        Ok(bytes_read.try_into().expect(
+            "bytes_read won't be negative, because negative return values are converted to errors",
+        ))
+    }
+}
 
 /// The read callback is invoked whenever the library requires raw bytes from
-/// the archive. The read callback should read data into a buffer, set the
-/// `const void **buffer` argument to point to the available data, and return a
-/// count of the number of bytes available. The library will invoke the read
-/// callback again only after it has consumed this data. The library imposes
-/// no constraints on the size of the data blocks returned. On end-of-file,
-/// the read callback should return zero. On error, the read callback should
+/// the archive. It should read data into a buffer, set the `const void **buffer` argument
+/// to point to the available data, and return a count of the number of bytes available.
+///
+/// The library will invoke the read callback again only after it has consumed this data.
+/// The library imposes no constraints on the size of the data blocks returned.
+///
+/// On end-of-file, the read callback should return zero. On error, the read callback should
 /// invoke `archive_set_error()` to register an error code and message and return -1.
 extern "C" fn read_callback<R: Read + Seek>(
     archive: *mut libarchive::archive,
@@ -138,7 +163,8 @@ extern "C" fn read_callback<R: Read + Seek>(
                 // https://doc.rust-lang.org/src/alloc/io/read.rs.html#115
 
                 let error_string = CString::new(
-                    "the amount of bytes read was greater than the size of the buffer",
+                    "The amount of bytes read was greater than the size of the buffer.\n
+                    This indicates an incorrect implementation of Read.",
                 )
                 .expect("the string contains no NUL bytes");
 
@@ -163,46 +189,48 @@ extern "C" fn read_callback<R: Read + Seek>(
 
 #[cfg(test)]
 mod test {
-    use std::io::{Cursor, Write};
+    use std::io::{Cursor, Read, Seek, Write};
 
     use tempfile::tempfile;
     use zip::{ZipWriter, write::SimpleFileOptions};
 
     use crate::Archive;
 
-    fn memory() -> Archive<Cursor<Vec<u8>>> {
-        let mut zip = ZipWriter::new(Cursor::new(vec![]));
-        zip.add_directory("test/", SimpleFileOptions::default())
-            .unwrap();
+    const LOREM: &str = "Aut quia quam culpa hic. Quas labore ipsa magnam ut. Ad perferendis excepturi iure ratione accusamus numquam.";
 
-        let lorem = "Aut quia quam culpa hic. Quas labore ipsa magnam ut. Ad perferendis excepturi iure ratione accusamus numquam.";
-        zip.start_file("test/lorem.txt", SimpleFileOptions::default())
-            .unwrap();
-        zip.write_all(lorem.as_bytes()).unwrap();
+    fn write_zip<W: Write + Seek>(writer: W) -> W {
+        let options = SimpleFileOptions::default();
+        let mut zip = ZipWriter::new(writer);
 
-        let buffer = zip.finish().unwrap();
+        zip.add_directory("test/", options).unwrap();
+        zip.start_file("test/lorem.txt", options).unwrap();
+        zip.write_all(LOREM.as_bytes()).unwrap();
 
-        Archive::open(buffer).unwrap()
+        let mut writer = zip.finish().unwrap();
+        writer.rewind().unwrap();
+        writer
+    }
+
+    fn assert_reads_lorem<S: Read + Write + Seek>(source: S) {
+        let archive = Archive::open(write_zip(source)).unwrap();
+
+        let _test_dir = archive.next_entry().unwrap().unwrap();
+        let mut lorem_txt = archive.next_entry().unwrap().unwrap();
+
+        let mut contents = String::new();
+        lorem_txt.read_to_string(&mut contents).unwrap();
+
+        assert_eq!(contents, LOREM);
+        assert!(archive.next_entry().unwrap().is_none());
     }
 
     #[test]
-    fn open_memory() {
-        memory();
+    fn read_lorem_memory() {
+        assert_reads_lorem(Cursor::new(vec![]));
     }
 
     #[test]
-    fn open_file() {
-        let mut zip = ZipWriter::new(tempfile().unwrap());
-        zip.add_directory("test/", SimpleFileOptions::default())
-            .unwrap();
-
-        let lorem = "Aut quia quam culpa hic. Quas labore ipsa magnam ut. Ad perferendis excepturi iure ratione accusamus numquam.";
-        zip.start_file("test/lorem.txt", SimpleFileOptions::default())
-            .unwrap();
-        zip.write_all(lorem.as_bytes()).unwrap();
-
-        let file = zip.finish().unwrap();
-
-        Archive::open(file).unwrap();
+    fn read_lorem_file() {
+        assert_reads_lorem(tempfile().unwrap());
     }
 }
