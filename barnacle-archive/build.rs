@@ -24,6 +24,14 @@ fn main() {
 
     let bindings = bindgen::Builder::default()
         .header("wrapper.h")
+        // Needed to evaluate macros bindgen can't parse on its own, like the AE_IF* casts
+        .clang_macro_fallback()
+        // Only generate libarchive's items. Otherwise the macro fallback also evaluates glibc's
+        // self-referential macros (e.g. `#define _PC_LINK_MAX _PC_LINK_MAX`), which duplicates
+        // constants already generated from their enums.
+        .allowlist_function("archive_.*")
+        .allowlist_type("archive.*")
+        .allowlist_var("ARCHIVE_.*|AE_.*")
         // Tell cargo to invalidate the built crate whenever any of the
         // included header files changed.
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
