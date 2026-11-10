@@ -9,33 +9,33 @@ workspace = true
 [dependencies]
 barnacle-archive = { path = "../barnacle-archive" }
 barnacle-l10n = { path = "../barnacle-l10n" }
-chrono = "0.4.44"
-clap = { version = "4.5.58", features = ["derive"] }
+chrono = "0.4.45"
+clap = { version = "4.6.7", features = ["derive"] }
 damascus = { version = "0.0.11", default-features=false, features = ["overlayfs"] }
 derive_more = { version = "2.1.1", features = ["eq", "from", "as_ref", "display", "deref"] }
 fs-more = "0.8.1"
 futures = "0.3.34"
-getset = "0.1.6"
+getset = "0.1.7"
 heck = "0.5.0"
-human-panic = "2.0.4"
-icu = { version = "2.3.1", features = ["serde"] }
-libloot = "0.29.6"
+human-panic = "2.0.8"
+icu = { version = "2.4.0", features = ["serde"] }
+libloot = "0.29.7"
 openmw-config = "1.1.0"
 parking_lot = "0.12.5"
-sea-orm = { version = "2.0.0", features = ["sqlx-sqlite", "runtime-tokio", "macros", "schema-sync", "entity-registry"] }
-serde = { version = "1.0.228", features = ["derive"] }
+sea-orm = { version = "2.0.4", features = ["sqlx-sqlite", "runtime-tokio", "macros", "schema-sync", "entity-registry"] }
+serde = { version = "1.0.229", features = ["derive"] }
 strum = { version = "0.28.0", features = ["derive"] }
 tempfile = "3.27.0"
-thiserror = "2.0.18"
-tokio = { version = "1.53.1", features = ["macros", "process"] }
-toml = "1.0.1"
+thiserror = "2.0.21"
+tokio = { version = "1.54.1", features = ["macros", "process"] }
+toml = "1.2.1"
 tracing = "0.1.44"
-tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
-ureq = "3.4.2"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+ureq = "3.5.1"
 walkdir = "2.5.0"
 which = "8.0.6"
 xdg = "3.0.0"
-zip = "8.4.0"
+zip = "9.5.0"
 
 [dev-dependencies]
 assert_fs = "1.1.4"

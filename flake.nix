@@ -208,6 +208,7 @@
                         ];
 
                         packages = with pkgs; [
+                            cargo-edit
                             cargo-machete
                             sqlite-web
                         ];

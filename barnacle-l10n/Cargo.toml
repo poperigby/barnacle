@@ -7,7 +7,7 @@ homepage.workspace = true
 [dependencies]
 fluent-langneg = "0.14.2"
 fluent-static = "0.6.0"
-icu = { version = "2.3.1", features = ["serde"] }
+icu = { version = "2.4.0", features = ["serde"] }
 sys-locale = "0.3.2"
 thiserror = "2.0.21"
 
