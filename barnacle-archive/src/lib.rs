@@ -1,18 +1,15 @@
 use std::{
     cmp::max,
-    ffi::CStr,
     fs::{File, create_dir_all},
     io::{self, Read, Seek},
     path::Path,
     ptr::{self, NonNull},
 };
 
-use libc::{LC_CTYPE, setlocale};
 use rustix::fs::{RenameFlags, renameat_with, statvfs};
 use tempfile::tempdir_in;
 
 use crate::{
-    callback::read_callback,
     entry::{ArchiveEntry, FileType},
     error::{Result, ReturnCode, Status},
     libarchive::{
@@ -38,6 +35,8 @@ where
 {
     handle: NonNull<libarchive::archive>,
     state: NonNull<State<R>>,
+    /// The compressed length of the archive, in bytes.
+    len: u64,
 }
 
 struct State<R: Read + Seek> {
@@ -49,7 +48,7 @@ impl<R> Archive<R>
 where
     R: Read + Seek,
 {
-    pub fn open(source: R) -> Result<Self> {
+    pub fn open(mut source: R) -> Result<Self> {
         let _ut8_guard = Utf8LocaleGuard::new();
 
         // SAFETY: `archive_read_new` takes no arguments and has no preconditions.
@@ -57,6 +56,9 @@ where
         // NULL on allocation failure, which is checked below before the pointer is used.
         // That's very unlikely to happen, though.
         let handle = unsafe { archive_read_new() };
+
+        let len = source.seek(io::SeekFrom::End(0)).unwrap();
+        source.rewind().unwrap();
 
         let state = NonNull::new(Box::into_raw(Box::new(State {
             reader: source,
@@ -68,6 +70,7 @@ where
         let archive = Ok(Self {
             handle: NonNull::new(handle).expect("libarchive won't give us a null pointer"),
             state,
+            len,
         });
 
         // SAFETY: `handle` is valid per the type invariants.
@@ -83,7 +86,7 @@ where
                 handle,
                 state.as_ptr().cast(),
                 None,
-                Some(read_callback::<R>),
+                Some(callback::read::<R>),
                 None,
             )
         }
@@ -99,7 +102,7 @@ where
     /// This method will return an error in the following cases:
     /// * `destination` does not exist
     /// * `destination` is not a directory
-    pub fn extract(&mut self, destination: &Path) -> Result<()> {
+    pub fn extract(&mut self, destination: &Path, on_progress: impl Fn(Progress)) -> Result<()> {
         let _utf8_guard = Utf8LocaleGuard::new();
 
         assert!(destination.is_dir());
@@ -115,6 +118,7 @@ where
             .unwrap();
         let budget = free - max(10u64 << 30, free / 20);
 
+        let mut bytes_written = 0;
         while let Some(mut entry) = self.next_entry()? {
             if !matches!(entry.file_type(), FileType::Regular | FileType::Directory) {
                 // TODO: Do we really want to silently continue here?
@@ -134,10 +138,23 @@ where
 
                 let mut file = File::create(path).unwrap();
 
-                io::copy(&mut entry, &mut file).unwrap();
+                let written = io::copy(&mut entry, &mut file).unwrap();
+
+                bytes_written += written;
             }
 
-            // TODO: Terminate if self.bytes_read() exceeds the size of the archive or the budget
+            if self.bytes_read() > self.len {
+                panic!("More compressed bytes were read from this archive than it contains. Hmmm")
+            }
+
+            if bytes_written > budget {
+                panic!("We exceeded our budget. Uh oh")
+            }
+
+            on_progress(Progress {
+                current: self.bytes_read(),
+                total: self.len,
+            });
 
             // TODO: Ensure entry:
             // * Reject entries where: compression ratio > 100:1 && output > 100MB. This will help to
@@ -204,6 +221,12 @@ where
             drop(Box::from_raw(self.state.as_ptr()));
         }
     }
+}
+
+#[derive(Debug)]
+pub struct Progress {
+    current: u64,
+    total: u64,
 }
 
 #[cfg(test)]
@@ -424,7 +447,14 @@ mod test {
     fn assert_extracts(test_archive: &TestArchive) {
         let destination = tempdir().unwrap();
 
-        test_archive.open().extract(destination.path()).unwrap();
+        let progress = |progress| {
+            dbg!(progress);
+        };
+
+        test_archive
+            .open()
+            .extract(destination.path(), progress)
+            .unwrap();
 
         test_archive.assert_extracted_to(destination.path());
     }

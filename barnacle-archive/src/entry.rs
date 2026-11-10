@@ -52,7 +52,7 @@ where
 
         // SAFETY: `handle` is valid per the type invariants.
         let ptr = unsafe {
-            // This will attempt to convert to UTF8, and return NULL if the conversion isn't
+            // This will attempt to convert to UTF8, and return null if the conversion isn't
             // possible, or if there isn't a pathname.
             archive_entry_pathname_utf8(self.handle.as_ptr())
         };

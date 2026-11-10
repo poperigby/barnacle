@@ -17,7 +17,7 @@ use crate::{
 ///
 /// On end-of-file, the read callback should return zero. On error, the read callback should
 /// invoke `archive_set_error()` to register an error code and message and return -1.
-pub extern "C" fn read_callback<R: Read + Seek>(
+pub extern "C" fn read<R: Read + Seek>(
     archive: *mut libarchive::archive,
     state: *mut c_void,
     buffer: *mut *const c_void,
@@ -68,3 +68,5 @@ pub extern "C" fn read_callback<R: Read + Seek>(
         };
     }
 }
+
+pub extern "C" fn seek<R: Read + Seek>() {}
