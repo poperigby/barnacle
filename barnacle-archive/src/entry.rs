@@ -5,13 +5,17 @@ use std::{
     ptr::NonNull,
 };
 
+use thiserror::Error;
+
 use crate::{
     Archive,
     error::ReturnCode,
     libarchive::{
         self, AE_IFBLK, AE_IFCHR, AE_IFDIR, AE_IFIFO, AE_IFLNK, AE_IFREG, AE_IFSOCK,
-        archive_entry_filetype, archive_entry_pathname_utf8, archive_entry_size, archive_read_data,
+        archive_entry_filetype, archive_entry_pathname, archive_entry_pathname_utf8,
+        archive_entry_pathname_w, archive_entry_size, archive_read_data,
     },
+    locale::Utf8LocaleGuard,
 };
 
 /// # Invariants
@@ -41,7 +45,11 @@ where
         }
     }
 
-    pub fn path(&self) -> Option<PathBuf> {
+    /// Returns a relative path with `/` separators, and no root or drive prefixes. It may still
+    /// return a path with `..`, so this will need to be checked against an extraction destination directory.
+    pub fn path(&self) -> Result<PathBuf, PathError> {
+        let _utf8_guard = Utf8LocaleGuard::new();
+
         // SAFETY: `handle` is valid per the type invariants.
         let ptr = unsafe {
             // This will attempt to convert to UTF8, and return NULL if the conversion isn't
@@ -50,7 +58,19 @@ where
         };
 
         if ptr.is_null() {
-            return None;
+            // Check if this is a UTF8 conversion error or a missing path.
+            // archive_entry_pathname{_w} will also return null if it's actually missing.
+
+            // SAFETY: `handle` is valid per the type invariants.
+            return Err(
+                if unsafe { archive_entry_pathname(self.handle.as_ptr()) }.is_null()
+                    && unsafe { archive_entry_pathname_w(self.handle.as_ptr()) }.is_null()
+                {
+                    PathError::MissingPath
+                } else {
+                    PathError::InvalidEncoding
+                },
+            );
         }
 
         // SAFETY: We just checked `ptr` is non-null, libarchive gives us a nul-terminated string,
@@ -58,11 +78,30 @@ where
         // longer pointing to the libarchive entry's internal buffer.
         let s = unsafe { CStr::from_ptr(ptr) }
             .to_str()
-            .ok()?
-            // Creates a new `String` and copies the data
+            .map_err(|_| PathError::InvalidEncoding)?
+            // This would technically falsely rename legitimate Linux files that contain `\`, but no
+            // sane file will do that.
+            //
+            // This creates a new `String` and copies the data, so we don't have to worry about `s`
+            // pointing to possibly invalid data.
             .replace('\\', "/");
 
-        Some(PathBuf::from(s))
+        if s.is_empty() {
+            return Err(PathError::Empty);
+        }
+
+        if s.starts_with('/') {
+            return Err(PathError::ContainsRoot);
+        }
+
+        // We have to parse for a prefix ourselves, because `Path` doesn't recognize something like
+        // `C:/` as a prefix on Linux
+        let mut chars = s.chars();
+        if matches!((chars.next(), chars.next()), (Some(c), Some(':')) if c.is_ascii_alphabetic()) {
+            return Err(PathError::ContainsPrefix);
+        }
+
+        Ok(PathBuf::from(s))
     }
 
     pub fn size(&self) -> Option<i64> {
@@ -115,6 +154,20 @@ where
             "bytes_read won't be negative, because negative return values are converted to errors",
         ))
     }
+}
+
+#[derive(Debug, Error)]
+pub enum PathError {
+    #[error("this entry doesn't list a path in its header")]
+    MissingPath,
+    #[error("libarchive failed to convert the path to UTF8")]
+    InvalidEncoding,
+    #[error("this path is empty")]
+    Empty,
+    #[error("this path contains a root component (e.g. '/')")]
+    ContainsRoot,
+    #[error("this path contains a prefix component (e.g. 'C:/')")]
+    ContainsPrefix,
 }
 
 #[derive(Debug, PartialEq)]
