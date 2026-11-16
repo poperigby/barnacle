@@ -21,7 +21,7 @@ human-panic = "2.0.8"
 icu = { version = "2.4.0", features = ["serde"] }
 libloot = "0.29.7"
 openmw-config = "1.1.0"
-parking_lot = "0.12.5"
+parking_lot = "0.13.0"
 sea-orm = { version = "2.0.4", features = ["sqlx-sqlite", "runtime-tokio", "macros", "schema-sync", "entity-registry"] }
 serde = { version = "1.0.229", features = ["derive"] }
 strum = { version = "0.28.0", features = ["derive"] }
